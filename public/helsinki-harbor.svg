@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1">
+      <stop stop-color="#244467"/>
+      <stop offset="1" stop-color="#9bd4dd"/>
+    </linearGradient>
+    <linearGradient id="water" x2="0" y2="1">
+      <stop stop-color="#547e98"/>
+      <stop offset="1" stop-color="#203e5d"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h640v214H0z"/>
+  <circle cx="468" cy="80" r="34" fill="#e0edf0" opacity=".88"/>
+  <path fill="#d1e9ee" opacity=".3" d="M41 84h135v3H41zm60 10h120v2H101zm391 21h116v3H492zm-22 8h103v2H470zM279 53h75v2h-75z"/>
+  <path fill="#57788d" d="M0 179h42v-18h28v11h25v-25h14v-13l19 13h24v31h22v-14h39v18h229v-29h23v-9h24v20h35v-29h33v18h37v19h46v42H0z"/>
+  <path fill="#6f909f" d="M0 197h31v-17h41v17h27v-20h28v-12l18-10 18 10v12h24v22h27v-17h27v27h151v-18h33v-17h37v14h30v-23h28v-11l18-8 18 8v11h24v30h26v-13h34v25H0z"/>
+  <path fill="#acc2c9" d="M214 192h212v9H214z"/>
+  <path fill="#c6d7d9" d="M241 156h158v36H241z"/>
+  <path fill="#e1e7df" d="M264 143h112v49H264z"/>
+  <path fill="#b5ced0" d="M267 157l53-25 53 25z"/>
+  <path fill="#f1eee1" d="M280 160h80v5h-80zm5 8h7v24h-7zm20 0h7v24h-7zm23 0h7v24h-7zm20 0h7v24h-7z"/>
+  <path fill="#e3e9e4" d="M297 109h46v32h-46zm-61 27h23v24h-23zm145 0h23v24h-23z"/>
+  <path fill="#537e82" d="M297 109c0-16 10-24 23-31 13 7 23 15 23 31zm-61 27c0-9 4-14 11.5-18 7.5 4 11.5 9 11.5 18zm145 0c0-9 4-14 11.5-18 7.5 4 11.5 9 11.5 18z"/>
+  <path stroke="#41636d" stroke-width="2" d="M320 78V66m-4 4h8m-76 48v-7m144 7v-7"/>
+  <path fill="#708f9d" d="M307 119h5v12h-5zm10 0h6v12h-6zm11 0h5v12h-5z"/>
+  <path fill="#35556d" d="M0 207h640v9H0z"/>
+  <path fill="url(#water)" d="M0 216h640v64H0z"/>
+  <path fill="#b5e1e5" opacity=".5" d="M51 227h96v2H51zm169 5h201v2H220zm-33 12h123v2H187zm146 0h75v2h-75zm99 10h157v2H432zm-381 9h159v2H51zm209 5h145v2H260zm212-46h128v2H472z"/>
+  <path fill="#1c374f" d="M84 239h78l-11 8H95z"/>
+  <path fill="#b7d1d8" d="M110 230h28l9 9h-37z"/>
+  <path stroke="#1c374f" stroke-width="2" d="M124 230v-12"/>
+</svg>

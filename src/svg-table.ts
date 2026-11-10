@@ -3,7 +3,7 @@ import { ballArtwork } from './svg-ball';
 import { ballMarkings } from './ball-markings';
 import { traceShot } from './aim-guide';
 import { cushions, width, length, radius, pockets, type BallOrientation } from './physics';
-import type { TableState } from './tv-table';
+import { calledPocketBorderWidth, calledPocketColor, type TableState } from './tv-table';
 
 const ns = 'http://www.w3.org/2000/svg';
 // A large, deterministic tile gives the cloth fine fibres without a dot grid.
@@ -182,14 +182,19 @@ export class SvgTable {
       guides += line(b,g.impact,'#fff4df');
       if (g.objectStart && g.objectEnd) guides += line(g.objectStart,g.objectEnd,'#f8d28b') + '<circle cx="'+g.impact.x*1000+'" cy="'+(-g.impact.z*1000)+'" r="35" fill="#ffffff0c" stroke="#fff8" stroke-width="2"/>';
     }
-    if (state.callEligible) pockets.forEach((p,i) => { guides += '<circle cx="'+p.x*1000+'" cy="'+(-p.z*1000)+'" r="'+(p.z === 0 ? 70 : 88)+'" fill="none" stroke="'+(state.calledPocket === i ? '#ffe2a2' : '#ffffff66')+'" stroke-width="4"/>'; });
+    if (state.callEligible) pockets.forEach((p, i) => {
+      const called = state.calledPocket === i;
+      const color = called ? calledPocketColor : '#ffffff66';
+      const borderWidth = called ? calledPocketBorderWidth * 1000 : 4;
+      guides += `<circle cx="${p.x * 1000}" cy="${-p.z * 1000}" r="${p.z === 0 ? 70 : 88}" fill="none" stroke="${color}" stroke-width="${borderWidth}"/>`;
+    });
     this.guides.innerHTML = guides;
     this.cue.style.display = state.rolling || state.finished ? 'none' : '';
     this.cue.setAttribute('transform','translate('+b.x*1000+' '+(-b.z*1000)+') rotate('+Math.atan2(-state.aim.z,state.aim.x)*180/Math.PI+') translate('+(-(radius+.018+state.pull*.12)*1000)+' 0)');
     const cueKey = state.cueStyle;
     if (this.cue.dataset.finish !== cueKey) {
       this.cue.dataset.finish = cueKey;
-      this.cue.innerHTML = cueArtwork(cueKey);
+      this.cue.innerHTML = cueArtwork(cueKey, true);
     }
   }
 }

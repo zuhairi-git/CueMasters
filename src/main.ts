@@ -3,7 +3,7 @@ import { ballBadge } from './svg-ball';
 import { GameAudio } from './audio';
 import { RemoteShot, remoteKey, remotePlacement, type RemoteKey } from './tv-controls';
 import { SvgTable } from './svg-table';
-import { TvTable } from './tv-table';
+import { TvTable, calledPocketBorderWidth, calledPocketColor } from './tv-table';
 import { dismissDialog } from './tv-dialogs';
 import { installFullscreenControl } from './fullscreen';
 import { cueLength, cuePose } from './cue-geometry';
@@ -50,6 +50,7 @@ const actionDescriptions: Record<string, string> = {
   reset: 'Set up a fresh game',
   openOnline: 'Your profile, QR code & online play',
   openSettings: 'Game, equipment, sound & guides',
+  endGame: 'Return to city selection',
 };
 for (const button of tableActions.querySelectorAll<HTMLButtonElement>('button')) {
   const description = document.createElement('span');
@@ -78,7 +79,7 @@ mobileMenu.onclick = () => setMobileMenu(!menuDialog.open);
 tableActions.addEventListener('click', event => {
   const button = (event.target as Element).closest('button');
   if (!menuDialog.open || !button || button.disabled) return;
-  const childId = button.id === 'openSettings' ? 'settings' : button.id === 'openOnline' ? 'online' : button.id === 'reset' && needsRerackConfirmation() ? 'rerackConfirm' : undefined;
+  const childId = button.id === 'endGame' ? 'endGameConfirm' : button.id === 'openSettings' ? 'settings' : button.id === 'openOnline' ? 'online' : button.id === 'reset' && needsRerackConfirmation() ? 'rerackConfirm' : undefined;
   if (childId) {
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       button.animate([
@@ -92,7 +93,7 @@ tableActions.addEventListener('click', event => {
     document.getElementById(childId)!.classList.add('modal-child');
   } else setMobileMenu(false);
 }, true);
-for (const child of document.querySelectorAll<HTMLDialogElement>('#settings, #online, #rerackConfirm')) {
+for (const child of document.querySelectorAll<HTMLDialogElement>('#settings, #online, #rerackConfirm, #endGameConfirm')) {
   child.addEventListener('close', () => {
     child.classList.remove('modal-child');
     if (menuDialog.dataset.activeChild !== child.id) return;
@@ -378,8 +379,19 @@ const pocketCallRings = pockets.map(pocket => {
   ring.material = pocketCallMaterial;
   ring.isPickable = false;
   ring.isVisible = false;
+  ring.visibility = 0.35;
   return ring;
 });
+const calledPocketRingRadius = 0.088;
+const calledPocketRing = MeshBuilder.CreateTorus('called pocket highlight', {
+  diameter: 2 * calledPocketRingRadius, thickness: calledPocketBorderWidth, tessellation: 48,
+}, scene);
+const calledPocketMaterial = material('called pocket highlight', calledPocketColor);
+calledPocketMaterial.disableLighting = true;
+calledPocketMaterial.emissiveColor = Color3.FromHexString(calledPocketColor);
+calledPocketRing.material = calledPocketMaterial;
+calledPocketRing.isPickable = false;
+calledPocketRing.isVisible = false;
 for (const pocket of pockets) buildPocket(scene, pocket, wood, leather, dark);
 // One continuous beveled cushion per rail, with mitered pocket approaches.
 for (const c of cushions.filter(c => !c.jaw)) {
@@ -588,6 +600,9 @@ snookerLines.setEnabled(false);
 let versusComputer = false;
 const online = new OnlineGame();
 let onlineMode = false;
+let wonByForfeit = false;
+let returningHome = false;
+let leavingMatch = false;
 let groups: Groups = [null, null];
 let winner: number | undefined;
 let breaking = true;
@@ -1110,13 +1125,17 @@ lockButton.onclick = toggleAimLock;
 
 function showReadyStatus() {
   if (tvEnabled) { updateTvControls(); return; }
+  if (online.departureDeadline !== undefined) {
+    status.textContent = 'Opponent left. Waiting for their timer to expire…';
+    return;
+  }
   if (finished) {
-    status.textContent = !snooker && winner !== undefined ? playerName(winner) + ' wins! Re-rack to play again.' :
+    status.textContent = !snooker && winner !== undefined ? playerName(winner) + (wonByForfeit ? ' wins by forfeit!' : ' wins! Re-rack to play again.') :
       scores[0] === scores[1] ? 'Match drawn.' : playerName(scores[0] > scores[1] ? 0 : 1) + ' wins!';
     return;
   }
   if (!canControl()) {
-    status.textContent = onlineMode ? online.active ? playerName(turn) + ' is lining up a shot.' : 'Online game paused. Reconnect or leave through Profile.' : 'Computer is lining up a shot.';
+    status.textContent = onlineMode ? online.active ? playerName(turn) + ' is lining up a shot.' : 'Online game paused. Reconnect through Players or choose End game.' : 'Computer is lining up a shot.';
     return;
   }
   if (aimLocked && !viewMode) {
@@ -1388,6 +1407,7 @@ document.querySelector<HTMLButtonElement>('#camera')!.onclick = event => {
   button.setAttribute('aria-label', overhead ? 'Switch to perspective view' : 'Switch to top-down view');
 };
 function resetMatch() {
+  wonByForfeit = false;
   applyTableFinish();
   tvContext = '';
   balls = rack(snooker, Math.random);
@@ -1443,8 +1463,15 @@ function confirmNewGame(fromSettings: boolean) {
   rerackDialog.returnValue = '';
   rerackDialog.showModal();
 }
-function startSettingsMatch() {
-  if (onlineMode) { online.leave(); onlineMode = false; }
+async function startSettingsMatch() {
+  if (leavingMatch) return;
+  if (onlineMode) {
+    leavingMatch = true;
+    try { await online.leave(!wonByForfeit); }
+    catch { status.textContent = 'Could not end the online game. Try again.'; return; }
+    finally { leavingMatch = false; }
+    onlineMode = false;
+  }
   snooker = select('game').value === 'snooker';
   versusComputer = select('opponent').value === 'computer';
   resetMatch();
@@ -1468,6 +1495,39 @@ rerackDialog.addEventListener('close', () => {
 });
 document.querySelector<HTMLButtonElement>('#noticeRematch')!.onclick = () => {
   if (!onlineMode || online.active && online.seat === 0) resetMatch();
+};
+const endGameDialog = document.querySelector<HTMLDialogElement>('#endGameConfirm')!;
+const endGameStatus = document.querySelector<HTMLElement>('#endGameStatus')!;
+const confirmEndGame = document.querySelector<HTMLButtonElement>('#confirmEndGame')!;
+const keepPlaying = document.querySelector<HTMLButtonElement>('#keepPlaying')!;
+function openEndGame() {
+  endGameStatus.hidden = true;
+  document.querySelector<HTMLElement>('#endGameDescription')!.textContent =
+    onlineMode && !finished && online.departureDeadline === undefined
+      ? 'You’ll return to city selection. Your opponent wins when your timer runs out.'
+      : 'You’ll return to city selection. Your current game will be cleared.';
+  endGameDialog.showModal();
+}
+document.querySelector<HTMLButtonElement>('#endGame')!.onclick = openEndGame;
+document.querySelector<HTMLButtonElement>('#leaveOnline')!.onclick = openEndGame;
+endGameDialog.addEventListener('cancel', event => { if (confirmEndGame.disabled) event.preventDefault(); });
+confirmEndGame.onclick = async () => {
+  if (leavingMatch) return;
+  leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = true;
+  try {
+    await online.leave(onlineMode && !wonByForfeit);
+    returningHome = true;
+    clearSavedGame();
+    const home = new URL(location.href);
+    home.searchParams.delete('join');
+    home.searchParams.delete('table');
+    location.replace(home.href);
+  } catch {
+    endGameStatus.textContent = 'Could not reach the online game. Try again to end it.';
+    endGameStatus.hidden = false;
+    leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = false;
+    confirmEndGame.focus();
+  }
 };
 document.querySelector<HTMLButtonElement>('#openSettings')!.onclick = () => {
   select('game').value = snooker ? 'snooker' : 'pool';
@@ -1561,10 +1621,15 @@ function applyGame(s: SavedGame, preserveLocalAim = false) {
   else status.textContent = 'Balls in motion';
 }
 function saveGame() {
+  if (returningHome || wonByForfeit) return;
   try { localStorage.setItem('billiard-game-v1', JSON.stringify(gameState())); } catch {}
+}
+function clearSavedGame() {
+  try { localStorage.removeItem('billiard-game-v1'); } catch {}
 }
 online.onPaired = resume => {
   setMobileMenu(false);
+  wonByForfeit = false;
   onlineMode = true;
   versusComputer = false;
   snooker = false;
@@ -1612,12 +1677,26 @@ online.onInput = value => {
   }
   if (input.action === 'shoot' && typeof input.strength === 'number' && Number.isFinite(input.strength) && input.strength >= 0.08 && input.strength <= 1) fire(input.strength);
 };
-online.onEnded = () => {
+online.onDeparture = () => {
+  rolling = false;
+  strike = 0;
+  showScore();
+  online.onEnded();
+};
+online.onEnded = winningSeat => {
   if (!onlineMode) return;
   clearStroke();
   tableStroke = undefined;
   aimPointer = undefined;
-  if (online.seat === undefined) { onlineMode = false; resetMatch(); }
+  if (winningSeat === 0 || winningSeat === 1) {
+    wonByForfeit = finished = true;
+    winner = winningSeat;
+    rolling = false;
+    strike = 0;
+    clearSavedGame();
+    showScore();
+    showReadyStatus();
+  } else if (online.seat === undefined) { onlineMode = false; resetMatch(); }
   else showReadyStatus();
 };
 try {
@@ -1735,7 +1814,7 @@ function updateTvControls() {
     power: ['Set power, then shoot', '↑ ↓ Power · OK Shoot · Back Aim'],
   };
   const [title, help] = labels[remote.stage];
-  const stepText = finished ? 'Game finished' : busy ? rolling || strike ? 'Balls in motion' : 'Waiting for opponent' : title;
+  const stepText = online.departureDeadline !== undefined ? 'Opponent left. Waiting for their timer.' : finished ? 'Game finished' : busy ? rolling || strike ? 'Balls in motion' : 'Waiting for opponent' : title;
   const helpText = finished || busy ? 'Back Menu' : remote.stage === 'pocket' ? help + ' · ' + pocketChoice.options[(calledPocket ?? 0) + 1].text : help;
   const powerText = Math.round(remote.power * 100) + '%';
   const presentation = [stepText, helpText, powerText].join('|');
@@ -1815,7 +1894,7 @@ document.addEventListener('keydown', event => {
   const key = remoteKey(event.key, event.keyCode);
   if (!key) return;
   const dialogs = [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')];
-  const dialog = dialogs.find(d => d.classList.contains('modal-child')) ?? dialogs[dialogs.length - 1];
+  const dialog = endGameDialog.open ? endGameDialog : dialogs.find(d => d.classList.contains('modal-child')) ?? dialogs[dialogs.length - 1];
   if (!tvEnabled && !dialog) return;
   // Text fields keep normal typing and their platform's on-screen keyboard.
   if (dialog && event.target instanceof HTMLInputElement && !['range', 'checkbox', 'button'].includes(event.target.type) && event.key !== 'Escape' && key !== 'ok' && !['up', 'down'].includes(key) && event.keyCode !== 10009 && event.keyCode !== 461) return;
@@ -1890,19 +1969,20 @@ function updateGameNotice() {
     confetti.replaceChildren();
   }
   const rematch = document.querySelector<HTMLButtonElement>('#noticeRematch')!;
-  rematch.hidden = kind !== 'win' || onlineMode && online.seat !== 0;
+  rematch.hidden = kind !== 'win' || wonByForfeit || onlineMode && online.seat !== 0;
   rematch.disabled = onlineMode && !online.active;
   document.querySelector<HTMLElement>('#noticeLabel')!.textContent = winningPlayer === undefined ? 'HONOURS EVEN' : 'VICTORY';
   document.querySelector<HTMLElement>('#noticeTitle')!.textContent = winningPlayer === undefined ? 'Match drawn' : playerName(winningPlayer) + ' wins!';
-  document.querySelector<HTMLElement>('#noticeDetail')!.textContent = onlineMode && online.seat !== 0 ? 'What a game! Waiting for the host to start the next round.' : winningPlayer === undefined ? 'A close match. Time for a rematch?' : 'What a finish. Ready for another round?';
+  document.querySelector<HTMLElement>('#noticeDetail')!.textContent = wonByForfeit ? 'Your opponent left and their timer expired.' : onlineMode && online.seat !== 0 ? 'What a game! Waiting for the host to start the next round.' : winningPlayer === undefined ? 'A close match. Time for a rematch?' : 'What a finish. Ready for another round?';
 }
 engine.runRenderLoop(() => {
   updateTvControls();
   updateGameNotice();
   const clock = document.querySelector<HTMLElement>('#shotClock')!;
   clock.hidden = !onlineMode;
-  clock.textContent = finished ? 'Finished' : !online.active ? 'Paused' : rolling || strike ? 'In motion' : Math.ceil(online.remainingMs() / 1000) + 's';
-  clock.classList.toggle('urgent', online.active && !rolling && !strike && online.remainingMs() <= 10000);
+  const departureTime = online.departureDeadline === undefined ? undefined : Math.max(0, online.departureDeadline - performance.now());
+  clock.textContent = departureTime !== undefined ? Math.ceil(departureTime / 1000) + 's' : finished ? 'Finished' : !online.active ? 'Paused' : rolling || strike ? 'In motion' : Math.ceil(online.remainingMs() / 1000) + 's';
+  clock.classList.toggle('urgent', departureTime !== undefined ? departureTime <= 10000 : online.active && !rolling && !strike && online.remainingMs() <= 10000);
   const callEligible = !snooker && !finished && !rolling && !strike && legalTargets().includes(8);
   const showPocketPicker = callEligible && canControl() && !tvEnabled && calledPocket === undefined;
   if (showPocketPicker && callPocket.hidden) setPocketPickerOpen(true);
@@ -1910,10 +1990,15 @@ engine.runRenderLoop(() => {
   pocketChoice.value = calledPocket === undefined ? '' : String(calledPocket);
   pocketSelectors.forEach((mesh, index) => {
     mesh.setEnabled(callEligible && canControl() && !viewMode);
-    pocketCallRings[index].isVisible = callEligible;
-    pocketCallRings[index].scaling.setAll(index === calledPocket ? 1.12 : 1);
-    pocketCallRings[index].visibility = index === calledPocket ? 1 : 0.35;
+    pocketCallRings[index].isVisible = callEligible && index !== calledPocket;
   });
+  const selectedPocket = callEligible && calledPocket !== undefined ? pockets[calledPocket] : undefined;
+  calledPocketRing.isVisible = Boolean(selectedPocket);
+  if (selectedPocket) {
+    const scale = (pocketMouthRadius(selectedPocket) + 0.003) / calledPocketRingRadius;
+    calledPocketRing.position.set(selectedPocket.x, railTop + calledPocketBorderWidth / 2, selectedPocket.z);
+    calledPocketRing.scaling.set(scale, 1, scale);
+  }
   stroke.disabled = rolling || strike > 0 || !canControl() || finished;
   tip.disabled = stroke.disabled;
   if (tip.disabled && spinDialog.open) spinDialog.close();

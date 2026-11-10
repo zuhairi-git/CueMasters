@@ -2,7 +2,40 @@ import { shouldAskAboutTv } from './tv-detection';
 import { remoteKey } from './tv-controls';
 import { installDialogFallback, installDialogDismissal } from './tv-dialogs';
 
+async function pickCity() {
+  const picker = document.querySelector<HTMLElement>('#cityPicker')!;
+  const choices = [...picker.querySelectorAll<HTMLButtonElement>('button[data-city]')];
+  const city = await new Promise<HTMLButtonElement>(resolve => {
+    picker.onkeydown = event => {
+      const key = remoteKey(event.key, event.keyCode);
+      if (!key || key === 'back') return;
+      event.preventDefault();
+      if (key === 'ok') {
+        if (!event.repeat) (event.target as HTMLButtonElement).click();
+      } else {
+        const step = key === 'left' || key === 'up' ? -1 : 1;
+        const index = choices.indexOf(event.target as HTMLButtonElement);
+        choices[(index + step + choices.length) % choices.length].focus();
+      }
+    };
+    for (const choice of choices) {
+      choice.addEventListener('click', () => {
+        picker.onkeydown = null;
+        resolve(choice);
+      }, { once: true });
+    }
+    choices[0].focus();
+  });
+  const name = city.dataset.cityName!;
+  document.body.dataset.city = city.dataset.city;
+  document.querySelector<HTMLElement>('#gameCity')!.textContent = name;
+  document.querySelector<HTMLElement>('#gameMenuTitle')!.textContent = `${name} · Game menu`;
+  document.title = `${name} · Billiard`;
+  picker.hidden = true;
+}
+
 async function start() {
+  await pickCity();
   installDialogFallback();
   installDialogDismissal();
   let preference: string | null = null;

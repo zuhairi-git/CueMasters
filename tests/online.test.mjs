@@ -21,6 +21,8 @@ function inbox(socket) {
   };
 }
 test('online IDs, host authority, profile names, and refresh reconnection', { timeout: 10000 }, async t => {
+  let now = Date.now();
+  t.mock.method(Date, 'now', () => now);
   const server = createServer();
   const sockets = attachOnline(server);
   server.listen(0, '127.0.0.1');
@@ -61,7 +63,29 @@ test('online IDs, host authority, profile names, and refresh reconnection', { ti
   assert.equal(hostResume.resume, true);
   assert.deepEqual(guestResume.state, {turn: 1, sequence: 7});
   rejoined.send({type: 'leave'});
-  await host.next('ended');
+  await rejoined.next('left');
+  assert.deepEqual(await host.next('departure'), {type: 'departure', remaining: 30000, seat: 0, peerName: 'Bobby'});
+  now += 29999;
+  host.send({type: 'host'});
+  await host.next('error');
+  now += 1;
+  assert.equal((await host.next('ended')).winner, 0);
+
+  host.send({type: 'host'});
+  await host.next('waiting');
+  rejoined.send({type: 'join', playerId: host.id});
+  await host.next('paired');
+  await rejoined.next('paired');
+  host.send({type: 'state', state: {turn: 0, rolling: false, strike: 0, finished: false}});
+  await host.next('clock');
+  await rejoined.next('clock');
+  await rejoined.next('state');
+  now += 10000;
+  host.send({type: 'leave'});
+  await host.next('left');
+  assert.deepEqual(await rejoined.next('departure'), {type: 'departure', remaining: 20000, seat: 1, peerName: 'Alice'});
+  now += 20000;
+  assert.equal((await rejoined.next('ended')).winner, 1);
 });
 
 test('profile QR codes round-trip through the same decoder used by the scanner', () => {

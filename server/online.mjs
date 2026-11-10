@@ -20,17 +20,43 @@ export function attachOnline(server) {
       if (host?.peer) { send(host, { type: 'timeout', turn: room.clock.turn }); sendClock(room); }
     }
   };
+  const sendDeparture = room => {
+    const departure = room.departure;
+    const remaining = Math.max(0, departure.deadline - Date.now());
+    const peer = players.get(departure.winnerId);
+    if (!peer) return;
+    if (remaining > 0) {
+      send(peer, { type: 'departure', remaining, seat: departure.winner, peerName: departure.name });
+    } else {
+      rooms.delete(departure.winnerId);
+      send(peer, { type: 'ended', winner: departure.winner, peerName: departure.name, message: 'You won because your opponent left the game.' });
+    }
+  };
   const leave = ws => {
     const room = rooms.get(ws.playerId);
-    if (room) { rooms.delete(room.hostId); rooms.delete(room.guestId); }
     const peer = ws.peer;
     ws.peer = undefined;
     ws.hosting = false;
-    if (peer) {
-      peer.peer = undefined;
-      peer.hosting = false;
-      send(peer, { type: 'ended', message: 'Opponent left. Create a new invite to play again.' });
+    rooms.delete(ws.playerId);
+    if (peer) peer.peer = undefined;
+    if (room && !room.departure) {
+      const seat = ws.playerId === room.hostId ? 0 : 1;
+      const winnerId = seat === 0 ? room.guestId : room.hostId;
+      if (room.state?.finished) {
+        rooms.delete(winnerId);
+        if (peer) send(peer, { type: 'ended', message: 'Opponent left. Create a new invite to play again.' });
+      } else {
+        const now = Date.now();
+        const clock = room.clock;
+        const remaining = clock?.turn === seat
+          ? Math.max(0, clock.deadline === null ? clock.remaining ?? shotTimeMs : clock.deadline - now)
+          : shotTimeMs;
+        room.departure = { deadline: now + remaining, winnerId, winner: 1 - seat, name: ws.playerName };
+        room.updated = now;
+        sendDeparture(room);
+      }
     }
+    send(ws, { type: 'left' });
   };
   const pair = room => {
     const host = players.get(room.hostId), guest = players.get(room.guestId);
@@ -76,12 +102,16 @@ export function attachOnline(server) {
         clearTimeout(registrationTimeout);
         send(ws, { type: 'registered', playerId: id });
         const room = rooms.get(id);
-        if (room) pair(room);
+        if (room?.departure) sendDeparture(room);
+        else if (room) pair(room);
         return;
       }
       if (!ws.playerId) return;
+      if ((data.type === 'host' || data.type === 'join') && rooms.has(ws.playerId)) {
+        send(ws, { type: 'error', message: 'End your current online game before starting another.' });
+        return;
+      }
       if (data.type === 'host') {
-        leave(ws);
         ws.hosting = true;
         send(ws, { type: 'waiting' });
       } else if (data.type === 'join' && !ws.peer) {
@@ -90,7 +120,6 @@ export function attachOnline(server) {
           send(ws, { type: 'error', message: 'That player is not waiting for a game. Ask them to create an invite.' });
           return;
         }
-        leave(ws);
         const room = { hostId: host.playerId, guestId: ws.playerId, state: undefined, updated: Date.now() };
         rooms.set(host.playerId, room);
         rooms.set(ws.playerId, room);
@@ -118,7 +147,7 @@ export function attachOnline(server) {
       // Keep the last authoritative state for ten minutes so refresh can resume.
       const peer = ws.peer;
       const room = rooms.get(ws.playerId);
-      if (room) pauseShotClock(room);
+      if (room && !room.departure) pauseShotClock(room);
       if (peer) {
         peer.peer = undefined;
         send(peer, { type: 'ended', message: 'Opponent disconnected. Waiting for them to reconnect…' });
@@ -138,7 +167,9 @@ export function attachOnline(server) {
   heartbeat.unref();
   const clockTick = setInterval(() => {
     for (const room of new Set(rooms.values())) {
-      if (players.get(room.hostId)?.peer && room.clock) { expire(room); sendClock(room); }
+      if (room.departure) {
+        if (Date.now() >= room.departure.deadline) sendDeparture(room);
+      } else if (players.get(room.hostId)?.peer && room.clock) { expire(room); sendClock(room); }
     }
   }, 500);
   clockTick.unref();

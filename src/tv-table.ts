@@ -2,6 +2,9 @@ import { traceShot } from './aim-guide';
 import { ballMarkings } from './ball-markings';
 import { cushions, length, pockets, radius, width, type Ball } from './physics';
 
+export const calledPocketColor = '#ffdc38';
+export const calledPocketBorderWidth = 0.018;
+
 export function tvViewport(screenWidth: number, screenHeight: number, top: number, bottom: number) {
   const landscape = screenWidth > screenHeight;
   const availableHeight = Math.max(1, bottom - top);
@@ -73,11 +76,11 @@ export class TvTable {
       ctx.lineWidth = thickness * scale;
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
     };
-    const circle = (x: number, z: number, r: number, color: string, outline?: string) => {
+    const circle = (x: number, z: number, r: number, color: string, outline?: string, outlineWidth = 0.004) => {
       const p = point(x, z);
       ctx.beginPath(); ctx.arc(p.x, p.y, r * scale, 0, Math.PI * 2);
       ctx.fillStyle = color; ctx.fill();
-      if (outline) { ctx.strokeStyle = outline; ctx.lineWidth = Math.max(1, scale * 0.004); ctx.stroke(); }
+      if (outline) { ctx.strokeStyle = outline; ctx.lineWidth = Math.max(1, scale * outlineWidth); ctx.stroke(); }
     };
     const rectangle = (w: number, h: number, color: string) => {
       const a = point(-w / 2, -h / 2), b = point(w / 2, h / 2);
@@ -113,12 +116,14 @@ export class TvTable {
     for (let i = 0; i < pockets.length; i++) {
       const p = pockets[i];
       const mouth = p.z === 0 ? 0.067 : 0.085;
+      const called = state.callEligible && state.calledPocket === i;
       circle(p.x, p.z, mouth + 0.012, '#c5ab79');
       circle(p.x, p.z, mouth + 0.009, '#21191c');
-      circle(p.x, p.z, mouth, '#030305', state.callEligible ? state.calledPocket === i ? '#ffe3a1' : '#63ddf1' : undefined);
+      const outline = called ? calledPocketColor : state.callEligible ? '#63ddf1' : undefined;
+      circle(p.x, p.z, mouth, '#030305', outline, called ? calledPocketBorderWidth : undefined);
       if (state.callEligible) {
         const label = point(p.x, p.z);
-        ctx.fillStyle = state.calledPocket === i ? '#ffe3a1' : '#d6c49f';
+        ctx.fillStyle = called ? calledPocketColor : '#d6c49f';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.font = 'bold ' + Math.max(12, scale * 0.04) + 'px sans-serif';
         ctx.fillText(String(i + 1), label.x, label.y);

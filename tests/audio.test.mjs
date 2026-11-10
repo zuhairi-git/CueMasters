@@ -65,7 +65,7 @@ const source = await readFile(new URL('../src/audio.ts', import.meta.url), 'utf8
 const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
 const { GameAudio } = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
 
-test('cue, ball, and pocket impacts have distinct resonances and responsive intensity', async () => {
+test('cue, ball, rail, and pocket impacts have distinct sounds and responsive intensity', async () => {
   const audio = new GameAudio();
   await audio.unlock();
   audio.configure(true, 0.8);
@@ -82,6 +82,10 @@ test('cue, ball, and pocket impacts have distinct resonances and responsive inte
   assert.ok(durations.filter(duration => duration < 0.3).length === 4);
   assert.ok(durations.some(duration => duration > 0.45));
   assert.ok(sources.every(item => item.buffer.data.some(sample => sample !== 0)));
+  const [ballImpact, , railImpact] = sources;
+  assert.equal(ballImpact.buffer.numberOfChannels, 2);
+  assert.equal(railImpact.buffer.numberOfChannels, 1);
+  assert.ok(railImpact.buffer.duration < ballImpact.buffer.duration);
   const impactGains = audio.context.gainNodes.slice(2).map(node => node.gain.value);
   assert.ok(Math.max(...impactGains) > Math.min(...impactGains));
   assert.equal(audio.context.sources.filter(item => item.loop).length, 1);

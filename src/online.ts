@@ -17,7 +17,10 @@ export class OnlineGame {
   private clockRunning = false;
   onState: (state: unknown) => void = () => {};
   onInput: (input: unknown) => void = () => {};
-  onEnded = () => {};
+  onEnded: (winner?: number) => void = () => {};
+  onDeparture = () => {};
+  departureDeadline?: number;
+  private acknowledgeLeave?: () => void;
   private socket?: WebSocket;
   private connection?: Promise<void>;
   private dialog = document.querySelector<HTMLDialogElement>('#online')!;
@@ -70,7 +73,6 @@ export class OnlineGame {
     document.querySelector<HTMLButtonElement>('#openOnline')!.onclick = () => this.open();
     document.querySelector<HTMLButtonElement>('#hostOnline')!.onclick = () => { void this.host(); };
     document.querySelector<HTMLButtonElement>('#joinOnline')!.onclick = () => { void this.join(); };
-    document.querySelector<HTMLButtonElement>('#leaveOnline')!.onclick = () => this.leave();
     document.querySelector<HTMLButtonElement>('#copyInvite')!.onclick = async () => {
       try { await navigator.clipboard.writeText(this.link.href); this.message.textContent = 'Invite copied.'; }
       catch { this.message.textContent = 'Select the invite link to copy or share it.'; }
@@ -149,6 +151,7 @@ export class OnlineGame {
         } else if (data.type === 'waiting') {
           this.message.textContent = 'Waiting for your opponent to join…';
         } else if (data.type === 'paired') {
+          this.departureDeadline = undefined;
           if (!data.resume) { this.clockRemaining = 30000; this.clockRunning = false; }
           this.active = true;
           this.seat = data.seat;
@@ -167,10 +170,25 @@ export class OnlineGame {
         } else if (data.type === 'timeout') this.onTimeout(data.turn);
         else if (data.type === 'input') this.onInput(data.input);
         else if (data.type === 'profile') { this.peerName = data.name; this.onProfile(); }
-        else if (data.type === 'ended') {
+        else if (data.type === 'departure') {
           this.active = false;
+          this.seat = data.seat;
+          this.peerName = data.peerName || 'Player';
+          this.departureDeadline = performance.now() + data.remaining;
+          this.message.textContent = 'Opponent left. Waiting for their timer to expire…';
+          if (this.dialog.open) this.dialog.close();
+          this.onDeparture();
+        } else if (data.type === 'ended') {
+          this.active = false;
+          this.departureDeadline = undefined;
+          if (data.winner === 0 || data.winner === 1) {
+            this.seat = data.winner;
+            this.peerName = data.peerName || 'Player';
+          }
           this.message.textContent = data.message;
-          this.onEnded();
+          this.onEnded(data.winner);
+        } else if (data.type === 'left') {
+          this.acknowledgeLeave?.();
         } else if (data.type === 'error') this.message.textContent = data.message;
       };
       socket.onclose = () => {
@@ -297,12 +315,28 @@ export class OnlineGame {
     } catch { /* Connection status is shown in the dialog. */ }
   }
 
-  leave() {
-    this.send({ type: 'leave' });
+  async leave(reconnect: boolean) {
+    if (this.connection || reconnect) {
+      await this.connect();
+      const socket = this.socket;
+      if (socket?.readyState !== WebSocket.OPEN) throw new Error('Could not reach the game server');
+      await new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => {
+          this.acknowledgeLeave = undefined;
+          reject(new Error('The game server did not acknowledge leaving'));
+        }, 5000);
+        this.acknowledgeLeave = () => {
+          clearTimeout(timeout);
+          this.acknowledgeLeave = undefined;
+          resolve();
+        };
+        socket.send(JSON.stringify({ type: 'leave' }));
+      });
+    }
     this.active = false;
     this.seat = undefined;
+    this.departureDeadline = undefined;
     this.message.textContent = 'Left the online game.';
-    this.onEnded();
   }
 
   remainingMs() {
