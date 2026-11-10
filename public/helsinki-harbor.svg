@@ -1,32 +1,80 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280">
   <defs>
-    <linearGradient id="sky" x2="0" y2="1">
-      <stop stop-color="#244467"/>
-      <stop offset="1" stop-color="#9bd4dd"/>
-    </linearGradient>
-    <linearGradient id="water" x2="0" y2="1">
-      <stop stop-color="#547e98"/>
-      <stop offset="1" stop-color="#203e5d"/>
-    </linearGradient>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#101f38"/><stop offset=".6" stop-color="#4c7287"/><stop offset="1" stop-color="#b6b9aa"/></linearGradient>
+    <linearGradient id="water" x2="0" y2="1"><stop stop-color="#527482"/><stop offset=".45" stop-color="#254658"/><stop offset="1" stop-color="#101f34"/></linearGradient>
+    <linearGradient id="stone" x2="1" y2=".25"><stop stop-color="#819798"/><stop offset=".3" stop-color="#c7cec4"/><stop offset=".7" stop-color="#eee6cf"/><stop offset="1" stop-color="#a6b5b1"/></linearGradient>
+    <linearGradient id="dome"><stop stop-color="#244e55"/><stop offset=".4" stop-color="#668c87"/><stop offset=".65" stop-color="#47746f"/><stop offset="1" stop-color="#1e454c"/></linearGradient>
+    <linearGradient id="reflection" x2="0" y2="1"><stop stop-color="#e6dcb3" stop-opacity=".5"/><stop offset="1" stop-color="#c9dccf" stop-opacity="0"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#d5e4dd" stop-opacity=".24"/><stop offset="1" stop-color="#d5e4dd" stop-opacity="0"/></radialGradient>
+    <radialGradient id="moon"><stop stop-color="#fff8dd"/><stop offset=".8" stop-color="#e0e7d6"/><stop offset="1" stop-color="#b2c8c4"/></radialGradient>
+    <pattern id="windows" width="14" height="15" patternUnits="userSpaceOnUse"><path fill="#142d3c" d="M5 4h4v7H5z"/><path fill="#ead29b" opacity=".6" d="M5 4h3v5H5z"/></pattern>
+    <pattern id="ripples" width="100" height="13" patternUnits="userSpaceOnUse"><path d="M3 4h18m14 5h33m13-7h12M6 12h7" fill="none" stroke="#a5c1c6" stroke-opacity=".16" stroke-width=".65"/></pattern>
+    <g id="column"><path fill="#677e80" d="M-1 0h8v32h-8z"/><path fill="url(#stone)" d="M0 0h5v32H0z"/><path stroke="#f0e8d3" stroke-width=".6" d="M1 2v28M3 2v28"/><path fill="#d7d8c8" d="M-2 0h9v3h-9zm0 30h9v3h-9z"/></g>
   </defs>
-  <path fill="url(#sky)" d="M0 0h640v214H0z"/>
-  <circle cx="468" cy="80" r="34" fill="#e0edf0" opacity=".88"/>
-  <path fill="#d1e9ee" opacity=".3" d="M41 84h135v3H41zm60 10h120v2H101zm391 21h116v3H492zm-22 8h103v2H470zM279 53h75v2h-75z"/>
-  <path fill="#57788d" d="M0 179h42v-18h28v11h25v-25h14v-13l19 13h24v31h22v-14h39v18h229v-29h23v-9h24v20h35v-29h33v18h37v19h46v42H0z"/>
-  <path fill="#6f909f" d="M0 197h31v-17h41v17h27v-20h28v-12l18-10 18 10v12h24v22h27v-17h27v27h151v-18h33v-17h37v14h30v-23h28v-11l18-8 18 8v11h24v30h26v-13h34v25H0z"/>
-  <path fill="#acc2c9" d="M214 192h212v9H214z"/>
-  <path fill="#c6d7d9" d="M241 156h158v36H241z"/>
-  <path fill="#e1e7df" d="M264 143h112v49H264z"/>
-  <path fill="#b5ced0" d="M267 157l53-25 53 25z"/>
-  <path fill="#f1eee1" d="M280 160h80v5h-80zm5 8h7v24h-7zm20 0h7v24h-7zm23 0h7v24h-7zm20 0h7v24h-7z"/>
-  <path fill="#e3e9e4" d="M297 109h46v32h-46zm-61 27h23v24h-23zm145 0h23v24h-23z"/>
-  <path fill="#537e82" d="M297 109c0-16 10-24 23-31 13 7 23 15 23 31zm-61 27c0-9 4-14 11.5-18 7.5 4 11.5 9 11.5 18zm145 0c0-9 4-14 11.5-18 7.5 4 11.5 9 11.5 18z"/>
-  <path stroke="#41636d" stroke-width="2" d="M320 78V66m-4 4h8m-76 48v-7m144 7v-7"/>
-  <path fill="#708f9d" d="M307 119h5v12h-5zm10 0h6v12h-6zm11 0h5v12h-5z"/>
-  <path fill="#35556d" d="M0 207h640v9H0z"/>
-  <path fill="url(#water)" d="M0 216h640v64H0z"/>
-  <path fill="#b5e1e5" opacity=".5" d="M51 227h96v2H51zm169 5h201v2H220zm-33 12h123v2H187zm146 0h75v2h-75zm99 10h157v2H432zm-381 9h159v2H51zm209 5h145v2H260zm212-46h128v2H472z"/>
-  <path fill="#1c374f" d="M84 239h78l-11 8H95z"/>
-  <path fill="#b7d1d8" d="M110 230h28l9 9h-37z"/>
-  <path stroke="#1c374f" stroke-width="2" d="M124 230v-12"/>
+  <style>
+    .clouds { animation: drift 36s ease-in-out infinite alternate; }
+    .shimmer { animation: shimmer 7s ease-in-out infinite alternate; }
+    .shimmer-secondary { animation: shimmer 9s ease-in-out -4s infinite alternate-reverse; }
+    .boat { transform-box: fill-box; transform-origin: center; animation: bob 6s ease-in-out infinite; }
+    @keyframes drift { to { transform: translateX(12px); } }
+    @keyframes shimmer { from { opacity: .35; transform: translateX(-3px); } to { opacity: .7; transform: translateX(3px); } }
+    @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-.5deg); } 50% { transform: translateY(1.5px) rotate(.5deg); } }
+    @media (prefers-reduced-motion: reduce) { .clouds, .shimmer, .shimmer-secondary, .boat { animation: none; } }
+  </style>
+  <path fill="url(#sky)" d="M0 0h640v215H0z"/>
+  <circle cx="471" cy="66" r="90" fill="url(#halo)"/>
+  <circle cx="471" cy="66" r="21" fill="url(#moon)"/>
+  <g fill="#9daea6" opacity=".14"><ellipse cx="465" cy="60" rx="6" ry="8"/><ellipse cx="478" cy="72" rx="8" ry="5"/><circle cx="464" cy="76" r="3"/></g>
+  <g fill="#eef0dd" opacity=".5"><circle cx="87" cy="30" r=".65"/><circle cx="223" cy="43" r=".6"/><circle cx="369" cy="22" r=".7"/><circle cx="562" cy="37" r=".55"/><circle cx="144" cy="61" r=".45"/></g>
+  <g class="clouds" fill="#b1c6ca" opacity=".13"><path d="M23 79q35-7 65-3t72 4q-62 5-137-1M371 103q43-8 91-2t92 2q-91 5-183 0M159 53q46-5 91 2-55 2-91-2"/></g>
+  <!-- Distant roofs recede into the evening haze. -->
+  <path fill="#496371" d="M0 169h16v-17h31v10h21v-22h25v13h18v-31l5-7 5 7v31h31v-10h32v17h32v-13h21v28h191v-28h29v-14h30v15h25v-20h35v20h22v-9h31v22h44v-13h28v67H0z"/>
+  <g stroke="#334d5b" stroke-width="1">
+    <path fill="#6c7c7e" d="M0 174h48v32H0zM42 166h52v40H42zM96 161h53v45H96zM152 174h46v32h-46zM193 182h43v24h-43z"/>
+    <path fill="#7e8987" d="M431 172h40v34h-40zM473 158h48v48h-48zM524 166h51v40h-51zM578 178h62v28h-62z"/>
+    <path fill="#2d4857" d="m39 166 29-13 29 13zm54-5 28-17 31 17zm377-3 27-15 27 15zm51 8 28-15 29 15z"/>
+  </g>
+  <path fill="url(#windows)" opacity=".7" d="M0 177h92v26H0zM99 165h47v38H99zM155 179h40v24h-40zM196 186h37v17h-37zM434 177h34v26h-34zM477 162h40v41h-40zM528 170h43v33h-43zM581 182h59v21h-59z"/>
+  <!-- Cathedral: shaded wings, copper domes, and a columned portico. -->
+  <path fill="#728c90" d="M237 150h165v44H237z"/>
+  <path fill="url(#stone)" d="M241 147h157v47H241z"/>
+  <path fill="#aec0b9" d="M261 142h117v52H261z"/>
+  <path fill="#6e8888" d="M294 107h51v41h-51z"/>
+  <path fill="url(#stone)" d="M297 105h45v40h-45z"/>
+  <path fill="url(#dome)" d="M296 106c0-16 7-25 24-34 17 9 24 18 24 34z"/>
+  <path d="M302 103q1-17 18-31m-8 32q-1-20 8-32m9 32q1-20-9-32m18 32q-1-18-18-32" fill="none" stroke="#9db3a1" stroke-opacity=".35"/>
+  <path fill="#94a9a2" d="M294 104h52v4h-52zM295 140h49v4h-49z"/>
+  <g fill="#38545b" stroke="#e0ddc8" stroke-width="1"><path d="M304 130v-13a3 3 0 0 1 6 0v13zM317 130v-13a3 3 0 0 1 6 0v13zM330 130v-13a3 3 0 0 1 6 0v13z"/></g>
+  <path fill="url(#stone)" d="M235 132h24v29h-24zM381 132h24v29h-24z"/>
+  <path fill="url(#dome)" d="M235 132q0-13 12-20 12 7 12 20zM381 132q0-13 12-20 12 7 12 20z"/>
+  <path stroke="#b8bca5" stroke-width="1.3" d="M320 73V60m-4 5h8m-77 47v-8m146 8v-8"/>
+  <path fill="#34545d" d="M244 141h6v13h-6zM390 141h6v13h-6z"/>
+  <path fill="#667e80" d="M269 160h103v34H269z"/>
+  <path fill="#d9ddcf" d="m263 158 57-27 57 27z"/>
+  <path fill="#8fa6a2" d="m274 153 46-21 46 21z"/>
+  <path fill="#becbc0" d="m284 151 36-16 36 16z"/>
+  <path fill="#eeead7" d="M265 157h110v4H265z"/>
+  <path fill="#293e43" d="M315 176a5 5 0 0 1 10 0v18h-10z"/>
+  <use href="#column" x="276" y="161"/><use href="#column" x="291" y="161"/><use href="#column" x="306" y="161"/><use href="#column" x="329" y="161"/><use href="#column" x="344" y="161"/><use href="#column" x="359" y="161"/>
+  <path fill="#b8c4bb" d="M253 194h134v3H253zM245 197h150v3H245zM232 200h176v3H232zM219 203h202v3H219z"/>
+  <path stroke="#70888a" stroke-width=".7" d="M245 200h150m-163 3h176m-155-6h134"/>
+  <path fill="#2c444f" d="M0 206h640v9H0z"/>
+  <path stroke="#93a29a" stroke-width="1" d="M0 206h640"/>
+  <g stroke="#263f4b" stroke-width="1.2" fill="#f4ddb0"><path d="M30 207v-9m57 9v-9m104 9v-9m253 9v-9m75 9v-9m88 9v-9"/><circle cx="30" cy="198" r="1.8"/><circle cx="87" cy="198" r="1.8"/><circle cx="191" cy="198" r="1.8"/><circle cx="444" cy="198" r="1.8"/><circle cx="519" cy="198" r="1.8"/><circle cx="607" cy="198" r="1.8"/></g>
+  <path fill="url(#water)" d="M0 215h640v65H0z"/>
+  <path fill="url(#reflection)" opacity=".4" d="m289 216 63 0 28 64H265zM461 216h20l33 64h-87z"/>
+  <path fill="url(#ripples)" d="M0 217h640v63H0z"/>
+  <g class="shimmer" fill="none" stroke="#d4ddcb" stroke-linecap="round"><path stroke-width="1.2" d="M458 220h27m-35 6h30m-19 6h33m-51 7h39m-22 8h44m-71 10h37m-20 11h66"/><path stroke-width=".8" d="M284 219h62m-50 6h55m-76 7h37m10 1h33m-65 8h47m-57 10h31m17 1h31"/></g>
+  <g class="shimmer-secondary" stroke="#a9c5c7" stroke-width=".7"><path d="M14 229h44m15 18h39m79-23h53m-80 36h62m155-34h30m128 13h64m-48 24h57M20 271h49m175-7h23"/></g>
+  <g stroke="#dec491" opacity=".3"><path d="M27 219h7m-10 5h12m47-5h8m96 1h8m246 1h9m65-2h9m82 3h9"/></g>
+  <ellipse cx="119" cy="253" rx="40" ry="3" fill="#0c2232" opacity=".35"/>
+  <g class="boat">
+    <path fill="#112938" d="m80 241 81-1-12 10H94z"/>
+    <path fill="#7e969b" d="m83 241 75-1-4 3H87z"/>
+    <path fill="#bdc9c3" d="M107 231h29l10 9h-39z"/>
+    <path fill="#304f60" d="M111 233h10v6h-10zm13 0h10l6 6h-16z"/>
+    <path stroke="#263f4c" stroke-width="1.2" d="M120 231v-17m0 5 15 10"/>
+    <path stroke="#cfbea0" stroke-width=".6" d="M93 240v-4h12m41 4v-4h8"/>
+    <circle cx="107" cy="240" r="1" fill="#f1d59c"/>
+  </g>
 </svg>
