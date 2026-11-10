@@ -24,7 +24,7 @@ export function attachOnline(server) {
     const departure = room.departure;
     const remaining = Math.max(0, departure.deadline - Date.now());
     const peer = players.get(departure.winnerId);
-    if (!peer) return;
+    if (peer?.readyState !== WebSocket.OPEN) return;
     if (remaining > 0) {
       send(peer, { type: 'departure', remaining, seat: departure.winner, peerName: departure.name });
     } else {
