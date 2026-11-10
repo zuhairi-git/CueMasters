@@ -181,7 +181,6 @@ footer.game-hud .power-track { position: relative; height: 5px; background: #070
 footer.game-hud .power-track span { background: linear-gradient(90deg, #78b578, #e1c26d 65%, #e7995b); }
 footer.game-hud .power-track::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(5% - 1px), #0b192c calc(5% - 1px) 5%); }
 footer.game-hud #powerValue { padding: 7px 0; border-block: 1px solid #c5a76c38; color: #9aeaf6; font: 700 .75rem ui-monospace, monospace; }
-footer.game-hud .call-pocket { padding-bottom: 6px; border-bottom: 1px solid var(--border); }
 .camera-zoom.game-hud { border-radius: 9px; }
 .game-hud .zoom-label { color: #a4c1e4; }
 .game-hud .zoom-button { color: #b8d6f4; }
@@ -294,6 +293,7 @@ footer.game-hud .contact .control-label { display: block; font-size: .52rem; }
     border-top: 1px solid var(--border);
   }
   .camera-zoom.game-hud .zoom-button { width: 30px; min-height: 32px; height: 32px; font-size: .95rem; }
+  .camera-zoom.game-hud #panTable { flex: 0 0 44px; height: 36px; }
   .camera-zoom.game-hud .zoom-value { width: auto; min-width: 34px; font-size: .62rem; }
   .camera-zoom.game-hud #cameraZoom {
     writing-mode: horizontal-tb;
@@ -309,13 +309,12 @@ footer.game-hud .contact .control-label { display: block; font-size: .52rem; }
   .camera-zoom.game-hud #cameraZoom::-moz-range-thumb { width: 5px; height: 20px; }
   .camera-zoom.game-hud .fine-aim { display: none; }
   body.compact-hud .camera-zoom.game-hud { display: flex; }
-  body.compact-hud .camera-zoom.game-hud > :not(.fine-aim) { display: none; }
-  body.compact-hud .camera-zoom.game-hud .fine-aim { display: flex; }
+  body.compact-hud .camera-zoom.game-hud > :not(.fine-aim, #panTable:enabled) { display: none; }
+  body.compact-hud .camera-zoom.game-hud .fine-aim { display: flex; flex: 1 1 0; min-width: 0; }
 }
 
 /* TV play keeps the table and a single, readable remote instruction strip. */
 body.compatibility-table :is(#viewMode, #camera) { display: none; }
-body.compatibility-table .camera-zoom > :not(.fine-aim) { display: none; }
 body.tv-mode footer.game-hud > :not(#tvControls),
 body.tv-mode .camera-zoom,
 body.tv-mode header.game-hud > #tableActions,
@@ -446,7 +445,7 @@ body.tv-mode .game-hud #status { font-size: .9rem; }
   .vertical-controls .camera-zoom.game-hud {
     left: max(8px, env(safe-area-inset-left));
     right: auto;
-    grid-template-rows: auto auto minmax(60px, auto) auto auto auto;
+    grid-template-rows: auto auto minmax(60px, auto) auto auto auto auto;
     padding-bottom: 8px;
   }
   .vertical-controls .camera-zoom.game-hud .fine-aim {

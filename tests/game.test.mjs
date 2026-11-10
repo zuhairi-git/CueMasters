@@ -82,11 +82,17 @@ test('saved games round-trip with a moving shot, groups, turn and aim lock', () 
     aim:[0,1], strike:0, shotPower:0.6, tip:[0.1,-0.2], aimLocked:false,
   };
   saved.balls[0].vz = 1.5;
+  assert.equal(validGame(saved), true);
+  saved.balls[0].orientation = [0.6, 0, 0, 0.8];
   const restored = JSON.parse(JSON.stringify(saved));
   assert.equal(validGame(restored), true);
   assert.equal(restored.balls[0].vz, 1.5);
+  assert.deepEqual(restored.balls[0].orientation, saved.balls[0].orientation);
   assert.deepEqual(restored.groups, ['Solids','Stripes']);
   assert.equal(restored.turn, 1);
+  restored.balls[0].orientation = [0, 0, 0, 0];
+  assert.equal(validGame(restored), false);
+  delete restored.balls[0].orientation;
   restored.balls[0].x = 99;
   assert.equal(validGame(restored), false);
 });

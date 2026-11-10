@@ -40,6 +40,27 @@ test('sliding friction spends energy, transitions to rolling, and stops', () => 
   assert.equal(isMoving(b), false);
 });
 
+test('visible rotation follows spin through skid, roll, and sidespin', () => {
+  const rolling = ball(0, 0, 0, 1);
+  const skidding = ball();
+  strikeBall(skidding, 0, 1, 1);
+  advance([rolling], 0.03);
+  advance([skidding], 0.03);
+  const [x, y, z, w] = rolling.orientation;
+  assert.ok(Math.abs(2 * Math.atan2(x, w) - rolling.z / radius) < 0.001);
+  assert.equal(y, 0);
+  assert.equal(z, 0);
+  assert.ok(skidding.z > rolling.z * 0.95);
+  assert.ok(skidding.orientation[0] < x * 0.1);
+
+  const spinning = { ...ball(), sideSpin: 4 };
+  step([spinning], 1 / 300);
+  assert.ok(spinning.orientation[1] > 0);
+  assert.equal(spinning.x, 0);
+  assert.equal(spinning.z, 0);
+  assert.ok(Math.abs(Math.hypot(...spinning.orientation) - 1) < 1e-12);
+});
+
 test('backspin draws the cue back after contact; topspin follows forward', () => {
   const shot = tip => {
     const balls = [ball(-2 * radius - 0.001), ball()];
@@ -108,6 +129,27 @@ test('break remains finite, separates the rack, and eventually settles', () => {
     if (balls[i].pocketed || balls[j].pocketed) continue;
     assert.ok(Math.hypot(balls[i].x - balls[j].x, balls[i].z - balls[j].z) >= 2 * radius - 0.0001);
   }
+});
+
+test('small rack variations change the spread of identical breaks', () => {
+  const makeRack = seed => rack(false, () => {
+    seed = (Math.imul(1664525, seed) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  });
+  const first = makeRack(1), second = makeRack(2);
+  for (const balls of [first, second]) {
+    assert.deepEqual(balls[1], rack()[1]);
+    assert.ok(balls[8].z > balls[1].z && Math.abs(balls[8].x) < 0.001);
+    assert.ok(balls[7].x < -0.14 && balls[15].x > 0.14);
+    for (let i = 1; i < balls.length; i++) for (let j = i + 1; j < balls.length; j++) {
+      assert.ok(Math.hypot(balls[i].x - balls[j].x, balls[i].z - balls[j].z) >= 2 * radius);
+    }
+    strikeBall(balls[0], 0, 1, 4.3);
+    advance(balls, 2);
+  }
+  const spreadDifference = first.slice(1).reduce((total, b, i) =>
+    total + Math.hypot(b.x - second[i + 1].x, b.z - second[i + 1].z), 0);
+  assert.ok(spreadDifference > 0.2);
 });
 
 test('equal elapsed time gives consistent results across caller frame rates', () => {

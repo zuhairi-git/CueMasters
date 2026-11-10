@@ -9,6 +9,8 @@ export const pockets = [-1, 1].flatMap(side =>
   }))
 );
 
+export type BallOrientation = [number, number, number, number];
+
 export interface Ball {
   x: number;
   z: number;
@@ -18,15 +20,18 @@ export interface Ball {
   spinX: number;
   spinZ: number;
   sideSpin: number;
+  orientation?: BallOrientation;
 }
 
-export function rack(snooker = false): Ball[] {
+export function rack(snooker = false, random?: () => number): Ball[] {
   const make = (x: number, z: number): Ball => ({ x, z, vx: 0, vz: 0, pocketed: false, spinX: 0, spinZ: 0, sideSpin: 0 });
   const balls = [make(0, -0.65)];
-  const spacing = 2 * radius + 0.0005;
+  // Leave room for millimetre-scale differences in how a new rack is set up.
+  const spacing = 2 * radius + (random ? 0.0025 : 0.0005);
   for (let row = 0; row < 5; row++) {
     for (let column = 0; column <= row; column++) {
-      balls.push(make((column - row / 2) * spacing, 0.48 + row * spacing * Math.sqrt(3) / 2));
+      const jitter = () => random && row ? (random() - 0.5) * 0.0016 : 0;
+      balls.push(make((column - row / 2) * spacing + jitter(), 0.48 + row * spacing * Math.sqrt(3) / 2 + jitter()));
     }
   }
   if (!snooker) {
@@ -182,10 +187,34 @@ function cushionContact(ball: Ball, cushion: Cushion, sound?: Sound) {
   ball.sideSpin += 2.5 * friction / radius;
 }
 
+function rotateBall(ball: Ball, x: number, y: number, z: number, dt: number) {
+  const angularSpeed = Math.hypot(x, y, z);
+  if (angularSpeed < 1e-8) return;
+  const halfAngle = angularSpeed * dt / 2;
+  const scale = Math.sin(halfAngle) / angularSpeed;
+  x *= scale;
+  y *= scale;
+  z *= scale;
+  const w = Math.cos(halfAngle);
+  const [a, b, c, d] = ball.orientation ?? [0, 0, 0, 1];
+  const next: BallOrientation = [
+    w * a + x * d + y * c - z * b,
+    w * b - x * c + y * d + z * a,
+    w * c + x * b - y * a + z * d,
+    w * d - x * a - y * b - z * c,
+  ];
+  const norm = Math.hypot(...next);
+  ball.orientation = [next[0] / norm, next[1] / norm, next[2] / norm, next[3] / norm];
+}
+
 function substep(balls: Ball[], dt: number, sound?: Sound) {
   for (const ball of balls) {
     if (ball.pocketed) continue;
+    const { spinX, spinZ, sideSpin } = ball;
     clothFriction(ball, dt);
+    // Use angular velocity at the cloth, including the transition from skid to roll.
+    rotateBall(ball, (spinZ + ball.spinZ) / (2 * radius),
+      (sideSpin + ball.sideSpin) / 2, -(spinX + ball.spinX) / (2 * radius), dt);
     ball.x += ball.vx * dt;
     ball.z += ball.vz * dt;
     if (pockets.some(p => Math.hypot(p.x - ball.x, p.z - ball.z) < pocketCaptureRadius)) {

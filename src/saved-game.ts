@@ -14,11 +14,13 @@ export function validGame(value: unknown): value is SavedGame {
   if (!value || typeof value !== 'object') return false;
   const s = value as SavedGame;
   const finite = (v: unknown, max: number) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= max;
+  const validOrientation = (v: unknown) => v === undefined || Array.isArray(v) && v.length === 4
+    && v.every(component => finite(component, 1)) && Math.abs(Math.hypot(...v) - 1) < 1e-6;
   const index = (v: unknown) => Number.isInteger(v) && Number(v) >= 0 && Number(v) < (s.snooker ? 22 : 16);
   return s.version === 1 && ['snooker', 'versusComputer', 'onlineMode', 'breaking', 'shotWasBreak', 'colourAfterRed', 'finished', 'rolling', 'aimLocked'].every(k => typeof (s as unknown as Record<string, unknown>)[k] === 'boolean')
     && (s.calledPocket === undefined || Number.isInteger(s.calledPocket) && s.calledPocket >= 0 && s.calledPocket < 6)
     && (s.turn === 0 || s.turn === 1) && (s.winner === undefined || s.winner === 0 || s.winner === 1)
-    && Array.isArray(s.balls) && s.balls.length === (s.snooker ? 22 : 16) && s.balls.every(b => b && typeof b.pocketed === 'boolean' && finite(b.x, 0.8) && finite(b.z, 1.5) && [b.vx, b.vz, b.spinX, b.spinZ].every(v => finite(v, 12)) && finite(b.sideSpin, 200))
+    && Array.isArray(s.balls) && s.balls.length === (s.snooker ? 22 : 16) && s.balls.every(b => b && typeof b.pocketed === 'boolean' && finite(b.x, 0.8) && finite(b.z, 1.5) && [b.vx, b.vz, b.spinX, b.spinZ].every(v => finite(v, 12)) && finite(b.sideSpin, 200) && validOrientation(b.orientation))
     && Array.isArray(s.scores) && s.scores.length === 2 && s.scores.every(v => finite(v, 100000) && v >= 0)
     && Array.isArray(s.groups) && s.groups.length === 2 && s.groups.every(g => g === null || g === 'Solids' || g === 'Stripes')
     && (s.firstContact === undefined || index(s.firstContact))

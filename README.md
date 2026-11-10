@@ -52,7 +52,8 @@ lightweight Canvas 2D renderer. All views use the same physics and match state.
 - The game saves locally every half second and when the page hides. Refresh restores an
   unfinished shot as well as the ball positions, players, turn, groups and scores.
 - The camera ruler on the right zooms from 0.65× to 2.5×. Drag its marker, use +/−,
-  or tap the magnification to return to the fitted table view. Zoom is remembered.
+  or tap the magnification to return to the fitted table view. When zoomed in, tap
+  the hand and drag the table, or hold Space and drag with the mouse.
 - The centred player panels show the assigned groups and a stack of numbered balls.
   Pocketed balls are bright; balls still on the table appear faint. Ball in hand and
   the winning player also have explicit banners.

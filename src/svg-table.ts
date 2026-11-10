@@ -1,7 +1,8 @@
 import { cueArtwork } from './svg-cue';
 import { ballArtwork } from './svg-ball';
+import { ballMarkings } from './ball-markings';
 import { traceShot } from './aim-guide';
-import { cushions, width, length, radius, pockets } from './physics';
+import { cushions, width, length, radius, pockets, type BallOrientation } from './physics';
 import type { TableState } from './tv-table';
 
 const ns = 'http://www.w3.org/2000/svg';
@@ -20,18 +21,25 @@ function feltFibres() {
 
 export function svgViewport(w: number, h: number, top: number, bottom: number, zoom = 1) {
   const landscape = w > h;
-  const scale = Math.min(Math.max(1, w - 20) / ((landscape ? length : width) + .30), Math.max(1, bottom - top) / ((landscape ? width : length) + .30)) * zoom;
-  return { landscape, scale, cx: w / 2, cy: (top + bottom) / 2 };
+  const tableWidth = (landscape ? length : width) + .30;
+  const tableHeight = (landscape ? width : length) + .30;
+  const availableWidth = Math.max(1, w - 20);
+  const availableHeight = Math.max(1, bottom - top);
+  const scale = Math.min(availableWidth / tableWidth, availableHeight / tableHeight) * zoom;
+  const maxPanX = Math.max(0, (tableWidth * scale - availableWidth) / 2);
+  const maxPanY = Math.max(0, (tableHeight * scale - availableHeight) / 2);
+  return { landscape, scale, cx: w / 2, cy: (top + bottom) / 2, maxPanX, maxPanY };
 }
 export class SvgTable {
   private view = svgViewport(1280, 720, 100, 620);
+  private panX = 0;
+  private panY = 0;
   private root: SVGGElement;
   private table: SVGGElement;
   private guides: SVGGElement;
   private cue: SVGGElement;
   private balls: SVGGElement[];
-  private previous: {x: number; z: number}[] = [];
-  private angles: number[] = [];
+  private orientations: (BallOrientation | null)[] = [];
   private finish = '';
   constructor(private svg: SVGSVGElement) {
     svg.innerHTML = `<defs>
@@ -58,17 +66,27 @@ export class SvgTable {
   resize(w: number, h: number, top: number, bottom: number, zoom = 1) {
     this.svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
     this.view = svgViewport(w, h, top, bottom, zoom);
+    this.panBy(0, 0);
+  }
+  panBy(dx: number, dy: number) {
     const v = this.view;
-    this.root.setAttribute('transform', 'translate(' + v.cx + ' ' + v.cy + ') scale(' + v.scale / 1000 + ') rotate(' + (v.landscape ? 90 : 0) + ')');
+    this.panX = Math.max(-v.maxPanX, Math.min(v.maxPanX, this.panX + dx));
+    this.panY = Math.max(-v.maxPanY, Math.min(v.maxPanY, this.panY + dy));
+    this.root.setAttribute('transform', 'translate(' + (v.cx + this.panX) + ' ' + (v.cy + this.panY) + ') scale(' + v.scale / 1000 + ') rotate(' + (v.landscape ? 90 : 0) + ')');
+  }
+  resetPan() {
+    this.panBy(-this.panX, -this.panY);
   }
   project(x: number, z: number) {
     const v = this.view;
-    return { x: v.cx + (v.landscape ? z : x) * v.scale, y: v.cy + (v.landscape ? x : -z) * v.scale };
+    return { x: v.cx + this.panX + (v.landscape ? z : x) * v.scale, y: v.cy + this.panY + (v.landscape ? x : -z) * v.scale };
   }
   pick(sx: number, sy: number, rails = false) {
     const v = this.view;
-    const x = (v.landscape ? sy - v.cy : sx - v.cx) / v.scale;
-    const z = (v.landscape ? sx - v.cx : v.cy - sy) / v.scale;
+    const dx = sx - v.cx - this.panX;
+    const dy = sy - v.cy - this.panY;
+    const x = (v.landscape ? dy : dx) / v.scale;
+    const z = (v.landscape ? dx : -dy) / v.scale;
     const margin = rails ? .16 : 0;
     if (Math.abs(x) > width / 2 + margin || Math.abs(z) > length / 2 + margin) return;
     return {x, z};
@@ -84,10 +102,6 @@ export class SvgTable {
       <rect x="-635" y="-1270" width="1270" height="2540" fill="url(#sv-fibre)"/>
       <rect x="-629" y="-1264" width="1258" height="2528" fill="none" stroke="#00131c" stroke-width="12" opacity=".035"/>`;
     const cushion = (d: string) => { s += '<path d="' + d + '" fill="' + felt + '"/><path d="' + d + '" fill="url(#sv-cushion)" stroke="#ffffff" stroke-opacity=".12" stroke-width="1.5"/>'; };
-    for (const p of pockets) {
-      const r = p.z === 0 ? 67 : 85;
-      s += '<circle cx="'+p.x*1000+'" cy="'+(-p.z*1000)+'" r="'+(r+5)+'" fill="#342b2b" stroke="#b7a27e" stroke-width="2"/><circle cx="'+p.x*1000+'" cy="'+(-p.z*1000)+'" r="'+r+'" fill="url(#sv-pocket)"/>';
-    }
     // Each jaw follows the collision approach, then curves along the pocket lip.
     for (const c of cushions.filter(c => !c.jaw)) {
       const a = {x:c.ax*1000,y:-c.az*1000}, b = {x:c.bx*1000,y:-c.bz*1000};
@@ -124,10 +138,19 @@ export class SvgTable {
     }
     if (state.snooker) s += '<path d="M-635 740H635 M-220 740 A220 220 0 0 0 220 740" fill="none" stroke="#f6dfcd" stroke-opacity=".45" stroke-width="2"/>';
     else s += '<path d="M-635 635H635" stroke="#fff" stroke-opacity=".12" stroke-width="2"/>';
-    this.table.innerHTML = s;
+    // Paint the complete pocket over the cushion ends so the rim stays continuous.
+    s += '<g class="sv-pockets">';
+    for (const p of pockets) {
+      const r = p.z === 0 ? 67 : 85;
+      const center = `<circle cx="${p.x * 1000}" cy="${-p.z * 1000}"`;
+      s += `${center} r="${r + 5}" fill="#342b2b" stroke="#b7a27e" stroke-width="2"/>`;
+      s += `${center} r="${r}" fill="url(#sv-pocket)"/>`;
+    }
+    this.table.innerHTML = s + '</g>';
     state.balls.forEach((_, i) => {
-      this.balls[i].innerHTML = ballArtwork(i, state.snooker);
+      this.balls[i].innerHTML = ballArtwork(i, state.snooker, true);
     });
+    this.orientations = [];
   }
   draw(state: TableState) {
     const key = state.snooker + state.tableStyle + state.balls.length;
@@ -136,10 +159,19 @@ export class SvgTable {
       const g = this.balls[i];
       g.style.display = b.pocketed ? 'none' : '';
       g.setAttribute('transform', 'translate('+b.x*1000+' '+(-b.z*1000)+')');
-      const prev = this.previous[i];
-      if (prev && state.rolling) this.angles[i] = (this.angles[i] || 0) + Math.hypot(b.x-prev.x,b.z-prev.z) / radius * 30;
-      this.previous[i] = { x: b.x, z: b.z };
-      g.querySelector('.sv-ball-art')?.setAttribute('transform', 'rotate('+(this.angles[i] || 0)+')');
+      const orientation = b.orientation ?? null;
+      if (b.pocketed || state.snooker && i > 0 || this.orientations[i] === orientation) return;
+      this.orientations[i] = orientation;
+      const { mark, caps } = ballMarkings(b.orientation, i > 8, i === 0);
+      const size = radius * 1000;
+      mark[4] *= size;
+      mark[5] *= size;
+      g.querySelector('.sv-ball-mark')?.setAttribute('transform', 'matrix(' + mark.join(' ') + ')');
+      if (caps.length) {
+        const path = caps.filter(points => points.length).map(points =>
+          'M' + points.map(([x, y]) => (x * size).toFixed(2) + ' ' + (y * size).toFixed(2)).join('L') + 'Z');
+        g.querySelector('.sv-ball-caps')?.setAttribute('d', path.join(' '));
+      }
     });
     this.balls.forEach((g, i) => { if (i >= state.balls.length) g.style.display = 'none'; });
     const b = state.balls[0];

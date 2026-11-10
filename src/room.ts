@@ -1,5 +1,39 @@
 import { roomBounds } from './camera-bounds';
-import { Color3, DynamicTexture, MeshBuilder, Scene, StandardMaterial } from '@babylonjs/core';
+import { Color3, DynamicTexture, MeshBuilder, Scene, StandardMaterial, Texture } from '@babylonjs/core';
+
+const tableLight = { height: 2.62, width: 0.58, length: 1.85 };
+
+export function tableReflections(scene: Scene) {
+  const texture = new DynamicTexture('room reflections', { width: 512, height: 256 }, scene, true);
+  const ctx = texture.getContext();
+  const pixels = ctx.getImageData(0, 0, 512, 256);
+  // Project the ceiling fixture onto a panorama as seen from the table.
+  for (let y = 0; y < pixels.height; y++) {
+    const latitude = (y + 0.5) / pixels.height * Math.PI;
+    const up = Math.cos(latitude);
+    const reach = tableLight.height * Math.tan(latitude);
+    for (let x = 0; x < pixels.width; x++) {
+      const longitude = ((x + 0.5) / pixels.width * 2 - 1) * Math.PI;
+      const edge = Math.max(
+        Math.abs(Math.cos(longitude) * reach) - tableLight.width / 2,
+        Math.abs(Math.sin(longitude) * reach) - tableLight.length / 2,
+      );
+      const panel = up > 0 ? Math.max(0, Math.min(1, 0.5 - edge / 0.09)) : 0;
+      const room = 8 + 18 * Math.max(0, up);
+      const pixel = (y * pixels.width + x) * 4;
+      pixels.data[pixel] = room + panel * 229;
+      pixels.data[pixel + 1] = room + panel * 213;
+      pixels.data[pixel + 2] = room + panel * 184;
+      pixels.data[pixel + 3] = 255;
+    }
+  }
+  ctx.putImageData(pixels, 0, 0);
+  texture.coordinatesMode = Texture.EQUIRECTANGULAR_MODE;
+  texture.wrapU = Texture.WRAP_ADDRESSMODE;
+  texture.level = 0.32;
+  texture.update();
+  return texture;
+}
 
 export function furnishRoom(scene: Scene, wood: StandardMaterial, brass: StandardMaterial) {
   function finish(name: string, color: string) {
@@ -45,6 +79,12 @@ export function furnishRoom(scene: Scene, wood: StandardMaterial, brass: Standar
   glow.emissiveColor = Color3.FromHexString('#c9a06b');
   const glass = finish('evening window', '#526776');
   glass.emissiveColor = Color3.FromHexString('#192c3a');
+
+  const diffuser = finish('table light diffuser', '#ffefd6');
+  diffuser.disableLighting = true;
+  diffuser.emissiveColor = diffuser.diffuseColor;
+  block('table light housing', 0, tableLight.height + 0.04, 0, tableLight.width + 0.045, 0.075, tableLight.length + 0.045, charcoal);
+  block('table light panel', 0, tableLight.height, 0, tableLight.width, 0.01, tableLight.length, diffuser);
 
   // Large slabs and a restrained rug keep the table visually prominent.
   for (let x = 0; x < 6; x++) {

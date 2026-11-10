@@ -1,4 +1,5 @@
 import { traceShot } from './aim-guide';
+import { ballMarkings } from './ball-markings';
 import { cushions, length, pockets, radius, width, type Ball } from './physics';
 
 export function tvViewport(screenWidth: number, screenHeight: number, top: number, bottom: number) {
@@ -147,21 +148,33 @@ export class TvTable {
       circle(ball.x + 0.003, ball.z + 0.003, radius * 1.08, '#00000055');
       const color = state.snooker ? i === 0 ? colors[0] : i <= 15 ? '#c24135' : snookerColors[i - 16] : colors[i > 8 ? i - 8 : i];
       circle(ball.x, ball.z, radius, color, '#00000066');
-      if (!state.snooker && i > 8) {
-        // White caps identify stripes without textures or GPU effects.
+      if (!state.snooker || i === 0) {
         const p = point(ball.x, ball.z);
-        ctx.save(); ctx.beginPath(); ctx.arc(p.x, p.y, radius * scale, 0, Math.PI * 2); ctx.clip();
+        const size = radius * scale;
+        const { mark, caps } = ballMarkings(ball.orientation, i > 8, i === 0);
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (this.view.landscape) ctx.rotate(Math.PI / 2);
+        ctx.scale(size, size);
+        ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.clip();
         ctx.fillStyle = '#eee9dc';
-        ctx.fillRect(p.x - radius * scale, p.y - radius * scale, 2 * radius * scale, radius * scale * 0.45);
-        ctx.fillRect(p.x - radius * scale, p.y + radius * scale * 0.55, 2 * radius * scale, radius * scale * 0.45);
+        for (const points of caps) {
+          if (!points.length) continue;
+          ctx.beginPath();
+          ctx.moveTo(...points[0]);
+          for (let j = 1; j < points.length; j++) ctx.lineTo(...points[j]);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.transform(...mark);
+        ctx.beginPath(); ctx.arc(0, 0, i ? 0.43 : 0.074, 0, Math.PI * 2);
+        ctx.fillStyle = i ? '#fff6e4' : '#a6342c';
+        ctx.fill();
+        if (i) {
+          ctx.fillStyle = '#161b17'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.font = 'bold 0.56px sans-serif';
+          ctx.fillText(String(i), 0, 0.03);
+        }
         ctx.restore();
-      }
-      if (!state.snooker && i > 0) {
-        circle(ball.x, ball.z, radius * 0.49, '#fff6e4');
-        const p = point(ball.x, ball.z);
-        ctx.fillStyle = '#161b17'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = 'bold ' + Math.max(8, radius * scale * 0.8) + 'px sans-serif';
-        ctx.fillText(String(i), p.x, p.y + 0.5);
       }
     });
   }
