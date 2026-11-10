@@ -39,7 +39,30 @@
   cursor: pointer;
   box-shadow: 0 18px 44px #030a16a0;
 }
-.city-card img { display: block; width: 100%; height: auto; }
+.city-card-scene {
+  position: relative;
+  display: block;
+  aspect-ratio: 640 / 280;
+  overflow: hidden;
+}
+.city-card-scene svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .harbor-distant, .harbor-near {
+    transform-origin: center;
+    transition: transform 400ms ease-out;
+  }
+  .harbor-distant {
+    transform: translate(calc(var(--harbor-x, 0px) * .3), calc(var(--harbor-y, 0px) * .3)) scaleX(1.01);
+  }
+  .harbor-near {
+    transform: translate(var(--harbor-x, 0px), var(--harbor-y, 0px)) scale(1.02);
+  }
+}
 .city-card-info {
   display: flex;
   align-items: center;
@@ -81,6 +104,6 @@
   .city-picker h1 { font-size: 2.3rem; }
   .city-picker-intro { margin-bottom: 14px; }
   .city-card { max-width: 400px; }
-  .city-card img { max-height: 122px; object-fit: cover; }
+  .city-card-scene { max-height: 122px; }
   .city-card-info { padding: 12px 16px; }
 }

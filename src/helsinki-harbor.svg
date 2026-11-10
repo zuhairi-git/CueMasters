@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#101f38"/><stop offset=".6" stop-color="#4c7287"/><stop offset="1" stop-color="#b6b9aa"/></linearGradient>
+    <linearGradient id="water" x2="0" y2="1"><stop stop-color="#527482"/><stop offset=".45" stop-color="#254658"/><stop offset="1" stop-color="#101f34"/></linearGradient>
+    <linearGradient id="stone" x2="1" y2=".25"><stop stop-color="#819798"/><stop offset=".3" stop-color="#c7cec4"/><stop offset=".7" stop-color="#eee6cf"/><stop offset="1" stop-color="#a6b5b1"/></linearGradient>
+    <linearGradient id="dome"><stop stop-color="#244e55"/><stop offset=".4" stop-color="#668c87"/><stop offset=".65" stop-color="#47746f"/><stop offset="1" stop-color="#1e454c"/></linearGradient>
+    <linearGradient id="reflection" x2="0" y2="1"><stop stop-color="#e6dcb3" stop-opacity=".5"/><stop offset="1" stop-color="#c9dccf" stop-opacity="0"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#d5e4dd" stop-opacity=".24"/><stop offset="1" stop-color="#d5e4dd" stop-opacity="0"/></radialGradient>
+    <radialGradient id="moon"><stop stop-color="#fff8dd"/><stop offset=".8" stop-color="#e0e7d6"/><stop offset="1" stop-color="#b2c8c4"/></radialGradient>
+    <clipPath id="harbor-waterline"><path d="M0 216h640v64H0z"/></clipPath>
+    <filter id="harbor-ripple-softness">
+      <feGaussianBlur stdDeviation=".55"/>
+    </filter>
+    <pattern id="harbor-far-ripples" y="216" width="223" height="64" patternUnits="userSpaceOnUse">
+      <path fill="#b9d4d6" opacity=".26" filter="url(#harbor-ripple-softness)"
+        d="M8 12q17-3 37 0-20-1-37 0z
+           M67 6q10-2 24 0-13-.7-24 0z
+           M110 18q22-4 50 0-28-1.5-50 0z
+           M177 9q15-2.7 33 0-18-.9-33 0z
+           M29 26q25-4.5 53 0-29-1.7-53 0z
+           M164 31q22-3.8 49 0-26-1.2-49 0z"/>
+    </pattern>
+    <pattern id="harbor-near-ripples" y="216" width="317" height="64" patternUnits="userSpaceOnUse">
+      <path fill="#b9d4d6" opacity=".3" filter="url(#harbor-ripple-softness)"
+        d="M12 40q22-4.2 48 0-26-1.4-48 0z
+           M39 59q36-6 77 0-41-2-77 0z
+           M92 34q18-3.3 40 0-22-1.2-40 0z
+           M130 49q32-5.6 67 0-36-1.8-67 0z
+           M212 37q15-3.6 35 0-19-1.3-35 0z
+           M234 57q31-5.8 68 0-36-2.1-68 0z"/>
+    </pattern>
+    <g id="column"><path fill="#677e80" d="M-1 0h8v32h-8z"/><path fill="url(#stone)" d="M0 0h5v32H0z"/><path stroke="#f0e8d3" stroke-width=".6" d="M1 2v28M3 2v28"/><path fill="#d7d8c8" d="M-2 0h9v3h-9zm0 30h9v3h-9z"/></g>
+  </defs>
+  <style>
+    .harbor-clouds { animation: harbor-drift 36s ease-in-out infinite alternate; }
+    .harbor-waves { animation: harbor-wave-travel var(--ripple-duration) linear infinite; }
+    .harbor-waves-far { --ripple-distance: -223px; --ripple-duration: 61s; }
+    .harbor-waves-near { --ripple-distance: -317px; --ripple-duration: 43s; }
+    .harbor-boat { transform-box: fill-box; transform-origin: center; animation: harbor-bob 6s ease-in-out infinite; }
+    @keyframes harbor-drift { to { transform: translateX(5px); } }
+    @keyframes harbor-wave-travel { to { transform: translateX(var(--ripple-distance)); } }
+    @keyframes harbor-bob { 0%, 100% { transform: translateY(0) rotate(-.2deg); } 50% { transform: translateY(.8px) rotate(.2deg); } }
+    @media (prefers-reduced-motion: reduce) { .harbor-clouds, .harbor-waves, .harbor-boat { animation: none; } }
+  </style>
+  <path fill="url(#sky)" d="M0 0h640v215H0z"/>
+  <circle cx="471" cy="66" r="90" fill="url(#halo)"/>
+  <circle cx="471" cy="66" r="21" fill="url(#moon)"/>
+  <g fill="#9daea6" opacity=".14"><ellipse cx="465" cy="60" rx="6" ry="8"/><ellipse cx="478" cy="72" rx="8" ry="5"/><circle cx="464" cy="76" r="3"/></g>
+  <g fill="#eef0dd" opacity=".5"><circle cx="87" cy="30" r=".65"/><circle cx="223" cy="43" r=".6"/><circle cx="369" cy="22" r=".7"/><circle cx="562" cy="37" r=".55"/><circle cx="144" cy="61" r=".45"/></g>
+  <g class="harbor-clouds" fill="#b1c6ca" opacity=".13"><path d="M23 79q35-7 65-3t72 4q-62 5-137-1M371 103q43-8 91-2t92 2q-91 5-183 0M159 53q46-5 91 2-55 2-91-2"/></g>
+  <!-- Distant roofs recede into the evening haze. -->
+  <path class="harbor-distant" fill="#496371" d="M0 169h16v-17h31v10h21v-22h25v13h18v-31l5-7 5 7v31h31v-10h32v17h32v-13h21v28h191v-28h29v-14h30v15h25v-20h35v20h22v-9h31v22h44v-13h28v67H0z"/>
+  <g class="harbor-near">
+    <path fill="#354f5e" d="M0 174h39v-8l29-13 29 13v-5l24-17 31 17v13h46v8h38v24H0zM431 172h39v-14l27-15 27 15v8l25-15 29 15v12h62v28H431z"/>
+    <!-- Cathedral: shaded wings, copper domes, and a columned portico. -->
+    <path fill="#728c90" d="M237 150h165v44H237z"/>
+    <path fill="url(#stone)" d="M241 147h157v47H241z"/>
+    <path fill="#aec0b9" d="M261 142h117v52H261z"/>
+    <path fill="#6e8888" d="M294 107h51v41h-51z"/>
+    <path fill="url(#stone)" d="M297 105h45v40h-45z"/>
+    <path fill="url(#dome)" d="M296 106c0-16 7-25 24-34 17 9 24 18 24 34z"/>
+    <path d="M302 103q1-17 18-31m-8 32q-1-20 8-32m9 32q1-20-9-32m18 32q-1-18-18-32" fill="none" stroke="#9db3a1" stroke-opacity=".35"/>
+    <path fill="#94a9a2" d="M294 104h52v4h-52zM295 140h49v4h-49z"/>
+    <g fill="#38545b" stroke="#e0ddc8" stroke-width="1"><path d="M304 130v-13a3 3 0 0 1 6 0v13zM317 130v-13a3 3 0 0 1 6 0v13zM330 130v-13a3 3 0 0 1 6 0v13z"/></g>
+    <path fill="url(#stone)" d="M235 132h24v62h-24zM381 132h24v62h-24z"/>
+    <path fill="url(#dome)" d="M235 132q0-13 12-20 12 7 12 20zM381 132q0-13 12-20 12 7 12 20z"/>
+    <path stroke="#b8bca5" stroke-width="1.3" d="M320 73V60m-4 5h8m-77 47v-8m146 8v-8"/>
+    <path fill="#34545d" d="M244 141h6v13h-6zM390 141h6v13h-6z"/>
+    <path fill="#667e80" d="M269 160h103v34H269z"/>
+    <path fill="#d9ddcf" d="m263 158 57-27 57 27z"/>
+    <path fill="#8fa6a2" d="m274 153 46-21 46 21z"/>
+    <path fill="#becbc0" d="m284 151 36-16 36 16z"/>
+    <path fill="#eeead7" d="M265 157h110v4H265z"/>
+    <path fill="#293e43" d="M315 176a5 5 0 0 1 10 0v18h-10z"/>
+    <use href="#column" x="276" y="161"/><use href="#column" x="291" y="161"/><use href="#column" x="306" y="161"/><use href="#column" x="329" y="161"/><use href="#column" x="344" y="161"/><use href="#column" x="359" y="161"/>
+    <path fill="#b8c4bb" d="M232 194h176v3H232zM228 197h184v3H228zM224 200h192v3H224zM219 203h202v3H219z"/>
+    <path stroke="#70888a" stroke-width=".7" d="M232 197h176M228 200h184M224 203h192"/>
+    <path fill="#2c444f" d="M0 206h640v9H0z"/>
+    <path stroke="#93a29a" stroke-width="1" d="M0 206h640"/>
+    <path fill="url(#water)" d="M0 215h640v65H0z"/>
+    <path fill="url(#reflection)" opacity=".4" d="m289 216 63 0 28 64H265zM461 216h20l33 64h-87z"/>
+    <g clip-path="url(#harbor-waterline)">
+      <path class="harbor-waves harbor-waves-far" fill="url(#harbor-far-ripples)" d="M0 216h863v64H0z"/>
+      <path class="harbor-waves harbor-waves-near" fill="url(#harbor-near-ripples)" d="M0 216h957v64H0z"/>
+    </g>
+    <ellipse cx="119" cy="253" rx="40" ry="3" fill="#0c2232" opacity=".35"/>
+    <g class="harbor-boat">
+      <path fill="#112938" d="m80 241 81-1-12 10H94z"/>
+      <path fill="#7e969b" d="m83 241 75-1-4 3H87z"/>
+      <path fill="#bdc9c3" d="M107 231h29l10 9h-39z"/>
+      <path fill="#304f60" d="M111 233h10v6h-10zm13 0h10l6 6h-16z"/>
+      <path stroke="#263f4c" stroke-width="1.2" d="M120 231v-17m0 5 15 10"/>
+      <path stroke="#cfbea0" stroke-width=".6" d="M93 240v-4h12m41 4v-4h8"/>
+      <circle cx="107" cy="240" r="1" fill="#f1d59c"/>
+    </g>
+  </g>
+</svg>
