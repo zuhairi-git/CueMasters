@@ -185,6 +185,7 @@ function cushionContact(ball: Ball, cushion: Cushion, sound?: Sound) {
   ball.vx += tx * friction;
   ball.vz += tz * friction;
   ball.sideSpin += 2.5 * friction / radius;
+  return true;
 }
 
 function rotateBall(ball: Ball, x: number, y: number, z: number, dt: number) {
@@ -207,7 +208,7 @@ function rotateBall(ball: Ball, x: number, y: number, z: number, dt: number) {
   ball.orientation = [next[0] / norm, next[1] / norm, next[2] / norm, next[3] / norm];
 }
 
-function substep(balls: Ball[], dt: number, sound?: Sound) {
+function substep(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball) => void) {
   for (const ball of balls) {
     if (ball.pocketed) continue;
     const { spinX, spinZ, sideSpin } = ball;
@@ -254,14 +255,16 @@ function substep(balls: Ball[], dt: number, sound?: Sound) {
       }
     }
     for (const ball of balls) {
-      if (!ball.pocketed) for (const cushion of cushions) cushionContact(ball, cushion, sound);
+      if (!ball.pocketed) for (const cushion of cushions) {
+        if (cushionContact(ball, cushion, sound) && !cushion.jaw) onRail?.(ball);
+      }
       guardBall(ball);
     }
   }
   return firstContact;
 }
 
-export function step(balls: Ball[], dt: number, sound?: Sound) {
+export function step(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball) => void) {
   if (!Number.isFinite(dt) || dt <= 0) return;
   dt = Math.min(dt, 0.1);
   for (const ball of balls) guardBall(ball);
@@ -272,7 +275,7 @@ export function step(balls: Ball[], dt: number, sound?: Sound) {
   const count = Math.max(1, Math.ceil(dt / Math.min(1 / 300, radius * 0.2 / Math.max(fastest, 0.01))));
   let firstContact: number | undefined;
   for (let i = 0; i < count; i++) {
-    const contact = substep(balls, dt / count, sound);
+    const contact = substep(balls, dt / count, sound, onRail);
     firstContact ??= contact;
   }
   return firstContact;

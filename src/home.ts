@@ -1,7 +1,9 @@
-import { cities, cityDifficulty, cityStatus, computerProgress, getPlayerSecret, type Circuit, type Mode, type Progress } from './circuit';
+import { cities, cityDifficulty, cityStatus, getPlayerSecret, type Circuit, type Mode, type Progress } from './circuit';
 import { difficulties } from './difficulty';
 import { validGame, type SavedGame } from './saved-game';
 import { remoteKey } from './tv-controls';
+import { t } from './i18n';
+import { careerCityStatus, careerClears, careerCues, careerDifficulty, careerProgress, careerReward, careerStages, careerStageStatus, equipCareerCue } from './career';
 import helsinki from './helsinki-harbor.svg?raw';
 import stockholm from './stockholm-skyline.svg?raw';
 import copenhagen from './copenhagen-skyline.svg?raw';
@@ -39,7 +41,7 @@ function selectionCard(options: { title: string; subtitle: string; detail: strin
     card.onclick = options.play!;
   }
   card.innerHTML = `<span class="selection-scene" aria-hidden="true">${options.artwork}</span>
-    ${options.status ? `<span class="city-status">${options.status}</span>` : ''}
+    ${options.status ? `<span class="city-status">${t(options.status)}</span>` : ''}
     <span class="selection-copy">
       <span class="selection-subtitle">${options.subtitle}</span>
       <strong class="selection-title">${options.title}</strong>
@@ -85,17 +87,21 @@ function savedSession(): typeof launch | undefined {
     }
     const city = cities.find(entry => entry.id === mode?.city?.id);
     if (mode?.kind === 'online' && city) return { mode: { kind: 'online', city }, state: saved.state, awaitingOnline: saved.awaitingOnline === true };
-    if (mode?.kind === 'computer' && city && typeof mode.matchId === 'string' && cityStatus(city, computerProgress()) !== 'Locked') {
-      return { mode: { kind: 'computer', city, matchId: mode.matchId }, state: saved.state };
+    if (mode?.kind === 'computer' && city && typeof mode.matchId === 'string') {
+      const stage = mode.stage ?? 0;
+      if (Number.isInteger(stage) && careerStageStatus(city, stage, careerProgress()) !== 'Locked' && (mode.stage !== undefined || !saved.state.finished)) {
+        return { mode: { kind: 'computer', city, stage, matchId: mode.matchId }, state: saved.state };
+      }
     }
   } catch {}
 }
 
 export function labelGame(mode: Mode) {
-  const name = 'city' in mode ? mode.city.name : mode.kind === 'training' ? 'Training' : 'Invite play';
+  const city = t('city' in mode ? mode.city.name : mode.kind === 'training' ? 'Training' : 'Invite play');
+  const name = mode.kind === 'computer' ? city + ' · ' + t(careerStages[mode.stage].title) : city;
   document.querySelector<HTMLElement>('#gameCity')!.textContent = name;
-  document.querySelector<HTMLElement>('#gameMenuTitle')!.textContent = name + ' · Game menu';
-  document.title = name + ' · Billiard';
+  document.querySelector<HTMLElement>('#gameMenuTitle')!.textContent = name + ' · ' + t('Game menu');
+  document.title = name + ' · Cue Master';
 }
 
 export async function chooseGame() {
@@ -106,6 +112,7 @@ export async function chooseGame() {
   const status = document.querySelector<HTMLElement>('#setupStatus')!;
   const list = document.querySelector<HTMLElement>('#cityList')!;
   const back = document.querySelector<HTMLButtonElement>('#modeBack')!;
+  const shop = document.querySelector<HTMLButtonElement>('#careerShop')!;
   const resume = document.querySelector<HTMLButtonElement>('#resumeMatch')!;
   const url = new URL(location.href);
   const saved = savedSession();
@@ -114,7 +121,8 @@ export async function chooseGame() {
   else launch = await new Promise<typeof launch>(resolve => {
     let request: AbortController | undefined;
     let previousButton: HTMLButtonElement | undefined;
-    let view: Circuit | 'training' | 'difficulty' | undefined;
+    let view: Circuit | 'training' | 'difficulty' | 'stages' | 'shop' | undefined;
+    let selectedCity: typeof cities[number] | undefined;
     const start = (mode: Mode) => resolve({ mode });
 
     resume.hidden = !saved;
@@ -123,6 +131,8 @@ export async function chooseGame() {
 
     back.onclick = () => {
       request?.abort();
+      if (view === 'shop' && selectedCity) { showStages(selectedCity); return; }
+      if (view === 'stages' || view === 'shop') { void showSetup('computer'); return; }
       if (view === 'difficulty') {
         showTraining().focus();
         return;
@@ -133,30 +143,85 @@ export async function chooseGame() {
       previousButton?.focus();
     };
 
+    function wallet() {
+      const { coins, points } = careerProgress();
+      return t('{coins} coins · {points} career points', { coins, points });
+    }
+
+    function showStages(city: typeof cities[number]) {
+      selectedCity = city;
+      view = 'stages';
+      shop.hidden = false;
+      back.textContent = t('← Cities');
+      title.textContent = t(city.name);
+      status.textContent = t('{cleared}/{total} games cleared', { cleared: careerClears(city, careerProgress()), total: careerStages.length }) + ' · ' + wallet();
+      const progress = careerProgress();
+      list.dataset.layout = 'stages';
+      list.replaceChildren(...careerStages.map((stage, index) => {
+        const availability = careerStageStatus(city, index, progress);
+        const locked = availability === 'Locked';
+        return selectionCard({
+          title: t(stage.title), subtitle: t('Game {number}', { number: index + 1 }) + ' · ' + t(careerDifficulty(city, index)),
+          detail: t(stage.objective) + (availability !== 'Completed' ? ' · ' + t('{coins} coins · {points} career points', careerReward(index)) : ''),
+          status: availability, artwork: tableArt(index % 5 + 1),
+          action: locked ? undefined : t(availability === 'Completed' ? 'Replay' : 'Play'),
+          play: locked ? undefined : () => start({ kind: 'computer', city, stage: index, matchId: crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-') }),
+        });
+      }));
+      back.focus();
+    }
+
+    function showShop(focusIndex = -1) {
+      view = 'shop';
+      shop.hidden = true;
+      back.textContent = selectedCity ? t('← Games') : t('← Cities');
+      title.textContent = t('Equipment shop');
+      status.textContent = wallet();
+      list.dataset.layout = 'training';
+      const progress = careerProgress();
+      list.replaceChildren(...careerCues.map((cue, index) => {
+        const equipped = progress.equipped === cue.id;
+        const owned = progress.owned.includes(cue.id);
+        const affordable = progress.coins >= cue.price;
+        return selectionCard({
+          title: t(cue.id), subtitle: owned ? t(equipped ? 'Equipped' : 'Owned') : t('{coins} coins', { coins: cue.price }),
+          detail: t(cue.description), artwork: tableArt(index + 1),
+          action: equipped ? undefined : t(owned ? 'Equip' : affordable ? 'Buy and equip' : 'More coins needed'),
+          play: equipped || !affordable && !owned ? undefined : () => {
+            if (equipCareerCue(cue.id)) showShop(index);
+            else status.textContent = t('Could not save equipment. Try again.');
+          },
+        });
+      }));
+      const focus = list.children[focusIndex] as HTMLElement | undefined;
+      if (focus) { focus.tabIndex = 0; focus.focus(); } else back.focus();
+    }
+    shop.onclick = () => showShop();
+
     function showTraining() {
       view = 'training';
-      back.textContent = '← Game modes';
-      title.textContent = 'Training';
+      back.textContent = t('← Game modes');
+      title.textContent = t('Training');
       list.dataset.layout = 'training';
       const computer = selectionCard({
-        title: 'Against Computer', subtitle: 'Practice match', detail: 'Play eight-ball at any difficulty.',
-        artwork: tableArt(5), action: 'Choose difficulty',
+        title: t('Against Computer'), subtitle: t('Practice match'), detail: t('Play eight-ball at any difficulty.'),
+        artwork: tableArt(5), action: t('Choose difficulty'),
         play: () => {
           view = 'difficulty';
-          back.textContent = '← Training';
-          title.textContent = 'Choose your opponent';
+          back.textContent = t('← Training');
+          title.textContent = t('Choose your opponent');
           list.dataset.layout = 'difficulty';
           list.replaceChildren(...difficulties.map((difficulty, index) => selectionCard({
-            title: difficulty, subtitle: 'Level ' + (index + 1), detail: trainingNotes[index],
-            artwork: tableArt(index + 1), action: 'Play',
+            title: t(difficulty), subtitle: t('Level {level}', { level: index + 1 }), detail: t(trainingNotes[index]),
+            artwork: tableArt(index + 1), action: t('Play'),
             play: () => start({ kind: 'training', opponent: 'computer', difficulty }),
           })));
           back.focus();
         },
       });
       list.replaceChildren(selectionCard({
-        title: 'Solo Training', subtitle: 'Open table', detail: 'Control both sides and practice your shots.',
-        artwork: tableArt(1), action: 'Play', play: () => start(solo),
+        title: t('Solo Training'), subtitle: t('Open table'), detail: t('Control both sides and practice your shots.'),
+        artwork: tableArt(1), action: t('Play'), play: () => start(solo),
       }), computer);
       return computer;
     }
@@ -164,22 +229,42 @@ export async function chooseGame() {
     async function showSetup(mode: Circuit | 'training') {
       request?.abort();
       view = mode;
+      selectedCity = undefined;
+      shop.hidden = mode !== 'computer';
       modes.hidden = true;
       setup.hidden = false;
       list.replaceChildren();
       list.dataset.layout = 'cities';
-      back.textContent = '← Game modes';
-      title.textContent = mode === 'online' ? 'Online city circuit' : mode === 'computer' ? 'Computer city circuit' : 'Training';
+      back.textContent = t('← Game modes');
+      title.textContent = t(mode === 'online' ? 'Online city circuit' : mode === 'computer' ? 'Computer Career' : 'Training');
       status.textContent = '';
       back.focus();
       if (mode === 'training') {
         showTraining();
         return;
       }
-      let progress = computerProgress();
+      if (mode === 'computer') {
+        const progress = careerProgress();
+        status.textContent = wallet();
+        for (const city of cities) {
+          const availability = careerCityStatus(city, progress);
+          const prerequisite = cities.find(entry => entry.id === city.requires);
+          const locked = availability === 'Locked';
+          list.append(selectionCard({
+            title: t(city.name), subtitle: t(city.country),
+            detail: locked && prerequisite ? t('Clear all games in {city} to unlock', { city: t(prerequisite.name) })
+              : t('{cleared}/{total} games cleared', { cleared: careerClears(city, progress), total: careerStages.length }),
+            status: availability, artwork: cityArt[city.id],
+            action: locked ? undefined : t('View games'),
+            play: locked ? undefined : () => showStages(city),
+          }));
+        }
+        return;
+      }
+      let progress: Progress = {};
       if (mode === 'online') {
         const pending = request = new AbortController();
-        status.textContent = 'Loading online progress…';
+        status.textContent = t('Loading online progress…');
         try {
           const response = await fetch('/circuit-progress', {
             method: 'POST', headers: { 'X-Player-Secret': getPlayerSecret() }, signal: pending.signal,
@@ -189,35 +274,32 @@ export async function chooseGame() {
           if (pending.signal.aborted) return;
         } catch {
           if (pending.signal.aborted) return;
-          status.textContent = 'Could not load online progress.';
+          status.textContent = t('Could not load online progress.');
           const retry = document.createElement('button');
           retry.className = 'home-action';
-          retry.textContent = 'Try again';
+          retry.textContent = t('Try again');
           retry.onclick = () => { void showSetup(mode); };
           list.append(retry);
           return;
         }
       }
-      status.textContent = cities.filter(city => cityStatus(city, progress) === 'Completed').length + ' of ' + cities.length + ' cities completed. Win a match to complete a city.';
+      status.textContent = t('{completed} of {total} cities completed. Win a match to complete a city.', {
+        completed: cities.filter(city => cityStatus(city, progress) === 'Completed').length, total: cities.length,
+      });
       for (const city of cities) {
         const availability = cityStatus(city, progress);
         const prerequisite = cities.find(entry => entry.id === city.requires);
         const stats = progress[city.id];
         const locked = availability === 'Locked';
         list.append(selectionCard({
-          title: city.name,
-          subtitle: city.country + ' · Level ' + city.level + ' · ' + cityDifficulty(city),
-          detail: locked ? 'Win in ' + prerequisite?.name + ' to unlock' : (stats?.wins ?? 0) + ' wins · ' + (stats?.losses ?? 0) + ' losses',
+          title: t(city.name),
+          subtitle: [t(city.country), t('Level {level}', { level: city.level }), t(cityDifficulty(city))].join(' · '),
+          detail: locked && prerequisite ? t('Win in {city} to unlock', { city: t(prerequisite.name) })
+            : t('{wins} wins · {losses} losses', { wins: stats?.wins ?? 0, losses: stats?.losses ?? 0 }),
           artwork: cityArt[city.id],
           status: availability,
-          action: locked ? undefined : availability === 'Completed' ? 'Replay' : mode === 'online' ? 'Join tournament' : 'Play tournament',
-          play: locked ? undefined : () => {
-            if (mode === 'online') start({ kind: mode, city });
-            else if (cityStatus(city, computerProgress()) !== 'Locked') {
-              const matchId = Array.from(crypto.getRandomValues(new Uint32Array(2))).join('-');
-              start({ kind: mode, city, matchId });
-            }
-          },
+          action: locked ? undefined : t(availability === 'Completed' ? 'Replay' : 'Join tournament'),
+          play: locked ? undefined : () => start({ kind: mode, city }),
         }));
       }
     }
@@ -231,6 +313,9 @@ export async function chooseGame() {
     if (circuit === 'computer' || circuit === 'online') {
       previousButton = buttons.find(button => button.dataset.mode === circuit);
       void showSetup(circuit);
+      const city = cities.find(entry => entry.id === url.searchParams.get('careerCity'));
+      if (circuit === 'computer' && city && careerCityStatus(city, careerProgress()) !== 'Locked') showStages(city);
+      if (circuit === 'computer' && url.searchParams.get('careerShop') === '1') showShop();
     } else buttons[0].focus();
 
     picker.onkeydown = event => {
@@ -254,6 +339,8 @@ export async function chooseGame() {
   });
   picker.onkeydown = null;
   url.searchParams.delete('circuit');
+  url.searchParams.delete('careerCity');
+  url.searchParams.delete('careerShop');
   try { history.replaceState(null, '', url.href); } catch {}
   labelGame(launch.mode);
   picker.hidden = true;

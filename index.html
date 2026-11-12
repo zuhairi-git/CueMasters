@@ -3,7 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Billiard · Pool &amp; Snooker</title>
+  <title>Cue Master · Pool &amp; Snooker</title>
+  <meta name="theme-color" content="#101e2c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/cue-master.webmanifest">
+  <link rel="apple-touch-icon" href="/cue-master-180.png">
   <link rel="icon" type="image/svg+xml" href="/billiard-mark.svg">
   <link rel="stylesheet" href="/src/design-system.css">
   <link rel="stylesheet" href="/src/game.css">
@@ -13,8 +18,9 @@
 <body>
   <section id="cityPicker" class="city-picker" aria-labelledby="cityPickerTitle">
     <div class="city-picker-content">
-      <img class="city-picker-brand" src="/billiard-logo.svg" width="270" height="64" alt="Billiard · Pool and Snooker">
+      <img class="city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker">
       <div id="homeModes">
+        <div id="languagePicker" class="home-languages" role="group" aria-label="Language"></div>
         <h1 id="cityPickerTitle">Choose your game</h1>
         <div class="mode-grid">
           <article class="mode-card mode-online">
@@ -25,9 +31,9 @@
           </article>
           <article class="mode-card mode-computer">
             <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="7" y="7" width="18" height="18" rx="3"/><path d="M12 12h8v8h-8zm1-8v3m6-3v3m-6 18v3m6-3v3M4 13h3m-3 6h3m18-6h3m-3 6h3"/></svg></span>
-            <h2>Tournaments – Against Computer</h2>
-            <p>Win city matches against five increasingly skilled opponents.</p>
-            <button class="home-action" type="button" data-mode="computer">Play Tournament</button>
+            <h2>Computer Career</h2>
+            <p>Clear ten games per city and earn coins for cue upgrades.</p>
+            <button class="home-action" type="button" data-mode="computer">Play Career</button>
           </article>
           <article class="mode-card mode-training">
             <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="21" cy="11" r="6"/><path d="m5 27 10-10m5-8h2v4h-2z"/></svg></span>
@@ -39,10 +45,21 @@
         <div class="home-links">
           <button class="home-back" id="resumeMatch" type="button" hidden>Resume saved game</button>
           <button class="home-back" id="casualOnline" type="button">Play with an invite</button>
+          <button class="home-back install-app" id="installApp" type="button" aria-controls="installHelp" aria-expanded="false" hidden>Install Cue Master</button>
+        </div>
+        <div class="install-help" id="installHelp" hidden>
+          <p id="installAppleMobile" hidden>In Safari, tap Share, then Add to Home Screen. If you see Open as Web App, turn it on before tapping Add.</p>
+          <p id="installAndroid" hidden>Open your browser menu and choose Install app or Add to Home screen.</p>
+          <p id="installMac" hidden>In Safari, choose File → Add to Dock. In Chrome or Edge, use the install option in the address bar or browser menu.</p>
+          <p id="installDesktop" hidden>Use the install icon in the address bar or the install option in the browser menu. If it’s missing, open this page in Chrome or Edge.</p>
+          <p id="installSecure" hidden>Open the secure HTTPS version of Cue Master to install it.</p>
         </div>
       </div>
       <section id="modeSetup" aria-labelledby="setupTitle" hidden>
-        <button class="home-back" id="modeBack" type="button">← Game modes</button>
+        <div class="career-nav">
+          <button class="home-back" id="modeBack" type="button">← Game modes</button>
+          <button class="home-back" id="careerShop" type="button" hidden>Equipment shop</button>
+        </div>
         <h2 id="setupTitle"></h2>
         <p id="setupStatus" role="status"></p>
         <div id="cityList" class="city-list"></div>
@@ -51,9 +68,10 @@
   </section>
   <header class="game-hud">
     <div class="game-heading">
-      <strong class="game-brand"><img src="/billiard-logo.svg" width="270" height="64" alt="Billiard · Pool and Snooker"><span id="gameCity" class="game-city"></span></strong>
+      <strong class="game-brand"><img src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker"><span id="gameCity" class="game-city"></span></strong>
       <span id="shotClock" role="timer" aria-label="Online time remaining" hidden>30s</span>
       <small id="status" role="status">Tap or drag either side of the cue ball to aim.</small>
+      <small id="careerObjective" hidden></small>
     </div>
     <div id="score" aria-label="Players and pocketed balls"></div>
     <button class="ui-button hud-action" id="mobileMenu" type="button" aria-label="Open game menu" aria-expanded="false" aria-haspopup="dialog" aria-controls="mobileGameMenu"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="menu-open-icon" d="M4 6h16M4 12h16M4 18h16"/><path class="menu-close-icon" d="m6 6 12 12M6 18 18 6"/></svg></button>
@@ -71,7 +89,7 @@
   <dialog id="mobileGameMenu" class="ui-dialog game-menu" aria-labelledby="gameMenuTitle">
     <div class="dialog-body">
     <div class="game-menu-heading">
-      <div class="settings-heading"><img class="menu-brand" src="/billiard-logo.svg" width="270" height="64" alt="Billiard · Pool and Snooker"><h2 id="gameMenuTitle">Game menu</h2></div>
+      <div class="settings-heading"><img class="menu-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker"><h2 id="gameMenuTitle">Game menu</h2></div>
       <button class="ui-button game-menu-close" id="closeGameMenu" type="button" aria-label="Close game menu" autofocus><span aria-hidden="true">×</span></button>
     </div>
     <div id="gameMenuActions"></div>
@@ -94,7 +112,9 @@
       <svg viewBox="0 0 100 100" focusable="false"><defs><linearGradient id="victoryGold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0b7"/><stop offset=".5" stop-color="#eac16a"/><stop offset="1" stop-color="#bd8030"/></linearGradient></defs><g stroke="#c38d3d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M29 28H17v9c0 12 9 18 20 18m34-27h12v9c0 12-9 18-20 18" fill="none"/><path d="M28 19h44v22c0 17-10 25-22 25S28 58 28 41Z" fill="url(#victoryGold)"/><path d="M50 67v14m-17 7h34l-5-7H38Z" fill="url(#victoryGold)"/></g><path d="m50 29 4 8 9 1-7 6 2 9-8-4-8 4 2-9-7-6 9-1Z" fill="#fff5d4"/><path d="m13 14 2 5 5 2-5 2-2 5-2-5-5-2 5-2Zm73 42 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#eac16a"/></svg>
     </div>
     <span class="eyebrow" id="noticeLabel"></span><strong id="noticeTitle"></strong><small id="noticeDetail"></small>
-    <button class="ui-button ui-button--primary" id="noticeRematch" type="button" hidden>Play again</button><button class="ui-button ui-button--primary" id="noticeCircuit" type="button" hidden>Return to cities</button>
+    <button class="ui-button ui-button--primary" id="noticeRematch" type="button" hidden>Play again</button><button class="ui-button ui-button--primary" id="noticeCircuit" type="button" hidden>Return to cities</button><button class="ui-button" id="noticeRetry" type="button" hidden>Try again</button>
+    <button class="ui-button" id="noticeNext" type="button" hidden>Next game</button>
+    <button class="ui-button" id="noticeShop" type="button" hidden>Equipment shop</button>
   </section>
   <div class="call-pocket" id="callPocket" hidden>
     <button class="ui-button" id="openPocketPicker" type="button" aria-controls="pocketPicker" aria-expanded="false">Call pocket</button>
@@ -157,14 +177,14 @@
     <label class="ui-field"><span>Game</span><span class="ui-select-wrap"><select class="ui-select" id="game"><option value="pool">Pool · Eight-ball</option><option value="snooker">Snooker</option></select></span></label>
     <label class="ui-field"><span>Play</span><span class="ui-select-wrap"><select class="ui-select" id="opponent"><option value="solo">Practice · Control both players</option><option value="computer">Against computer</option></select></span></label>
     <label class="ui-field" id="offlinePlayerTwoNameRow"><span>Player 2 name</span><input class="ui-select" id="offlinePlayerTwoName" maxlength="24" autocomplete="off"></label>
-    <label class="ui-field"><span>Difficulty</span><span class="ui-select-wrap"><select class="ui-select" id="difficulty"><option>Beginner</option><option>Easy</option><option selected>Medium</option><option>Hard</option><option>Expert</option></select></span></label>
+    <label class="ui-field"><span>Difficulty</span><span class="ui-select-wrap"><select class="ui-select" id="difficulty"><option value="Beginner">Beginner</option><option value="Easy">Easy</option><option value="Medium" selected>Medium</option><option value="Hard">Hard</option><option value="Expert">Expert</option></select></span></label>
     <div class="sound-row"><div><strong>Play on TV</strong><small>Lightweight TV table with remote controls. Arrows to aim, OK to play, Back for the menu. In menus: ↑ ↓ move, ← → change, OK select.</small><small id="tvCompatibility" hidden></small></div><button class="ui-button" id="tvToggle" type="button" aria-pressed="false">TV off</button></div>
     <div class="sound-row"><div><strong>Shot guides</strong><small>Aim line, object-ball path and pocket highlight</small></div><button class="ui-button" id="guidesToggle" type="button" aria-pressed="true">Guides on</button></div>
     </fieldset><fieldset><legend>Room &amp; equipment</legend>
-    <label class="ui-field"><span>Cue</span><span class="ui-select-wrap"><select class="ui-select" id="cueStyle"><option>Classic Maple</option><option>Rosewood</option><option selected>Carbon Black</option></select></span></label>
-    <label class="ui-field"><span>Table</span><span class="ui-select-wrap"><select class="ui-select" id="tableStyle"><option selected>Club Green</option><option>Tournament Blue</option><option>Burgundy Lounge</option></select></span></label>
+    <label class="ui-field"><span>Cue</span><span class="ui-select-wrap"><select class="ui-select" id="cueStyle"><option value="Classic Maple">Classic Maple</option><option value="Rosewood">Rosewood</option><option value="Carbon Black" selected>Carbon Black</option></select></span></label>
+    <label class="ui-field"><span>Table</span><span class="ui-select-wrap"><select class="ui-select" id="tableStyle"><option value="Club Green" selected>Club Green</option><option value="Tournament Blue">Tournament Blue</option><option value="Burgundy Lounge">Burgundy Lounge</option></select></span></label>
     <label class="ui-field"><span>Theme</span><span class="ui-select-wrap"><select class="ui-select" id="theme"><option value="club">Clubhouse</option><option value="midnight">Midnight</option><option value="ivory">Ivory</option></select></span></label>
-    <label class="ui-field"><span>Graphics</span><span class="ui-select-wrap"><select class="ui-select" id="quality"><option>Low</option><option>Medium</option><option selected>High</option><option>Ultra</option></select></span></label>
+    <label class="ui-field"><span>Graphics</span><span class="ui-select-wrap"><select class="ui-select" id="quality"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High" selected>High</option><option value="Ultra">Ultra</option></select></span></label>
     </fieldset><fieldset class="desktop-control-settings"><legend>Controls</legend>
     <label class="ui-field desktop-control-layout"><span>Shot controls</span><span class="ui-select-wrap"><select class="ui-select" id="controlLayout"><option value="horizontal">Horizontal · Bottom</option><option value="vertical" selected>Vertical · Side</option></select></span></label>
     <label class="ui-field desktop-control-side"><span>Vertical side</span><span class="ui-select-wrap"><select class="ui-select" id="controlSide"><option value="right" selected>Shot controls right · Zoom/aim left</option><option value="left">Shot controls left · Zoom/aim right</option></select></span></label>

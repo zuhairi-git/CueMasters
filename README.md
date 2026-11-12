@@ -7,10 +7,13 @@ A static file host alone does not support online games.
 
 ## Play
 
-- Choose **Online Play**, **Against Computer**, or **Training** from the homepage.
-  Each tournament city is one eight-ball match. A win completes the city and
-  unlocks the next one. Online matchmaking pairs players in the same city.
-  Computer progress lives in your browser. Online progress follows your player ID
+- Choose **Online Play**, **Computer Career**, or **Training** from the homepage.
+  In Computer Career, clear all ten games in each city to open the next city.
+  First clears earn career points and coins. Spend coins on cue upgrades in
+  the **Equipment shop** on the career screen. Career progress and equipment
+  live in your browser, and cities unlocked before the update remain accessible.
+  In the online circuit, a match win completes the city. Matchmaking pairs players
+  in the same city. Online progress follows your player ID
   on the same server and is saved to `.billiard-circuit.json` by default. Set
   `CIRCUIT_DATA_FILE` to a persistent writable path when hosting the game.
 - Training lets you control both seats or practice against the computer at any
@@ -66,6 +69,15 @@ lightweight Canvas 2D renderer. All views use the same physics and match state.
 - The centred player panels show the assigned groups and a stack of numbered balls.
   Pocketed balls are bright; balls still on the table appear faint. Ball in hand and
   the winning player also have explicit banners.
+
+## Languages
+
+Choose **English** or **Suomi** above the game modes. The browser remembers your choice.
+English is the source language. To add another language, add a JSON catalog alongside
+`src/locales/fi.json` and register it in `src/i18n.ts` with the language's own name.
+The catalog uses the English text in `index.html` and in calls to `t()` as its keys.
+Keep placeholders such as `{city}` in the translated sentence and use explicit option
+values for settings. Missing translations fall back to English.
 
 ## Profiles and online play
 

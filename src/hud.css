@@ -57,6 +57,11 @@ header.game-hud > .game-heading {
   font: 500 1.05rem Georgia, serif;
   letter-spacing: .06em;
 }
+#careerObjective {
+  color: var(--accent);
+  font-size: .72rem;
+  line-height: 1.25;
+}
 .brand-ball {
   display: grid;
   place-items: center;
@@ -387,6 +392,10 @@ body.tv-mode .game-hud #status { font-size: .9rem; }
     color: #a4c1e4;
     text-align: center;
     line-height: 1.2;
+  }
+  .compact-hud header.game-hud > .game-heading:has(#careerObjective:not([hidden])) {
+    flex-direction: column;
+    text-align: center;
   }
   .compact-hud header.game-hud > #score { grid-column: 1; grid-row: 1; border: 0; padding: 0; background: transparent; box-shadow: none; }
   .compact-hud .game-hud .player-score { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; min-height: 44px; padding: 5px 7px; border-radius: 8px; }

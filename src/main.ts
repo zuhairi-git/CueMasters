@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import { cueArtwork } from './svg-cue';
 import { ballBadge } from './svg-ball';
 import { GameAudio } from './audio';
@@ -9,7 +10,8 @@ import { installFullscreenControl } from './fullscreen';
 import { cueLength, cuePose } from './cue-geometry';
 import { directionToBall, traceShot } from './aim-guide';
 import { OnlineGame } from './online';
-import { cities, cityDifficulty, finishComputerCity, resultMessage } from './circuit';
+import { cities, resultMessage } from './circuit';
+import { careerCityStatus, careerCue, careerCues, careerDifficulty, careerLayout, careerProgress, careerStages, careerStageStatus, finishCareerStage } from './career';
 import { clearSession, labelGame, launch, saveSession } from './home';
 import type { Difficulty } from './difficulty';
 import { groupOf, poolTargets, resolvePoolShot, type Groups } from './pool-rules';
@@ -47,13 +49,13 @@ let tvPresentation = '';
 try { tvEnabled = localStorage.getItem('billiard-tv') === 'on'; } catch {}
 if (document.documentElement.dataset.tvChoice) tvEnabled = document.documentElement.dataset.tvChoice === 'on';
 const actionDescriptions: Record<string, string> = {
-  fullscreen: 'Hide browser navigation while you play',
-  viewMode: 'Look around the table',
-  camera: 'Switch between top-down and 3D',
-  reset: 'Set up a fresh game',
-  openOnline: 'Your profile, QR code & online play',
-  openSettings: 'Game, equipment, sound & guides',
-  endGame: 'Return to game modes',
+  fullscreen: t('Hide browser navigation while you play'),
+  viewMode: t('Look around the table'),
+  camera: t('Switch between top-down and 3D'),
+  reset: t('Set up a fresh game'),
+  openOnline: t('Your profile, QR code & online play'),
+  openSettings: t('Game, equipment, sound & guides'),
+  endGame: t('Return to game modes'),
 };
 for (const button of tableActions.querySelectorAll<HTMLButtonElement>('button')) {
   const description = document.createElement('span');
@@ -75,7 +77,7 @@ function setMobileMenu(open: boolean, restoreFocus = false) {
   }
   hudHeader.dataset.menuOpen = String(open);
   mobileMenu.setAttribute('aria-expanded', String(open));
-  mobileMenu.setAttribute('aria-label', open ? 'Close game menu' : 'Open game menu');
+  mobileMenu.setAttribute('aria-label', t(open ? 'Close game menu' : 'Open game menu'));
   if (restoreFocus && !document.querySelector('dialog[open]')) mobileMenu.focus();
 }
 mobileMenu.onclick = () => setMobileMenu(!menuDialog.open);
@@ -150,7 +152,7 @@ const guidesToggle = document.querySelector<HTMLButtonElement>('#guidesToggle')!
 let guidesEnabled = true;
 try { guidesEnabled = localStorage.getItem('billiard-guides') !== 'off'; } catch {}
 function updateGuides() {
-  guidesToggle.textContent = guidesEnabled ? 'Guides on' : 'Guides off';
+  guidesToggle.textContent = t(guidesEnabled ? 'Guides on' : 'Guides off');
   guidesToggle.setAttribute('aria-pressed', String(guidesEnabled));
 }
 guidesToggle.onclick = () => {
@@ -165,7 +167,7 @@ const volume = document.querySelector<HTMLInputElement>('#volume')!;
 const volumeLabel = document.querySelector<HTMLOutputElement>('#volumeLabel')!;
 function updateSound() {
   sound.configure(sound.enabled, Number(volume.value) / 100);
-  soundToggle.textContent = sound.enabled ? 'Sound on' : 'Sound off';
+  soundToggle.textContent = t(sound.enabled ? 'Sound on' : 'Sound off');
   soundToggle.setAttribute('aria-pressed', String(sound.enabled));
   volumeLabel.value = volume.value + '%';
   try { localStorage.setItem('3dbilliard-sound', JSON.stringify({ enabled: sound.enabled, volume: sound.volume })); } catch {}
@@ -517,12 +519,12 @@ const offlineAvatarOptions = document.querySelector<HTMLElement>('#offlineAvatar
 let offlinePlayerOneName = '';
 let offlinePlayerTwoName = 'Player 2';
 const avatarOptions = [
-  { id: 'man-classic', label: 'Male · Classic', group: 'Male', background: '#8ad6e6', skin: '#f2c6a0', hair: '#26334a', shirt: '#315b8e', hairShape: 'M10 19C7 8 14 3 21 4c8 1 11 8 8 16l-4-4c-4 0-7-2-9-5-1 4-3 6-6 8Z', fringe: 'M10 13c4-1 6-4 7-7 2 4 5 6 10 6l1 5c-5-1-8-3-10-6-2 3-4 4-8 5Z', beard: '' },
-  { id: 'man-curly', label: 'Male · Curls', group: 'Male', background: '#b7a2ef', skin: '#bb7959', hair: '#182333', shirt: '#397b78', hairShape: 'M9 19C5 12 8 4 13 6c1-5 7-5 9-2 5-2 9 3 7 8 3 3 1 8-2 9l-2-7c-5 1-8-1-10-4-1 4-3 6-6 9Z', fringe: 'M10 14c2-5 5-5 6-9 2 4 5 5 10 4l2 7c-4-1-7-3-9-6-2 3-5 4-8 4Z', beard: 'M12 24c4 3 8 3 12 0l-2 5h-8Z' },
-  { id: 'man-beard', label: 'Male · Beard', group: 'Male', background: '#f3bd83', skin: '#e5b18c', hair: '#51372f', shirt: '#8a4c55', hairShape: 'M10 19C7 9 12 4 20 4c8 0 11 8 8 16l-4-4c-5 0-8-2-10-5-1 4-2 6-4 8Z', fringe: 'M10 14c4-1 6-4 7-7 2 4 5 6 10 6l1 5c-5-1-8-3-10-6-2 3-4 4-8 5Z', beard: 'M11 22c2 4 5 7 9 7s7-3 9-7l-2 8-7 5-7-5Z' },
-  { id: 'woman-waves', label: 'Female · Waves', group: 'Female', background: '#f3a5bb', skin: '#edc2a5', hair: '#48304d', shirt: '#a54f83', hairShape: 'M8 24C3 11 8 3 19 3c12 0 17 12 12 23l-4 5-1-16c-4 0-8-2-10-5-2 5-4 8-8 9Z', fringe: 'M9 14c4-1 6-5 7-9 2 4 6 6 11 6l1 7c-5-1-9-3-11-7-2 4-4 5-8 6Z', beard: '' },
-  { id: 'woman-bob', label: 'Female · Bob', group: 'Female', background: '#84c8b7', skin: '#bc8062', hair: '#202a42', shirt: '#396a85', hairShape: 'M8 22C5 8 11 3 20 3s15 7 12 20l-4 7-2-14c-5 0-9-2-11-5-1 5-3 8-6 10Z', fringe: 'M9 13c4 0 7-3 8-7 2 4 5 6 11 6l1 7c-5 0-9-3-11-6-2 3-4 4-8 5Z', beard: '' },
-  { id: 'woman-curls', label: 'Female · Curls', group: 'Female', background: '#e5a56e', skin: '#80503e', hair: '#211c2c', shirt: '#54734f', hairShape: 'M8 25C3 15 5 5 12 6c1-5 7-5 9-2 6-3 12 3 9 9 5 4 2 12-2 15l-1-14c-5 1-8-1-10-5-2 5-4 8-8 9Z', fringe: 'M9 14c2-5 5-5 6-9 2 4 5 5 10 4l2 8c-5-1-8-3-10-6-2 3-4 4-8 5Z', beard: '' },
+  { id: 'man-classic', label: t('Male · Classic'), group: 'Male', background: '#8ad6e6', skin: '#f2c6a0', hair: '#26334a', shirt: '#315b8e', hairShape: 'M10 19C7 8 14 3 21 4c8 1 11 8 8 16l-4-4c-4 0-7-2-9-5-1 4-3 6-6 8Z', fringe: 'M10 13c4-1 6-4 7-7 2 4 5 6 10 6l1 5c-5-1-8-3-10-6-2 3-4 4-8 5Z', beard: '' },
+  { id: 'man-curly', label: t('Male · Curls'), group: 'Male', background: '#b7a2ef', skin: '#bb7959', hair: '#182333', shirt: '#397b78', hairShape: 'M9 19C5 12 8 4 13 6c1-5 7-5 9-2 5-2 9 3 7 8 3 3 1 8-2 9l-2-7c-5 1-8-1-10-4-1 4-3 6-6 9Z', fringe: 'M10 14c2-5 5-5 6-9 2 4 5 5 10 4l2 7c-4-1-7-3-9-6-2 3-5 4-8 4Z', beard: 'M12 24c4 3 8 3 12 0l-2 5h-8Z' },
+  { id: 'man-beard', label: t('Male · Beard'), group: 'Male', background: '#f3bd83', skin: '#e5b18c', hair: '#51372f', shirt: '#8a4c55', hairShape: 'M10 19C7 9 12 4 20 4c8 0 11 8 8 16l-4-4c-5 0-8-2-10-5-1 4-2 6-4 8Z', fringe: 'M10 14c4-1 6-4 7-7 2 4 5 6 10 6l1 5c-5-1-8-3-10-6-2 3-4 4-8 5Z', beard: 'M11 22c2 4 5 7 9 7s7-3 9-7l-2 8-7 5-7-5Z' },
+  { id: 'woman-waves', label: t('Female · Waves'), group: 'Female', background: '#f3a5bb', skin: '#edc2a5', hair: '#48304d', shirt: '#a54f83', hairShape: 'M8 24C3 11 8 3 19 3c12 0 17 12 12 23l-4 5-1-16c-4 0-8-2-10-5-2 5-4 8-8 9Z', fringe: 'M9 14c4-1 6-5 7-9 2 4 6 6 11 6l1 7c-5-1-9-3-11-7-2 4-4 5-8 6Z', beard: '' },
+  { id: 'woman-bob', label: t('Female · Bob'), group: 'Female', background: '#84c8b7', skin: '#bc8062', hair: '#202a42', shirt: '#396a85', hairShape: 'M8 22C5 8 11 3 20 3s15 7 12 20l-4 7-2-14c-5 0-9-2-11-5-1 5-3 8-6 10Z', fringe: 'M9 13c4 0 7-3 8-7 2 4 5 6 11 6l1 7c-5 0-9-3-11-6-2 3-4 4-8 5Z', beard: '' },
+  { id: 'woman-curls', label: t('Female · Curls'), group: 'Female', background: '#e5a56e', skin: '#80503e', hair: '#211c2c', shirt: '#54734f', hairShape: 'M8 25C3 15 5 5 12 6c1-5 7-5 9-2 6-3 12 3 9 9 5 4 2 12-2 15l-1-14c-5 1-8-1-10-5-2 5-4 8-8 9Z', fringe: 'M9 14c2-5 5-5 6-9 2 4 5 5 10 4l2 8c-5-1-8-3-10-6-2 3-4 4-8 5Z', beard: '' },
 ] as const;
 let offlinePlayerAvatars: [string, string] = ['man-classic', 'woman-waves'];
 try {
@@ -586,8 +588,9 @@ document.body.classList.add('compact-hud');
 hudToggle.onclick = () => {
   const compact = document.body.classList.toggle('compact-hud');
   hudToggle.setAttribute('aria-expanded', String(!compact));
-  hudToggle.setAttribute('aria-label', compact ? 'Expand game details' : 'Collapse game details');
-  hudToggle.innerHTML = compact ? '⌃<span>Details</span>' : '⌄<span>Hide</span>';
+  hudToggle.setAttribute('aria-label', t(compact ? 'Expand game details' : 'Collapse game details'));
+  hudToggle.innerHTML = compact ? '⌃<span></span>' : '⌄<span></span>';
+  hudToggle.querySelector('span')!.textContent = t(compact ? 'Details' : 'Hide');
   requestAnimationFrame(fitOverheadCamera);
 };
 const baulkPoints = [new Vector3(-width / 2, 0.002, -0.74), new Vector3(width / 2, 0.002, -0.74)];
@@ -602,7 +605,10 @@ snookerLines.isPickable = false;
 snookerLines.setEnabled(false);
 let mode = launch.mode;
 const isTournament = () => 'city' in mode;
-let difficulty: Difficulty = mode.kind === 'computer' ? cityDifficulty(mode.city) : mode.kind === 'training' ? mode.difficulty : 'Medium';
+let difficulty: Difficulty = mode.kind === 'computer' ? careerDifficulty(mode.city, mode.stage) : mode.kind === 'training' ? mode.difficulty : 'Medium';
+const equippedCareerCue = mode.kind === 'computer' ? careerCue() : undefined;
+let careerAttempts = 0;
+let careerBanked = false;
 let versusComputer = mode.kind === 'computer' || mode.kind === 'training' && mode.opponent === 'computer';
 const online = new OnlineGame(mode.kind === 'computer');
 let onlineMode = mode.kind === 'online';
@@ -630,7 +636,7 @@ function canControl() {
   return onlineMode ? online.active && turn === online.seat && online.remainingMs() > 0 : !versusComputer || turn === 0;
 }
 function playerName(seat: number) {
-  return onlineMode ? seat === online.seat ? online.name : online.peerName : seat === 0 ? offlinePlayerOneName || online.name : versusComputer ? 'Computer' : offlinePlayerTwoName;
+  return onlineMode ? seat === online.seat ? online.name : online.peerName : seat === 0 ? offlinePlayerOneName || online.name : versusComputer ? t('Computer') : offlinePlayerTwoName;
 }
 function avatarMarkup(id: string) {
   const avatar = avatarOptions.find(option => option.id === id) ?? avatarOptions[0];
@@ -664,7 +670,7 @@ function renderPlayerDetails() {
     const category = document.createElement('div');
     category.className = 'avatar-choice-group';
     const label = document.createElement('span');
-    label.textContent = group;
+    label.textContent = t(group);
     const choices = document.createElement('div');
     choices.className = 'avatar-choice-buttons';
     for (const avatar of avatarOptions.filter(option => option.group === group)) {
@@ -685,9 +691,10 @@ function renderPlayerDetails() {
     category.append(label, choices);
     offlineAvatarOptions.append(category);
   }
-  const current = finished ? winner === detailsSeat ? 'Winner' : 'Game finished' : turn === detailsSeat ? 'At the table now' : 'Waiting for their turn';
+  const current = finished ? winner === detailsSeat ? t('Winner') : t('Game finished') : turn === detailsSeat ? t('At the table now') : t('Waiting for their turn');
   const group = groups[detailsSeat];
-  let summaryText = current + ' · ' + (snooker ? 'Score: ' + scores[detailsSeat] + '. Balls below are shared table totals.' : group ? group + ' group' : 'Open table · Groups unassigned. Showing all object balls.');
+  let summaryText = current + ' · ' + (snooker ? t('Score: {score}. Balls below are shared table totals.', { score: scores[detailsSeat] })
+    : group ? t('{group} group', { group: t(group) }) : t('Open table · Groups unassigned. Showing all object balls.'));
   if (online.playerId && detailsSeat === (online.seat ?? 0)) {
     summaryText += ' · ID: ' + online.playerId;
   }
@@ -700,22 +707,22 @@ function renderPlayerDetails() {
     const section = document.createElement('section');
     section.className = 'player-ball-section';
     const heading = document.createElement('h3');
-    heading.textContent = (potted ? 'Balls in' : 'Remaining') + ' · ' + numbers.length;
+    heading.textContent = (potted ? t('Balls in') : t('Remaining')) + ' · ' + numbers.length;
     const tray = document.createElement('div');
     tray.className = 'player-detail-tray';
     for (const i of numbers) {
       const badge = ballBadge(i, snooker);
-      const label = snooker ? i <= 15 ? 'Red' : colourNames[i - 16] : 'Ball ' + i;
+      const label = snooker ? t(i <= 15 ? 'Red' : colourNames[i - 16]) : t('Ball {number}', { number: i });
       badge.title = label;
       badge.setAttribute('aria-label', label);
       tray.append(badge);
     }
-    if (!numbers.length) { const empty = document.createElement('small'); empty.textContent = potted ? 'No balls pocketed yet' : 'All cleared'; tray.append(empty); }
+    if (!numbers.length) { const empty = document.createElement('small'); empty.textContent = potted ? t('No balls pocketed yet') : t('All cleared'); tray.append(empty); }
     section.append(heading, tray); container.append(section);
   }
   if (!snooker && group) {
     const eight = document.createElement('p');
-    eight.textContent = balls[8].pocketed ? 'Black 8 · Pocketed' : 'Black 8 · ' + (indices.every(i => balls[i].pocketed) ? 'Clear to play — call a pocket' : 'Clear your group first');
+    eight.textContent = balls[8].pocketed ? t('Black 8 · Pocketed') : t('Black 8') + ' · ' + t(indices.every(i => balls[i].pocketed) ? 'Clear to play — call a pocket' : 'Clear your group first');
     container.append(eight);
   }
 }
@@ -726,7 +733,7 @@ function showScore() {
     item.type = 'button';
     item.setAttribute('aria-haspopup', 'dialog');
     item.setAttribute('aria-controls', 'playerDetails');
-    item.setAttribute('aria-label', playerName(seat) + ', view player details');
+    item.setAttribute('aria-label', t('{player}, view player details', { player: playerName(seat) }));
     item.onclick = () => { detailsSeat = seat; renderPlayerDetails(); playerDetails.showModal(); };
     item.className = 'player-score' + (turn === seat && !finished ? ' active' : '');
     if (turn === seat) item.setAttribute('aria-current', 'true');
@@ -748,7 +755,9 @@ function showScore() {
     name.append(document.createTextNode(playerName(seat)));
     const detail = document.createElement('span');
     detail.className = 'player-group';
-    detail.textContent = snooker ? 'Score · ' + scores[seat] : groups[seat] ? groups[seat] + ' · ' + left + ' left' : 'Open table';
+    const group = groups[seat];
+    detail.textContent = snooker ? t('Score · {score}', { score: scores[seat] })
+      : group ? t('{group} · {count} left', { group: t(group), count: left }) : t('Open table');
     const tray = document.createElement('span');
     tray.className = 'potted-balls';
     if (!snooker && groups[seat]) {
@@ -757,20 +766,20 @@ function showScore() {
       for (const ball of numbers) {
         const badge = ballBadge(ball.number);
         badge.classList.add(ball.potted ? 'achieved' : 'pending');
-        badge.title = 'Ball ' + ball.number + (ball.potted ? ' · pocketed' : ' · on table');
+        badge.title = t(ball.potted ? 'Ball {number} · pocketed' : 'Ball {number} · on table', { number: ball.number });
         badge.setAttribute('aria-label', badge.title);
         tray.append(badge);
       }
     } else {
       tray.classList.add('empty');
-      tray.textContent = snooker ? 'Snooker' : 'Groups unassigned';
+      tray.textContent = snooker ? 'Snooker' : t('Groups unassigned');
     }
     item.append(marker, name, detail, tray);
     if (turn === seat && !finished) {
       const turnBadge = document.createElement('span');
       turnBadge.className = 'player-turn';
-      turnBadge.textContent = 'Playing';
-      turnBadge.setAttribute('aria-label', 'Current player');
+      turnBadge.textContent = t('Playing');
+      turnBadge.setAttribute('aria-label', t('Current player'));
       item.append(turnBadge);
     }
     return item;
@@ -824,6 +833,26 @@ function finishShot() {
     const eightPocket = balls[8].pocketed ? pockets.reduce((closest, pocket, index) =>
       Math.hypot(pocket.x - balls[8].x, pocket.z - balls[8].z) < Math.hypot(pockets[closest].x - balls[8].x, pockets[closest].z - balls[8].z) ? index : closest, 0) : undefined;
     const result = resolvePoolShot({ turn, groups, targets: shotTargets, firstContact, potted, scratch, breaking: shotWasBreak, calledPocket, eightPocket });
+    const stage = mode.kind === 'computer' ? careerStages[mode.stage] : undefined;
+    const challenge = stage?.challenge;
+    if (mode.kind === 'computer' && challenge) {
+      careerAttempts++;
+      const legal = !result.foul && firstContact === challenge.ball;
+      const won = legal && (challenge.kind === 'contact' ||
+        potted.includes(challenge.ball) && (challenge.kind !== 'bank' || careerBanked));
+      if (!won && careerAttempts < challenge.attempts) {
+        const attempts = careerAttempts;
+        resetMatch();
+        careerAttempts = attempts;
+        showReadyStatus();
+        saveGame();
+        return;
+      }
+      result.winner = won ? 0 : 1;
+    } else if (stage?.oneVisit) {
+      result.winner = !result.foul && balls[1].pocketed && balls[2].pocketed ? 0
+        : result.turn !== turn || result.foul ? 1 : undefined;
+    }
     groups = result.groups;
     winner = result.winner;
     finished = winner !== undefined;
@@ -939,8 +968,8 @@ const stroke = document.querySelector<HTMLButtonElement>("#stroke")!;
 const powerValue = document.querySelector<HTMLOutputElement>("#powerValue")!;
 function updateStrokeDirection() {
   const vertical = document.body.classList.contains('vertical-controls') && !mobileLayout.matches;
-  stroke.setAttribute('aria-label', vertical ? 'Pull the cue down and release to shoot' : 'Pull the cue left and release to shoot');
-  stroke.setAttribute('title', vertical ? 'Pull down and release to shoot' : 'Pull left and release to shoot');
+  stroke.setAttribute('aria-label', t(vertical ? 'Pull the cue down and release to shoot' : 'Pull the cue left and release to shoot'));
+  stroke.setAttribute('title', t(vertical ? 'Pull down and release to shoot' : 'Pull left and release to shoot'));
 }
 function showPull() {
   const percent = Math.round(pull * 100);
@@ -957,11 +986,11 @@ function setTip(x: number, y: number) {
   mark.style.top = (50 - tipY * 50) + "%";
   spinMark.style.left = mark.style.left;
   spinMark.style.top = mark.style.top;
-  const horizontal = Math.abs(tipX) < 0.02 ? '' : Math.round(Math.abs(tipX) * 100) + '% ' + (tipX < 0 ? 'left' : 'right');
-  const vertical = Math.abs(tipY) < 0.02 ? '' : Math.round(Math.abs(tipY) * 100) + '% ' + (tipY > 0 ? 'follow' : 'draw');
-  spinValue.value = [horizontal, vertical].filter(Boolean).join(' · ') || 'Center ball · No spin';
-  spinBall.setAttribute('aria-label', spinValue.value + '. Arrow keys adjust; Home resets to center.');
-  tip.title = "Contact offset: " + Math.round(tipX * 100) + "% horizontal, " + Math.round(tipY * 100) + "% vertical";
+  const horizontal = Math.abs(tipX) < 0.02 ? '' : Math.round(Math.abs(tipX) * 100) + '% ' + t(tipX < 0 ? 'left' : 'right');
+  const vertical = Math.abs(tipY) < 0.02 ? '' : Math.round(Math.abs(tipY) * 100) + '% ' + t(tipY > 0 ? 'follow' : 'draw');
+  spinValue.value = [horizontal, vertical].filter(Boolean).join(' · ') || t('Center ball · No spin');
+  spinBall.setAttribute('aria-label', t('{spin}. Arrow keys adjust; Home resets to center.', { spin: spinValue.value }));
+  tip.title = t('Contact offset: {x}% horizontal, {y}% vertical', { x: Math.round(tipX * 100), y: Math.round(tipY * 100) });
 }
 setTip(0, 0);
 function selectTip(event: PointerEvent) {
@@ -1013,6 +1042,7 @@ function fire(strength: number) {
   shotWasBreak = breaking;
   placement = undefined;
   firstContact = undefined;
+  careerBanked = false;
   shotTargets = legalTargets();
   previouslyPocketed = balls.map(ball => ball.pocketed);
   shotPower = Math.max(0, Math.min(1, Number.isFinite(strength) ? strength : 0));
@@ -1138,30 +1168,42 @@ function toggleAimLock() {
 lockButton.onclick = toggleAimLock;
 
 function showReadyStatus() {
+  const objective = document.querySelector<HTMLElement>('#careerObjective')!;
+  objective.hidden = mode.kind !== 'computer' || finished;
+  if (mode.kind === 'computer' && !finished) {
+    const stage = careerStages[mode.stage];
+    objective.textContent = t(stage.objective) + (stage.challenge
+      ? ' · ' + t('Attempts left: {count}', { count: stage.challenge.attempts - careerAttempts }) : '');
+  }
   if (tvEnabled) { updateTvControls(); return; }
   if (online.departureDeadline !== undefined) {
-    status.textContent = 'Opponent left. Waiting for their timer to expire…';
+    status.textContent = t('Opponent left. Waiting for their timer to expire…');
     return;
   }
   if (finished) {
-    status.textContent = !snooker && winner !== undefined ? playerName(winner) + (wonByForfeit ? ' wins by forfeit!' : ' wins!') :
-      scores[0] === scores[1] ? 'Match drawn.' : playerName(scores[0] > scores[1] ? 0 : 1) + ' wins!';
+    status.textContent = !snooker && winner !== undefined
+      ? t(wonByForfeit ? '{player} wins by forfeit!' : '{player} wins!', { player: playerName(winner) })
+      : scores[0] === scores[1] ? t('Match drawn.') : t('{player} wins!', { player: playerName(scores[0] > scores[1] ? 0 : 1) });
     return;
   }
-  if (awaitingOnline) { status.textContent = 'Waiting for an opponent. Open Players to see matchmaking.'; return; }
+  if (awaitingOnline) { status.textContent = t('Waiting for an opponent. Open Players to see matchmaking.'); return; }
   if (!canControl()) {
-    status.textContent = onlineMode ? online.active ? playerName(turn) + ' is lining up a shot.' : 'Online game paused. Reconnect through Players or choose End game.' : 'Computer is lining up a shot.';
+    status.textContent = onlineMode ? online.active ? t('{player} is lining up a shot.', { player: playerName(turn) })
+      : t('Online game paused. Reconnect through Players or choose End game.') : t('Computer is lining up a shot.');
     return;
   }
   if (aimLocked && !viewMode) {
-    status.textContent = 'Aim locked · Drag back on the table and release to shoot. Double-tap the cue ball to unlock.';
+    status.textContent = t('Aim locked · Drag back on the table and release to shoot. Double-tap the cue ball to unlock.');
     return;
   }
   if (placement && !viewMode) {
-    status.textContent = placement === 'break' ? 'Drag the cue ball behind the head string. Aim on the cloth.' : 'Ball in hand. Drag the cue ball or aim on the cloth.';
+    status.textContent = placement === 'break' ? t('Drag the cue ball behind the head string. Aim on the cloth.') : t('Ball in hand. Drag the cue ball or aim on the cloth.');
     return;
   }
-  status.textContent = viewMode ? 'Drag to orbit. Pinch or scroll to zoom.' : window.matchMedia('(pointer: coarse)').matches ? playerName(turn) + ' · Tap to aim, slide Fine aim, then pull the cue to shoot.' : playerName(turn) + ' · ← → Aim · Shift + arrows for fine aim';
+  status.textContent = viewMode ? t('Drag to orbit. Pinch or scroll to zoom.')
+    : t(window.matchMedia('(pointer: coarse)').matches
+      ? '{player} · Tap to aim, slide Fine aim, then pull the cue to shoot.'
+      : '{player} · ← → Aim · Shift + arrows for fine aim', { player: playerName(turn) });
 }
 
 function canPanTable() {
@@ -1229,7 +1271,7 @@ viewToggle.onclick = () => {
   viewMode = !viewMode;
   syncPanControls();
   syncTableSurface();
-  viewToggle.querySelector<HTMLElement>('.hud-label')!.textContent = viewMode ? 'Orbit on' : 'Orbit';
+  viewToggle.querySelector<HTMLElement>('.hud-label')!.textContent = t(viewMode ? 'Orbit on' : 'Orbit');
   viewToggle.setAttribute('aria-pressed', String(viewMode));
   if (viewMode) {
     camera.targetScreenOffset.set(0, 0);
@@ -1418,19 +1460,22 @@ document.querySelector<HTMLButtonElement>('#camera')!.onclick = event => {
     camera.fov = zoomFov();
   }
   const button = event.currentTarget as HTMLButtonElement;
-  button.querySelector<HTMLElement>('.hud-label')!.textContent = overhead ? '3D view' : 'Top view';
-  button.setAttribute('aria-label', overhead ? 'Switch to perspective view' : 'Switch to top-down view');
+  button.querySelector<HTMLElement>('.hud-label')!.textContent = t(overhead ? '3D view' : 'Top view');
+  button.setAttribute('aria-label', t(overhead ? 'Switch to perspective view' : 'Switch to top-down view'));
 };
 function resetMatch() {
   wonByForfeit = false;
   applyTableFinish();
   tvContext = '';
-  balls = rack(snooker, Math.random);
+  const preset = mode.kind === 'computer' ? careerLayout(mode.city, mode.stage) : undefined;
+  balls = preset ?? rack(snooker, Math.random);
+  careerAttempts = 0;
+  careerBanked = false;
   turn = 0;
   scores = [0, 0];
-  groups = [null, null];
+  groups = preset ? ['Solids', 'Stripes'] : [null, null];
   winner = undefined;
-  breaking = true;
+  breaking = !preset;
   calledPocket = undefined;
   shotWasBreak = false;
   firstContact = undefined;
@@ -1444,7 +1489,7 @@ function resetMatch() {
   cpuWait = 0;
   setTip(0, 0);
   showScore();
-  placement = "break";
+  placement = preset ? undefined : 'break';
   aimPointer = undefined;
   aimTargetPointer = undefined;
   movingCueBall = false;
@@ -1456,11 +1501,11 @@ function resetMatch() {
   showReadyStatus();
   ballMeshes.forEach((mesh, index) => {
     const ball = balls[index];
-    mesh.isVisible = Boolean(ball);
-    contacts[index].isVisible = Boolean(ball);
+    mesh.isVisible = Boolean(ball) && !ball.pocketed;
+    contacts[index].isVisible = Boolean(ball) && !ball.pocketed;
     if (!ball) return;
     mesh.material = snooker && index > 0 ? (index <= 15 ? redFinish : colourFinishes[index - 16]) : poolFinishes[index];
-    mesh.position.set(ball.x, radius, ball.z);
+    mesh.position.set(ball.x, ball.pocketed ? -0.12 : radius, ball.z);
   });
 }
 function needsRerackConfirmation() {
@@ -1470,11 +1515,11 @@ const rerackDialog = document.querySelector<HTMLDialogElement>('#rerackConfirm')
 let pendingSettingsMatch = false;
 function confirmNewGame(fromSettings: boolean) {
   pendingSettingsMatch = fromSettings;
-  document.querySelector<HTMLElement>('#rerackTitle')!.textContent = fromSettings ? 'Start a new game?' : 'Re-rack this game?';
-  document.querySelector<HTMLElement>('#rerackDescription')!.textContent = fromSettings
+  document.querySelector<HTMLElement>('#rerackTitle')!.textContent = t(fromSettings ? 'Start a new game?' : 'Re-rack this game?');
+  document.querySelector<HTMLElement>('#rerackDescription')!.textContent = t(fromSettings
     ? 'A game is in progress. Starting a new game will discard your current progress and use your selected game and opponent settings.'
-    : 'Your current progress will be lost. Re-racking starts a fresh game with both players back at the beginning.';
-  rerackDialog.querySelector<HTMLButtonElement>('[value="rerack"]')!.textContent = fromSettings ? 'Start new game' : 'Re-rack';
+    : 'Your current progress will be lost. Re-racking starts a fresh game with both players back at the beginning.');
+  rerackDialog.querySelector<HTMLButtonElement>('[value="rerack"]')!.textContent = t(fromSettings ? 'Start new game' : 'Re-rack');
   rerackDialog.returnValue = '';
   rerackDialog.showModal();
 }
@@ -1483,7 +1528,7 @@ async function startSettingsMatch() {
   if (onlineMode) {
     leavingMatch = true;
     try { await online.leave(!wonByForfeit); }
-    catch { status.textContent = 'Could not end the online game. Try again.'; return; }
+    catch { status.textContent = t('Could not end the online game. Try again.'); return; }
     finally { leavingMatch = false; }
     onlineMode = false;
   }
@@ -1522,14 +1567,14 @@ function openEndGame() {
   endGameStatus.hidden = true;
   document.querySelector<HTMLElement>('#endGameDescription')!.textContent =
     onlineMode && !awaitingOnline && !finished && online.departureDeadline === undefined
-      ? 'You’ll return to game modes. Your opponent wins when your timer runs out.'
-      : 'You’ll return to game modes. Your current game will be cleared.';
+      ? t('You’ll return to game modes. Your opponent wins when your timer runs out.')
+      : t('You’ll return to game modes. Your current game will be cleared.');
   endGameDialog.showModal();
 }
 document.querySelector<HTMLButtonElement>('#endGame')!.onclick = openEndGame;
 document.querySelector<HTMLButtonElement>('#leaveOnline')!.onclick = openEndGame;
 endGameDialog.addEventListener('cancel', event => { if (confirmEndGame.disabled) event.preventDefault(); });
-confirmEndGame.onclick = async () => {
+async function leaveGame(openShop = false) {
   if (leavingMatch) return;
   leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = true;
   try {
@@ -1540,21 +1585,45 @@ confirmEndGame.onclick = async () => {
     home.searchParams.delete('join');
     home.searchParams.delete('table');
     if ('city' in mode) home.searchParams.set('circuit', mode.kind);
+    if (mode.kind === 'computer' && careerCityStatus(mode.city, careerProgress()) !== 'Completed') home.searchParams.set('careerCity', mode.city.id);
+    if (openShop) home.searchParams.set('careerShop', '1');
     location.replace(home.href);
   } catch {
     if (!endGameDialog.open) endGameDialog.showModal();
-    endGameStatus.textContent = 'Could not reach the online game. Try again to end it.';
+    endGameStatus.textContent = t('Could not reach the online game. Try again to end it.');
     endGameStatus.hidden = false;
     leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = false;
     confirmEndGame.focus();
   }
-};
+}
+confirmEndGame.onclick = () => { void leaveGame(); };
 document.querySelector<HTMLButtonElement>('#noticeCircuit')!.onclick = () => confirmEndGame.click();
+document.querySelector<HTMLButtonElement>('#noticeShop')!.onclick = () => { void leaveGame(true); };
+function nextCareerStage() {
+  if (mode.kind !== 'computer' || winner !== 0) return -1;
+  const city = mode.city;
+  const progress = careerProgress();
+  return careerStages.findIndex((_, index) => careerStageStatus(city, index, progress) === 'Unlocked');
+}
+function restartCareerStage(stage: number) {
+  if (mode.kind !== 'computer' || !finished || stage < 0) return;
+  mode = { ...mode, stage, matchId: Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-') };
+  difficulty = careerDifficulty(mode.city, stage);
+  labelGame(mode);
+  circuitMessage = '';
+  resetMatch();
+  saveGame();
+}
+document.querySelector<HTMLButtonElement>('#noticeRetry')!.onclick = () => {
+  if (mode.kind === 'computer' && winner === 1) restartCareerStage(mode.stage);
+};
+document.querySelector<HTMLButtonElement>('#noticeNext')!.onclick = () => restartCareerStage(nextCareerStage());
 document.querySelector<HTMLButtonElement>('#openSettings')!.onclick = () => {
   select('game').value = snooker ? 'snooker' : 'pool';
   select('opponent').value = versusComputer ? 'computer' : 'solo';
   select('difficulty').value = difficulty;
   for (const field of ['game', 'opponent', 'difficulty']) select(field).disabled = isTournament();
+  select('cueStyle').disabled = mode.kind === 'computer';
   document.querySelector<HTMLButtonElement>('#newMatch')!.disabled = isTournament();
   offlinePlayerTwoNameInput.value = offlinePlayerTwoName;
   syncOfflinePlayerNameVisibility();
@@ -1588,6 +1657,7 @@ function updateCueStyle() {
   stroke.setAttribute('title', select('cueStyle').value + ' · Pull ' + direction + ' and release to shoot');
 }
 select('cueStyle').onchange = updateCueStyle;
+if (equippedCareerCue) select('cueStyle').value = equippedCareerCue.id;
 updateCueStyle();
 function applyTableFinish() {
   const [felt, cushion, rail] = snooker ? ['#851e39', '#4d142c', '#211a29'] : tableStyles[select('tableStyle').value];
@@ -1602,7 +1672,8 @@ select('tableStyle').onchange = applyTableFinish;
 function gameState(): SavedGame {
   return { version: 1, balls, snooker, versusComputer, onlineMode, turn, scores, groups, winner, breaking, shotWasBreak,
     colourAfterRed, finished, firstContact, shotTargets, previouslyPocketed, rolling, placement, aim: [aim.x, aim.z],
-    strike, shotPower, tip: [tipX, tipY], aimLocked, calledPocket };
+    strike, shotPower, tip: [tipX, tipY], aimLocked, calledPocket,
+    ...(mode.kind === 'computer' ? { careerAttempts, careerBanked } : {}) };
 }
 function applyGame(s: SavedGame, preserveLocalAim = false) {
   balls = s.balls.map(ball => ({ ...ball }));
@@ -1612,6 +1683,8 @@ function applyGame(s: SavedGame, preserveLocalAim = false) {
   versusComputer = s.versusComputer;
   turn = s.turn;
   scores = [...s.scores];
+  careerAttempts = s.careerAttempts ?? 0;
+  careerBanked = s.careerBanked ?? false;
   groups = [...s.groups];
   winner = s.winner;
   breaking = s.breaking;
@@ -1642,7 +1715,7 @@ function applyGame(s: SavedGame, preserveLocalAim = false) {
   });
   showScore();
   if (!rolling && !strike) showReadyStatus();
-  else status.textContent = 'Balls in motion';
+  else status.textContent = t('Balls in motion');
 }
 function saveGame() {
   if (returningHome || wonByForfeit) return;
@@ -1650,8 +1723,13 @@ function saveGame() {
 }
 function recordComputerResult() {
   if (mode.kind === 'computer' && winner !== undefined) {
-    circuitMessage = finishComputerCity(mode.city, mode.matchId, winner === 0);
+    circuitMessage = finishCareerStage(mode.city, mode.stage, mode.matchId, winner === 0);
   }
+}
+function trackCareerRail(ball: typeof balls[number]) {
+  if (mode.kind !== 'computer') return;
+  const challenge = careerStages[mode.stage].challenge;
+  if (challenge?.kind === 'bank' && ball === balls[challenge.ball]) careerBanked = true;
 }
 online.onPaired = (resume, cityId) => {
   const city = cities.find(entry => entry.id === cityId);
@@ -1674,7 +1752,7 @@ online.onCircuitResult = result => {
     circuitMessage = resultMessage(mode.city, online.seat === result.winner, result.firstWin);
   }
 };
-online.onCircuitSaveError = () => { circuitMessage = 'The server could not save your tournament result.'; };
+online.onCircuitSaveError = () => { circuitMessage = t('The server could not save your tournament result.'); };
 online.onProfile = showScore;
 online.onTimeout = expiredTurn => {
   if (!onlineMode || online.seat !== 0 || !online.active || turn !== expiredTurn || rolling || strike || finished) return;
@@ -1847,14 +1925,14 @@ function updateTvControls() {
   const context = [turn, placement, busy, finished, breaking].join(':');
   if (context !== tvContext) { remote.reset(Boolean(placement)); tvContext = context; }
   const labels = {
-    place: ['Place the cue ball', '↑ ↓ ← → Move ball · OK Keep position · Back Menu'],
-    aim: ['Aim your shot', '← → Aim · ↑ ↓ Fine aim · OK Set power · Back Menu'],
-    pocket: ['Call a pocket for the 8', '← → Choose pocket · OK Confirm · Back Aim'],
-    power: ['Set power, then shoot', '↑ ↓ Power · OK Shoot · Back Aim'],
+    place: [t('Place the cue ball'), t('↑ ↓ ← → Move ball · OK Keep position · Back Menu')],
+    aim: [t('Aim your shot'), t('← → Aim · ↑ ↓ Fine aim · OK Set power · Back Menu')],
+    pocket: [t('Call a pocket for the 8'), t('← → Choose pocket · OK Confirm · Back Aim')],
+    power: [t('Set power, then shoot'), t('↑ ↓ Power · OK Shoot · Back Aim')],
   };
   const [title, help] = labels[remote.stage];
-  const stepText = online.departureDeadline !== undefined ? 'Opponent left. Waiting for their timer.' : finished ? 'Game finished' : busy ? rolling || strike ? 'Balls in motion' : 'Waiting for opponent' : title;
-  const helpText = finished || busy ? 'Back Menu' : remote.stage === 'pocket' ? help + ' · ' + pocketChoice.options[(calledPocket ?? 0) + 1].text : help;
+  const stepText = online.departureDeadline !== undefined ? t('Opponent left. Waiting for their timer.') : finished ? t('Game finished') : busy ? rolling || strike ? t('Balls in motion') : t('Waiting for opponent') : title;
+  const helpText = finished || busy ? t('Back Menu') : remote.stage === 'pocket' ? help + ' · ' + pocketChoice.options[(calledPocket ?? 0) + 1].text : help;
   const powerText = Math.round(remote.power * 100) + '%';
   const presentation = [stepText, helpText, powerText].join('|');
   if (tvPresentation === presentation) return;
@@ -1869,11 +1947,11 @@ function applyTvMode() {
   document.body.classList.toggle('compatibility-table', webglUnavailable);
   tvPanel.hidden = !tvEnabled;
   syncTableSurface();
-  tvToggle.textContent = tvEnabled ? 'TV on' : 'TV off';
+  tvToggle.textContent = t(tvEnabled ? 'TV on' : 'TV off');
   tvToggle.setAttribute('aria-pressed', String(tvEnabled));
   const compatibility = document.querySelector<HTMLElement>('#tvCompatibility')!;
   compatibility.hidden = !webglUnavailable;
-  compatibility.textContent = webglUnavailable ? 'This browser could not start 3D. The compatibility table is active; you can turn TV controls on or off.' : '';
+  compatibility.textContent = webglUnavailable ? t('This browser could not start 3D. The compatibility table is active; you can turn TV controls on or off.') : '';
   tvContext = '';
   if (tvEnabled) {
     if (viewMode) viewToggle.click();
@@ -2008,12 +2086,21 @@ function updateGameNotice() {
     confetti.replaceChildren();
   }
   const rematch = document.querySelector<HTMLButtonElement>('#noticeRematch')!;
-  document.querySelector<HTMLButtonElement>('#noticeCircuit')!.hidden = kind !== 'win' || !isTournament();
+  const circuitButton = document.querySelector<HTMLButtonElement>('#noticeCircuit')!;
+  circuitButton.hidden = kind !== 'win' || !isTournament();
+  circuitButton.textContent = t(mode.kind === 'computer' && careerCityStatus(mode.city, careerProgress()) !== 'Completed' ? 'Return to games' : 'Return to cities');
+  document.querySelector<HTMLButtonElement>('#noticeRetry')!.hidden = kind !== 'win' || mode.kind !== 'computer' || winner !== 1;
+  document.querySelector<HTMLButtonElement>('#noticeNext')!.hidden = kind !== 'win' || nextCareerStage() < 0;
+  const progress = kind === 'win' && mode.kind === 'computer' && winner === 0 ? careerProgress() : undefined;
+  document.querySelector<HTMLButtonElement>('#noticeShop')!.hidden = !progress ||
+    !careerCues.some(cue => !progress.owned.includes(cue.id) && cue.price <= progress.coins);
   rematch.hidden = isTournament() || kind !== 'win' || wonByForfeit || onlineMode && online.seat !== 0;
   rematch.disabled = onlineMode && !online.active;
-  document.querySelector<HTMLElement>('#noticeLabel')!.textContent = winningPlayer === undefined ? 'HONOURS EVEN' : 'VICTORY';
-  document.querySelector<HTMLElement>('#noticeTitle')!.textContent = winningPlayer === undefined ? 'Match drawn' : playerName(winningPlayer) + ' wins!';
-  document.querySelector<HTMLElement>('#noticeDetail')!.textContent = isTournament() ? circuitMessage || 'Saving tournament result…' : wonByForfeit ? 'Your opponent left and their timer expired.' : onlineMode && online.seat !== 0 ? 'What a game! Waiting for the host to start the next round.' : winningPlayer === undefined ? 'A close match. Time for a rematch?' : 'What a finish. Ready for another round?';
+  document.querySelector<HTMLElement>('#noticeLabel')!.textContent = mode.kind === 'computer' ? t('Computer Career')
+    : winningPlayer === undefined ? t('HONOURS EVEN') : t('VICTORY');
+  document.querySelector<HTMLElement>('#noticeTitle')!.textContent = mode.kind === 'computer' ? t(winner === 0 ? 'Game cleared' : 'Game failed')
+    : winningPlayer === undefined ? t('Match drawn') : t('{player} wins!', { player: playerName(winningPlayer) });
+  document.querySelector<HTMLElement>('#noticeDetail')!.textContent = isTournament() ? circuitMessage || t('Saving tournament result…') : wonByForfeit ? t('Your opponent left and their timer expired.') : onlineMode && online.seat !== 0 ? t('What a game! Waiting for the host to start the next round.') : winningPlayer === undefined ? t('A close match. Time for a rematch?') : t('What a finish. Ready for another round?');
 }
 engine.runRenderLoop(() => {
   updateTvControls();
@@ -2021,7 +2108,7 @@ engine.runRenderLoop(() => {
   const clock = document.querySelector<HTMLElement>('#shotClock')!;
   clock.hidden = !onlineMode;
   const departureTime = online.departureDeadline === undefined ? undefined : Math.max(0, online.departureDeadline - performance.now());
-  clock.textContent = departureTime !== undefined ? Math.ceil(departureTime / 1000) + 's' : finished ? 'Finished' : !online.active ? 'Paused' : rolling || strike ? 'In motion' : Math.ceil(online.remainingMs() / 1000) + 's';
+  clock.textContent = departureTime !== undefined ? Math.ceil(departureTime / 1000) + 's' : finished ? t('Finished') : !online.active ? t('Paused') : rolling || strike ? t('In motion') : Math.ceil(online.remainingMs() / 1000) + 's';
   clock.classList.toggle('urgent', departureTime !== undefined ? departureTime <= 10000 : online.active && !rolling && !strike && online.remainingMs() <= 10000);
   const callEligible = !snooker && !finished && !rolling && !strike && legalTargets().includes(8);
   const showPocketPicker = callEligible && canControl() && !tvEnabled && calledPocket === undefined;
@@ -2044,8 +2131,8 @@ engine.runRenderLoop(() => {
   if (tip.disabled && spinDialog.open) spinDialog.close();
   lockButton.disabled = stroke.disabled || viewMode;
   fineAim.disabled = !canFineAim();
-  lockButton.querySelector<HTMLElement>('.hud-label')!.textContent = aimLocked ? 'Locked' : 'Aim lock';
-  lockButton.setAttribute('aria-label', aimLocked ? 'Unlock aim' : 'Lock aim');
+  lockButton.querySelector<HTMLElement>('.hud-label')!.textContent = t(aimLocked ? 'Locked' : 'Aim lock');
+  lockButton.setAttribute('aria-label', aimLocked ? t('Unlock aim') : t('Lock aim'));
   lockButton.setAttribute('aria-pressed', String(aimLocked));
   document.querySelector<HTMLButtonElement>('#reset')!.disabled = isTournament() || onlineMode && (online.seat !== 0 || !online.active);
   const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
@@ -2068,18 +2155,19 @@ engine.runRenderLoop(() => {
   if (strike && authoritative) {
     strike = Math.max(0, strike - dt);
     if (!strike) {
-      const speed = shotSpeed(shotPower);
-      strikeBall(cueBall, aim.x, aim.z, speed, tipX, tipY);
+      const cue = mode.kind === 'computer' && turn === 0 ? equippedCareerCue : undefined;
+      const speed = shotSpeed(shotPower ** (cue?.power ?? 1));
+      strikeBall(cueBall, aim.x, aim.z, speed, tipX * (cue?.spin ?? 1), tipY * (cue?.spin ?? 1));
       sound.queue('cue', speed);
       if (resetSpinAfterShot) setTip(0, 0);
       rolling = true;
-      status.textContent = 'Balls in motion';
+      status.textContent = t('Balls in motion');
     }
   }
   if (rolling && authoritative) {
     accumulator += dt;
     while (accumulator >= fixedStep) {
-      const contact = step(balls, fixedStep, sound.queue);
+      const contact = step(balls, fixedStep, sound.queue, trackCareerRail);
       firstContact ??= contact;
       accumulator -= fixedStep;
     }

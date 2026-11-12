@@ -4,8 +4,12 @@ import { chooseGame } from './home';
 import { shouldAskAboutTv } from './tv-detection';
 import { remoteKey } from './tv-controls';
 import { installDialogFallback, installDialogDismissal } from './tv-dialogs';
+import { installLanguagePicker, t } from './i18n';
+import { setupPwa } from './pwa';
 
 async function start() {
+  installLanguagePicker();
+  setupPwa();
   await chooseGame();
   installDialogFallback();
   installDialogDismissal();
@@ -52,5 +56,5 @@ async function start() {
 }
 
 void start().catch(() => {
-  document.querySelector<HTMLElement>('#status')!.textContent = 'The game could not start. Please reload this page.';
+  document.querySelector<HTMLElement>('#status')!.textContent = t('The game could not start. Please reload this page.');
 });

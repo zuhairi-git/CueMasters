@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "Cue Master",
+  "short_name": "Cue Master",
+  "description": "Play pool and snooker in 3D.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "background_color": "#101e2c",
+  "theme_color": "#101e2c",
+  "icons": [
+    { "src": "./cue-master-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./cue-master-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

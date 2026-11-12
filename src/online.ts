@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import QRCode from 'qrcode';
 import jsQR from 'jsqr';
 import { getPlayerSecret } from './circuit';
@@ -44,7 +45,7 @@ export class OnlineGame {
     try { this.name = localStorage.getItem('billiard-player-name') || 'Player'; this.playerId = localStorage.getItem('billiard-player-id') || ''; } catch {}
     const nameInput = document.querySelector<HTMLInputElement>('#profileName')!;
     nameInput.value = this.name;
-    document.querySelector<HTMLElement>('#playerId')!.textContent = this.playerId || 'Generating ID…';
+    document.querySelector<HTMLElement>('#playerId')!.textContent = this.playerId || t('Generating ID…');
     void this.initPlayerId();
     nameInput.onchange = () => {
       this.name = nameInput.value.trim().slice(0, 24) || 'Player';
@@ -71,8 +72,8 @@ export class OnlineGame {
         const data = context.getImageData(0, 0, canvas.width, canvas.height);
         const result = jsQR(data.data, data.width, data.height);
         if (result) this.scanned(result.data);
-        else this.message.textContent = 'No readable QR code found. Try a clearer photo.';
-      } catch { this.message.textContent = 'Unable to read that photo.'; }
+        else this.message.textContent = t('No readable QR code found. Try a clearer photo.');
+      } catch { this.message.textContent = t('Unable to read that photo.'); }
       input.value = '';
     };
     this.dialog.addEventListener('close', () => this.stopScanner());
@@ -82,8 +83,8 @@ export class OnlineGame {
     document.querySelector<HTMLButtonElement>('#hostOnline')!.onclick = () => { void this.host(); };
     document.querySelector<HTMLButtonElement>('#joinOnline')!.onclick = () => { void this.join(); };
     document.querySelector<HTMLButtonElement>('#copyInvite')!.onclick = async () => {
-      try { await navigator.clipboard.writeText(this.link.href); this.message.textContent = 'Invite copied.'; }
-      catch { this.message.textContent = 'Select the invite link to copy or share it.'; }
+      try { await navigator.clipboard.writeText(this.link.href); this.message.textContent = t('Invite copied.'); }
+      catch { this.message.textContent = t('Select the invite link to copy or share it.'); }
     };
     const id = new URL(location.href).searchParams.get('join');
     if (!profileOnly && id && /^[A-Fa-f0-9]{12}$/.test(id)) {
@@ -102,7 +103,7 @@ export class OnlineGame {
   setCircuit(city?: { id: string; name: string }) {
     this.city = city?.id;
     document.querySelector<HTMLElement>('#casualInviteControls')!.hidden = Boolean(city) || this.profileOnly;
-    document.querySelector<HTMLElement>('#onlineTitle')!.textContent = city ? city.name + ' · Online tournament' : 'Your player profile';
+    document.querySelector<HTMLElement>('#onlineTitle')!.textContent = city ? t(city.name) + ' · ' + t('Online tournament') : t('Your player profile');
     this.findButton.hidden = !city;
     this.findButton.onclick = () => { void this.findMatch(); };
   }
@@ -143,7 +144,7 @@ export class OnlineGame {
   private connect() {
     if (this.connected) return Promise.resolve();
     if (this.connection) return this.connection;
-    this.message.textContent = 'Connecting…';
+    this.message.textContent = t('Connecting…');
     this.connection = new Promise<void>((resolve, reject) => {
       const secret = this.secret;
       const socket = this.socket = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/play`);
@@ -158,13 +159,13 @@ export class OnlineGame {
           this.playerId = data.playerId;
           try { localStorage.setItem('billiard-player-id', this.playerId); } catch {}
           document.querySelector<HTMLElement>('#playerId')!.textContent = this.playerId;
-          this.message.textContent = this.city ? 'Ready to find an opponent.' : 'Create an invite, or enter the other player’s ID.';
+          this.message.textContent = this.city ? t('Ready to find an opponent.') : t('Create an invite, or enter the other player’s ID.');
           resolve();
           void this.drawInvite();
         } else if (data.type === 'waiting') {
-          this.message.textContent = 'Waiting for your opponent to join…';
+          this.message.textContent = t('Waiting for your opponent to join…');
         } else if (data.type === 'city-waiting') {
-          this.message.textContent = 'Waiting for another player to join this city…';
+          this.message.textContent = t('Waiting for another player to join this city…');
         } else if (data.type === 'paired') {
           this.departureDeadline = undefined;
           if (!data.resume) { this.clockRemaining = 30000; this.clockRunning = false; }
@@ -172,7 +173,7 @@ export class OnlineGame {
           this.seat = data.seat;
           this.peerId = data.peerId;
           this.peerName = data.peerName || 'Player';
-          this.message.textContent = 'Connected to player ' + this.peerId;
+          this.message.textContent = t('Connected to player {id}', { id: this.peerId });
           this.findButton.disabled = true;
           if (this.dialog.open) this.dialog.close();
           this.onPaired(data.resume ? data.state : undefined, data.city);
@@ -196,7 +197,7 @@ export class OnlineGame {
           this.seat = data.seat;
           this.peerName = data.peerName || 'Player';
           this.departureDeadline = performance.now() + data.remaining;
-          this.message.textContent = 'Opponent left. Waiting for their timer to expire…';
+          this.message.textContent = t('Opponent left. Waiting for their timer to expire…');
           if (this.dialog.open) this.dialog.close();
           this.onDeparture();
         } else if (data.type === 'ended') {
@@ -206,14 +207,14 @@ export class OnlineGame {
             this.seat = data.winner;
             this.peerName = data.peerName || 'Player';
           }
-          this.message.textContent = data.message;
+          this.message.textContent = t(data.message);
           if (data.result) this.onCircuitResult(data.result);
           this.onEnded(data.winner);
         } else if (data.type === 'left') {
           this.acknowledgeLeave?.();
         } else if (data.type === 'error') {
           this.findButton.disabled = this.active;
-          this.message.textContent = data.message;
+          this.message.textContent = t(data.message);
         }
       };
       socket.onclose = () => {
@@ -223,12 +224,12 @@ export class OnlineGame {
         const wasActive = this.active;
         this.active = false;
         this.findButton.disabled = false;
-        this.message.textContent = 'Connection closed. Reopen Online to reconnect.';
+        this.message.textContent = t('Connection closed. Reopen Online to reconnect.');
         if (wasActive) this.onEnded();
         reject(new Error('Online connection closed'));
       };
       socket.onerror = () => {
-        this.message.textContent = 'Online service unavailable. Start the game server, then reopen Online.';
+        this.message.textContent = t('Online service unavailable. Start the game server, then reopen Online.');
       };
     });
     return this.connection;
@@ -237,7 +238,7 @@ export class OnlineGame {
   private async host() {
     try {
       await this.connect();
-      if (this.active) { this.message.textContent = 'Leave the current online game before creating another invite.'; return; }
+      if (this.active) { this.message.textContent = t('Leave the current online game before creating another invite.'); return; }
       this.send({ type: 'host' });
       await this.drawInvite();
     } catch {
@@ -265,9 +266,9 @@ export class OnlineGame {
       document.querySelector<HTMLElement>('#invite')!.hidden = false;
       const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
       document.querySelector<HTMLElement>('#inviteNote')!.textContent = loopback
-        ? 'For another device, open this game using your computer’s network address first, then create the invite again.'
-        : 'Your opponent can scan this barcode / QR code with their phone camera, or open the invite link.';
-    } catch { this.message.textContent = 'Unable to generate the barcode / QR code.'; }
+        ? t('For another device, open this game using your computer’s network address first, then create the invite again.')
+        : t('Your opponent can scan this barcode / QR code with their phone camera, or open the invite link.');
+    } catch { this.message.textContent = t('Unable to generate the barcode / QR code.'); }
   }
 
   private scanned(text: string) {
@@ -275,11 +276,11 @@ export class OnlineGame {
     if (!/^[A-Fa-f0-9]{12}$/.test(id)) {
       try {
         const url = new URL(text);
-        if (url.origin !== location.origin) { this.message.textContent = 'This invite uses another game server. Open its invite link first.'; return; }
+        if (url.origin !== location.origin) { this.message.textContent = t('This invite uses another game server. Open its invite link first.'); return; }
         id = url.searchParams.get('join') ?? '';
       } catch { id = ''; }
     }
-    if (!/^[A-Fa-f0-9]{12}$/.test(id)) { this.message.textContent = 'That QR code is not a player invite.'; return; }
+    if (!/^[A-Fa-f0-9]{12}$/.test(id)) { this.message.textContent = t('That QR code is not a player invite.'); return; }
     this.stopScanner();
     this.opponentId.value = id.toUpperCase();
     void this.join();
@@ -287,7 +288,7 @@ export class OnlineGame {
 
   private async startScanner() {
     if (!navigator.mediaDevices?.getUserMedia) {
-      this.message.textContent = 'Camera scanning needs HTTPS or localhost. Use a QR photo or enter the player ID.';
+      this.message.textContent = t('Camera scanning needs HTTPS or localhost. Use a QR photo or enter the player ID.');
       return;
     }
     this.stopScanner();
@@ -300,7 +301,7 @@ export class OnlineGame {
       video.srcObject = stream;
       document.querySelector<HTMLElement>('#scanner')!.hidden = false;
       await video.play();
-      this.message.textContent = 'Point the camera at the other player’s QR code.';
+      this.message.textContent = t('Point the camera at the other player’s QR code.');
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d', { willReadFrequently: true })!;
       let lastScan = 0;
@@ -318,7 +319,7 @@ export class OnlineGame {
         this.scanFrame = requestAnimationFrame(scan);
       };
       this.scanFrame = requestAnimationFrame(scan);
-    } catch { this.stopScanner(); this.message.textContent = 'Camera unavailable or permission denied. Use a QR photo or enter the player ID.'; }
+    } catch { this.stopScanner(); this.message.textContent = t('Camera unavailable or permission denied. Use a QR photo or enter the player ID.'); }
   }
 
   private stopScanner() {
@@ -332,11 +333,11 @@ export class OnlineGame {
 
   private async join() {
     const id = this.opponentId.value.trim().toUpperCase();
-    if (!/^[A-F0-9]{12}$/.test(id)) { this.message.textContent = 'Enter a 12-character player ID.'; return; }
+    if (!/^[A-F0-9]{12}$/.test(id)) { this.message.textContent = t('Enter a 12-character player ID.'); return; }
     try {
       await this.connect();
-      if (this.active) { this.message.textContent = 'Leave your current game before joining another.'; return; }
-      this.message.textContent = 'Joining player ' + id + '…';
+      if (this.active) { this.message.textContent = t('Leave your current game before joining another.'); return; }
+      this.message.textContent = t('Joining player {id}…', { id });
       this.send({ type: 'join', playerId: id });
     } catch { /* Connection status is shown in the dialog. */ }
   }
@@ -362,7 +363,7 @@ export class OnlineGame {
     this.active = false;
     this.seat = undefined;
     this.departureDeadline = undefined;
-    this.message.textContent = 'Left the online game.';
+    this.message.textContent = t('Left the online game.');
   }
 
   remainingMs() {

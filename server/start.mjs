@@ -7,7 +7,7 @@ import { createCircuit } from './circuit.mjs';
 
 const circuit = createCircuit(process.env.CIRCUIT_DATA_FILE || '.billiard-circuit.json');
 const root = fileURLToPath(new URL('../dist/', import.meta.url));
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 const server = createServer(async (request, response) => {
   if (circuit.handleRequest(request, response)) return;
   try {

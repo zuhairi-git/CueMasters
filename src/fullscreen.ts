@@ -1,3 +1,4 @@
+import { t } from './i18n';
 type FullscreenDocument = Partial<Pick<Document, 'fullscreenElement' | 'exitFullscreen'>> & {
   webkitFullscreenElement?: Element | null;
   webkitCurrentFullScreenElement?: Element | null;
@@ -41,13 +42,13 @@ export function installFullscreenControl(button: HTMLButtonElement, notice: HTML
   function sync() {
     const active = fullscreenActive(doc);
     const supported = fullscreenSupported(doc, root);
-    const label = active ? 'Exit full screen' : 'Full screen';
+    const label = t(active ? 'Exit full screen' : 'Full screen');
     button.querySelector<HTMLElement>('.hud-label')!.textContent = label;
-    button.setAttribute('aria-label', active ? 'Exit full screen and show browser navigation' : 'Enter full screen and hide browser navigation');
+    button.setAttribute('aria-label', active ? t('Exit full screen and show browser navigation') : t('Enter full screen and hide browser navigation'));
     button.setAttribute('aria-pressed', String(active));
-    button.title = supported ? label : 'This browser does not support full screen';
+    button.title = supported ? label : t('This browser does not support full screen');
     const description = button.querySelector<HTMLElement>('.menu-description');
-    if (description) description.textContent = supported ? active ? 'Show the browser navigation again' : 'Hide browser navigation while you play' : 'Full screen is unavailable in this browser';
+    if (description) description.textContent = supported ? active ? t('Show the browser navigation again') : t('Hide browser navigation while you play') : t('Full screen is unavailable in this browser');
   }
   button.onclick = async () => {
     if (pending) return;
@@ -56,7 +57,7 @@ export function installFullscreenControl(button: HTMLButtonElement, notice: HTML
     window.clearTimeout(noticeTimeout);
     try { await toggleFullscreen(doc, root); }
     catch {
-      notice.textContent = 'This browser could not change full screen. Use its full-screen control if available.';
+      notice.textContent = t('This browser could not change full screen. Use its full-screen control if available.');
       notice.hidden = false;
       noticeTimeout = window.setTimeout(() => { notice.hidden = true; }, 8000);
     } finally { pending = false; sync(); }
