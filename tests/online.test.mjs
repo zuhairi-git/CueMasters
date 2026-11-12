@@ -10,6 +10,9 @@ import QRCode from 'qrcode';
 import jsQR from 'jsqr';
 import { attachOnline } from '../server/online.mjs';
 import { createCircuit } from '../server/circuit.mjs';
+import { loadSource } from './load-source.mjs';
+
+const { onlineMedals } = await loadSource('circuit');
 
 function inbox(socket) {
   const queue = [], waiting = [];
@@ -137,6 +140,8 @@ test('city matchmaking enforces unlocks and persists each result once', { timeou
   const reopened = createCircuit(file);
   assert.equal(reopened.canEnter(host.playerId, 'stockholm'), true);
   assert.equal(reopened.canEnter(guest.playerId, 'stockholm'), false);
+  assert.deepEqual(onlineMedals(await progress(host)).map(city => city.id), ['helsinki']);
+  assert.deepEqual(onlineMedals(await progress(guest)), []);
 });
 
 test('profile QR codes round-trip through the same decoder used by the scanner', () => {

@@ -36,6 +36,22 @@ export function cityDifficulty(city: City) {
   return difficulties[city.level - 1];
 }
 
+export function onlineMedals(progress: Progress) {
+  return cities.filter(city => progress[city.id]?.wins > 0);
+}
+
+export function onlineMedalName(city: City) {
+  return t('{city} medal', { city: t(city.name) });
+}
+
+export async function fetchOnlineProgress(secret: string, signal?: AbortSignal): Promise<Progress> {
+  const response = await fetch('/circuit-progress', {
+    method: 'POST', headers: { 'X-Player-Secret': secret }, signal,
+  });
+  if (!response.ok) throw new Error('Progress unavailable');
+  return response.json();
+}
+
 export function getPlayerSecret() {
   try {
     const saved = localStorage.getItem('billiard-player-secret');

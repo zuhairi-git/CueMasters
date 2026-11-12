@@ -182,6 +182,7 @@
     <div class="sound-row"><div><strong>Shot guides</strong><small>Aim line, object-ball path and pocket highlight</small></div><button class="ui-button" id="guidesToggle" type="button" aria-pressed="true">Guides on</button></div>
     </fieldset><fieldset><legend>Room &amp; equipment</legend>
     <label class="ui-field"><span>Cue</span><span class="ui-select-wrap"><select class="ui-select" id="cueStyle"><option value="Classic Maple">Classic Maple</option><option value="Rosewood">Rosewood</option><option value="Carbon Black" selected>Carbon Black</option></select></span></label>
+    <p class="settings-note" id="trainingCueNote" hidden></p>
     <label class="ui-field"><span>Table</span><span class="ui-select-wrap"><select class="ui-select" id="tableStyle"><option value="Club Green" selected>Club Green</option><option value="Tournament Blue">Tournament Blue</option><option value="Burgundy Lounge">Burgundy Lounge</option></select></span></label>
     <label class="ui-field"><span>Theme</span><span class="ui-select-wrap"><select class="ui-select" id="theme"><option value="club">Clubhouse</option><option value="midnight">Midnight</option><option value="ivory">Ivory</option></select></span></label>
     <label class="ui-field"><span>Graphics</span><span class="ui-select-wrap"><select class="ui-select" id="quality"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High" selected>High</option><option value="Ultra">Ultra</option></select></span></label>
@@ -220,6 +221,11 @@
 <dialog class="ui-dialog" id="online" aria-labelledby="onlineTitle">
   <div class="dialog-body">
   <div class="settings-heading"><span class="eyebrow">YOUR PROFILE · PLAY TOGETHER</span><h2 id="onlineTitle">Your player profile</h2></div>
+  <p class="settings-note" id="careerProfile"></p>
+  <section id="onlineMedalSection" aria-labelledby="onlineMedalTitle" hidden>
+    <h3 id="onlineMedalTitle">Online city medals</h3>
+    <ul id="onlineMedals" class="online-medals"></ul>
+  </section>
   <label class="profile-name" for="profileName">Your name<input class="ui-select" id="profileName" maxlength="24" autocomplete="nickname"></label>
   <p>Your player ID: <strong id="playerId">Connecting…</strong></p>
   <p id="onlineStatus" role="status"></p>

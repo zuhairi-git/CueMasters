@@ -2,6 +2,7 @@ import { cities, computerProgress, type City } from './circuit';
 import { difficulties } from './difficulty';
 import { t } from './i18n';
 import { rack } from './physics';
+import { cityFinishes } from './table-finishes';
 
 type Position = [number, number, number];
 type Challenge = { kind: 'pot' | 'bank' | 'contact'; attempts: number; ball: number };
@@ -40,6 +41,9 @@ export const careerStages: Stage[] = [
 ];
 
 const cityStages: Record<string, Record<number, Partial<Stage>>> = {
+  helsinki: {
+    5: { layout: [[0, .13, -.30], [1, .22, -.03]] },
+  },
   stockholm: {
     4: { title: 'Stockholm Run', objective: 'Clear all your solids in one visit.',
       layout: [[0, .10, -.32], [1, .43, -.12], [2, -.38, .22], [3, -.38, .92]] },
@@ -64,8 +68,8 @@ export function careerStage(city: City, index: number): Stage {
 
 export const careerCues = [
   { id: 'Carbon Black', price: 0, description: 'Standard cue', power: 1, spin: 1 },
-  { id: 'Classic Maple', price: 300, description: 'Finer control at low power', power: 1.08, spin: 1 },
-  { id: 'Rosewood', price: 600, description: 'Slightly more spin', power: 1, spin: 1.08 },
+  { id: 'Classic Maple', price: 300, description: 'Finer control at low power', power: 1.12, spin: 1 },
+  { id: 'Rosewood', price: 600, description: 'Slightly more spin', power: 1, spin: 1.12 },
 ] as const;
 export type CareerCue = typeof careerCues[number]['id'];
 type Career = {
@@ -174,14 +178,6 @@ export function finishCareerStage(city: City, index: number, matchId: string, wo
     : t('{city} completed. You won the circuit!', { city: t(city.name) }))
     + ' ' + t('Table finish unlocked: {finish}.', { finish: t(cityFinishes[city.id].name) });
 }
-
-export const cityFinishes: Record<string, { name: string; colors: [string, string, string] }> = {
-  helsinki: { name: 'Helsinki Harbor', colors: ['#327d89', '#1b555d', '#1d293a'] },
-  stockholm: { name: 'Stockholm Amber', colors: ['#a86d36', '#704421', '#30272b'] },
-  copenhagen: { name: 'Copenhagen Brick', colors: ['#a84e47', '#73322f', '#362229'] },
-  berlin: { name: 'Berlin Slate', colors: ['#535f80', '#343f5e', '#202532'] },
-  london: { name: 'London Emerald', colors: ['#248451', '#165437', '#23352d'] },
-};
 
 export function careerLayout(city: City, index: number, rackNumber = 0) {
   const stage = careerStage(city, index);

@@ -1,9 +1,10 @@
-import { cities, cityDifficulty, cityStatus, getPlayerSecret, type Circuit, type Mode, type Progress } from './circuit';
+import { cities, cityDifficulty, cityStatus, fetchOnlineProgress, getPlayerSecret, onlineMedalName, type Circuit, type Mode, type Progress } from './circuit';
 import { difficulties } from './difficulty';
 import { validGame, type SavedGame } from './saved-game';
 import { remoteKey } from './tv-controls';
 import { t } from './i18n';
-import { careerCityStatus, careerClears, careerCues, careerDifficulty, careerProgress, careerReward, careerStages, careerStageStatus, equipCareerCue } from './career';
+import { careerBonus, careerCityStatus, careerClears, careerCues, careerDifficulty, careerGoal, careerProgress, careerRank, careerReward, careerStage, careerStages, careerStageStatus, equipCareerCue } from './career';
+import { cityFinishes } from './table-finishes';
 import helsinki from './helsinki-harbor.svg?raw';
 import stockholm from './stockholm-skyline.svg?raw';
 import copenhagen from './copenhagen-skyline.svg?raw';
@@ -98,7 +99,7 @@ function savedSession(): typeof launch | undefined {
 
 export function labelGame(mode: Mode) {
   const city = t('city' in mode ? mode.city.name : mode.kind === 'training' ? 'Training' : 'Invite play');
-  const name = mode.kind === 'computer' ? city + ' · ' + t(careerStages[mode.stage].title) : city;
+  const name = mode.kind === 'computer' ? city + ' · ' + t(careerStage(mode.city, mode.stage).title) : city;
   document.querySelector<HTMLElement>('#gameCity')!.textContent = name;
   document.querySelector<HTMLElement>('#gameMenuTitle')!.textContent = name + ' · ' + t('Game menu');
   document.title = name + ' · Cue Master';
@@ -145,7 +146,7 @@ export async function chooseGame() {
 
     function wallet() {
       const { coins, points } = careerProgress();
-      return t('{coins} coins · {points} career points', { coins, points });
+      return t(careerRank(points)) + ' · ' + t('{coins} coins · {points} career points', { coins, points });
     }
 
     function showStages(city: typeof cities[number]) {
@@ -157,12 +158,15 @@ export async function chooseGame() {
       status.textContent = t('{cleared}/{total} games cleared', { cleared: careerClears(city, careerProgress()), total: careerStages.length }) + ' · ' + wallet();
       const progress = careerProgress();
       list.dataset.layout = 'stages';
-      list.replaceChildren(...careerStages.map((stage, index) => {
+      list.replaceChildren(...careerStages.map((_, index) => {
+        const stage = careerStage(city, index);
         const availability = careerStageStatus(city, index, progress);
         const locked = availability === 'Locked';
+        const bonus = progress.bonuses[city.id]?.[index] ? t('Skill goal completed')
+          : t('{goal} for +{coins} coins and +{points} points', { goal: t(careerGoal(city, index)), ...careerBonus });
         return selectionCard({
           title: t(stage.title), subtitle: t('Game {number}', { number: index + 1 }) + ' · ' + t(careerDifficulty(city, index)),
-          detail: t(stage.objective) + (availability !== 'Completed' ? ' · ' + t('{coins} coins · {points} career points', careerReward(index)) : ''),
+          detail: [t(stage.objective), availability !== 'Completed' ? t('{coins} coins · {points} career points', careerReward(index)) : '', bonus].filter(Boolean).join(' · '),
           status: availability, artwork: tableArt(index % 5 + 1),
           action: locked ? undefined : t(availability === 'Completed' ? 'Replay' : 'Play'),
           play: locked ? undefined : () => start({ kind: 'computer', city, stage: index, matchId: crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-') }),
@@ -253,7 +257,8 @@ export async function chooseGame() {
           list.append(selectionCard({
             title: t(city.name), subtitle: t(city.country),
             detail: locked && prerequisite ? t('Clear all games in {city} to unlock', { city: t(prerequisite.name) })
-              : t('{cleared}/{total} games cleared', { cleared: careerClears(city, progress), total: careerStages.length }),
+              : t('{cleared}/{total} games cleared', { cleared: careerClears(city, progress), total: careerStages.length })
+                + (availability === 'Completed' ? ' · ' + t('Table finish unlocked: {finish}.', { finish: t(cityFinishes[city.id].name) }) : ''),
             status: availability, artwork: cityArt[city.id],
             action: locked ? undefined : t('View games'),
             play: locked ? undefined : () => showStages(city),
@@ -266,11 +271,7 @@ export async function chooseGame() {
         const pending = request = new AbortController();
         status.textContent = t('Loading online progress…');
         try {
-          const response = await fetch('/circuit-progress', {
-            method: 'POST', headers: { 'X-Player-Secret': getPlayerSecret() }, signal: pending.signal,
-          });
-          if (!response.ok) throw new Error('Progress unavailable');
-          progress = await response.json();
+          progress = await fetchOnlineProgress(getPlayerSecret(), pending.signal);
           if (pending.signal.aborted) return;
         } catch {
           if (pending.signal.aborted) return;
@@ -295,7 +296,8 @@ export async function chooseGame() {
           title: t(city.name),
           subtitle: [t(city.country), t('Level {level}', { level: city.level }), t(cityDifficulty(city))].join(' · '),
           detail: locked && prerequisite ? t('Win in {city} to unlock', { city: t(prerequisite.name) })
-            : t('{wins} wins · {losses} losses', { wins: stats?.wins ?? 0, losses: stats?.losses ?? 0 }),
+            : t('{wins} wins · {losses} losses', { wins: stats?.wins ?? 0, losses: stats?.losses ?? 0 }) + ' · '
+              + (availability === 'Completed' ? onlineMedalName(city) : t('First win earns a city medal')),
           artwork: cityArt[city.id],
           status: availability,
           action: locked ? undefined : t(availability === 'Completed' ? 'Replay' : 'Join tournament'),

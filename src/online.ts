@@ -1,7 +1,7 @@
 import { t } from './i18n';
 import QRCode from 'qrcode';
 import jsQR from 'jsqr';
-import { getPlayerSecret } from './circuit';
+import { fetchOnlineProgress, getPlayerSecret, onlineMedalName, onlineMedals } from './circuit';
 
 export type CircuitResult = { winner: number; firstWin: boolean };
 
@@ -40,6 +40,7 @@ export class OnlineGame {
   private secret = getPlayerSecret();
   private city?: string;
   private findButton = document.querySelector<HTMLButtonElement>('#findCityMatch')!;
+  private medalRequest?: AbortController;
 
   constructor(private profileOnly = false) {
     try { this.name = localStorage.getItem('billiard-player-name') || 'Player'; this.playerId = localStorage.getItem('billiard-player-id') || ''; } catch {}
@@ -76,7 +77,10 @@ export class OnlineGame {
       } catch { this.message.textContent = t('Unable to read that photo.'); }
       input.value = '';
     };
-    this.dialog.addEventListener('close', () => this.stopScanner());
+    this.dialog.addEventListener('close', () => {
+      this.stopScanner();
+      this.medalRequest?.abort();
+    });
     window.addEventListener('pagehide', () => this.stopScanner());
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.stopScanner(); });
     document.querySelector<HTMLButtonElement>('#openOnline')!.onclick = () => this.open();
@@ -95,9 +99,34 @@ export class OnlineGame {
 
   open() {
     if (!this.dialog.open) this.dialog.showModal();
+    void this.refreshMedals();
     if (this.profileOnly) return;
     void this.drawInvite();
     void this.connect().catch(() => {});
+  }
+
+  async refreshMedals() {
+    if (!this.dialog.open) return;
+    this.medalRequest?.abort();
+    const pending = this.medalRequest = new AbortController();
+    const section = document.querySelector<HTMLElement>('#onlineMedalSection')!;
+    try {
+      const progress = await fetchOnlineProgress(this.secret, pending.signal);
+      if (pending.signal.aborted) return;
+      const medals = onlineMedals(progress);
+      const list = document.querySelector<HTMLUListElement>('#onlineMedals')!;
+      list.replaceChildren(...medals.map(city => {
+        const medal = document.createElement('li');
+        const icon = document.createElement('span');
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '★';
+        medal.append(icon, onlineMedalName(city));
+        return medal;
+      }));
+      section.hidden = medals.length === 0;
+    } catch {
+      if (!pending.signal.aborted) section.hidden = true;
+    }
   }
 
   setCircuit(city?: { id: string; name: string }) {

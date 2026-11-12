@@ -62,6 +62,23 @@ header.game-hud > .game-heading {
   font-size: .72rem;
   line-height: 1.25;
 }
+.online-medals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+}
+.online-medals li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: .8rem;
+}
+.online-medals li span { color: #e4b757; }
 .brand-ball {
   display: grid;
   place-items: center;

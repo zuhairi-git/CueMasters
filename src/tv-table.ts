@@ -1,4 +1,5 @@
 import { traceShot } from './aim-guide';
+import { tableFinish } from './table-finishes';
 import { ballMarkings } from './ball-markings';
 import { cushions, length, pockets, radius, width, type Ball } from './physics';
 
@@ -89,12 +90,7 @@ export class TvTable {
     };
     ctx.setTransform(this.pixelRatio, 0, 0, this.pixelRatio, 0, 0);
     ctx.fillStyle = '#080f20'; ctx.fillRect(0, 0, this.screenWidth, this.screenHeight);
-    const finishes: Record<string, string[]> = {
-      'Club Green': ['#199d85', '#116858', '#182e35'],
-      'Tournament Blue': ['#258bd0', '#125283', '#182b43'],
-      'Burgundy Lounge': ['#b44876', '#742c54', '#30233c'],
-    };
-    const [felt, cushion, wood] = state.snooker ? ['#851e39', '#4d142c', '#211a29'] : finishes[state.tableStyle] ?? finishes['Tournament Blue'];
+    const [felt, cushion, wood] = tableFinish(state.tableStyle, state.snooker);
     rectangle(width + 0.30, length + 0.30, '#0a100d');
     rectangle(width + 0.27, length + 0.27, '#63ddf1');
     rectangle(width + 0.25, length + 0.25, wood);

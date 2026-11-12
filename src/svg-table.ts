@@ -1,4 +1,5 @@
 import { cueArtwork } from './svg-cue';
+import { tableFinish } from './table-finishes';
 import { ballArtwork } from './svg-ball';
 import { ballMarkings } from './ball-markings';
 import { traceShot } from './aim-guide';
@@ -92,7 +93,9 @@ export class SvgTable {
     return {x, z};
   }
   private artwork(state: TableState) {
-    const felt = state.snooker ? '#90213e' : state.tableStyle === 'Club Green' ? '#138875' : state.tableStyle === 'Burgundy Lounge' ? '#922e59' : '#197eb4';
+    const felt = state.snooker ? '#90213e' : state.tableStyle === 'Club Green' ? '#138875'
+      : state.tableStyle === 'Burgundy Lounge' ? '#922e59' : state.tableStyle === 'Tournament Blue' ? '#197eb4'
+      : tableFinish(state.tableStyle, false)[0];
     let s = `<rect x="-784" y="-1419" width="1568" height="2838" rx="112" fill="#000" opacity=".4" transform="translate(0 12)"/>
       <rect x="-775" y="-1410" width="1550" height="2820" rx="105" fill="url(#sv-rail)" stroke="#c4aa77" stroke-width="4"/>
       <rect x="-760" y="-1395" width="1520" height="2790" rx="94" fill="none" stroke="#ffffff" stroke-opacity=".13" stroke-width="2"/>

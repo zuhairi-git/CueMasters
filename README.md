@@ -9,15 +9,21 @@ A static file host alone does not support online games.
 
 - Choose **Online Play**, **Computer Career**, or **Training** from the homepage.
   In Computer Career, clear all ten games in each city to open the next city.
-  First clears earn career points and coins. Spend coins on cue upgrades in
+  First clears earn career points and coins. Optional skill goals pay a one-time
+  bonus and can be earned on replays. Points determine your career rank, and
+  finishing a city unlocks a themed table finish in **Settings → Table**.
+  The London Championship is best-of-three.
+  Spend coins on cue upgrades in
   the **Equipment shop** on the career screen. Career progress and equipment
   live in your browser, and cities unlocked before the update remain accessible.
-  In the online circuit, a match win completes the city. Matchmaking pairs players
-  in the same city. Online progress follows your player ID
+  In the online circuit, your first win in each city completes the city and adds
+  its cosmetic medal to your player profile. Matchmaking pairs players in the
+  same city. Online progress and medals follow your player ID
   on the same server and is saved to `.billiard-circuit.json` by default. Set
   `CIRCUIT_DATA_FILE` to a persistent writable path when hosting the game.
 - Training lets you control both seats or practice against the computer at any
-  difficulty. You can re-rack freely and change the ruleset in Settings.
+  difficulty. Try any cue's power and spin characteristics under **Settings → Cue**.
+  You can re-rack freely and change the ruleset in Settings.
 
 The default overhead table uses SVG artwork for the table, cushions, cue, and
 balls. The scoreboard and player details share the same SVG ball artwork.

@@ -10,8 +10,9 @@ import { installFullscreenControl } from './fullscreen';
 import { cueLength, cuePose } from './cue-geometry';
 import { directionToBall, traceShot } from './aim-guide';
 import { OnlineGame } from './online';
-import { cities, resultMessage } from './circuit';
-import { careerCityStatus, careerCue, careerCues, careerDifficulty, careerLayout, careerProgress, careerStages, careerStageStatus, finishCareerStage } from './career';
+import { cities, onlineMedalName, resultMessage } from './circuit';
+import { careerCityStatus, careerCue, careerCues, careerDifficulty, careerGoal, careerLayout, careerProgress, careerRank, careerStage, careerStages, careerStageStatus, finishCareerStage } from './career';
+import { cityFinishes, tableFinish } from './table-finishes';
 import { clearSession, labelGame, launch, saveSession } from './home';
 import type { Difficulty } from './difficulty';
 import { groupOf, poolTargets, resolvePoolShot, type Groups } from './pool-rules';
@@ -609,6 +610,8 @@ let difficulty: Difficulty = mode.kind === 'computer' ? careerDifficulty(mode.ci
 const equippedCareerCue = mode.kind === 'computer' ? careerCue() : undefined;
 let careerAttempts = 0;
 let careerBanked = false;
+let careerClean = true;
+let careerRacks: [number, number] = [0, 0];
 let versusComputer = mode.kind === 'computer' || mode.kind === 'training' && mode.opponent === 'computer';
 const online = new OnlineGame(mode.kind === 'computer');
 let onlineMode = mode.kind === 'online';
@@ -833,7 +836,8 @@ function finishShot() {
     const eightPocket = balls[8].pocketed ? pockets.reduce((closest, pocket, index) =>
       Math.hypot(pocket.x - balls[8].x, pocket.z - balls[8].z) < Math.hypot(pockets[closest].x - balls[8].x, pockets[closest].z - balls[8].z) ? index : closest, 0) : undefined;
     const result = resolvePoolShot({ turn, groups, targets: shotTargets, firstContact, potted, scratch, breaking: shotWasBreak, calledPocket, eightPocket });
-    const stage = mode.kind === 'computer' ? careerStages[mode.stage] : undefined;
+    const stage = mode.kind === 'computer' ? careerStage(mode.city, mode.stage) : undefined;
+    if (stage && turn === 0 && scratch) careerClean = false;
     const challenge = stage?.challenge;
     if (mode.kind === 'computer' && challenge) {
       careerAttempts++;
@@ -842,7 +846,7 @@ function finishShot() {
         potted.includes(challenge.ball) && (challenge.kind !== 'bank' || careerBanked));
       if (!won && careerAttempts < challenge.attempts) {
         const attempts = careerAttempts;
-        resetMatch();
+        resetMatch(true);
         careerAttempts = attempts;
         showReadyStatus();
         saveGame();
@@ -850,8 +854,16 @@ function finishShot() {
       }
       result.winner = won ? 0 : 1;
     } else if (stage?.oneVisit) {
-      result.winner = !result.foul && balls[1].pocketed && balls[2].pocketed ? 0
+      result.winner = !result.foul && balls.slice(1, 8).every(ball => ball.pocketed) ? 0
         : result.turn !== turn || result.foul ? 1 : undefined;
+    }
+    if (stage?.bestOfThree && (result.winner === 0 || result.winner === 1)) {
+      careerRacks[result.winner]++;
+      if (careerRacks[result.winner] < 2) {
+        resetMatch(true);
+        saveGame();
+        return;
+      }
     }
     groups = result.groups;
     winner = result.winner;
@@ -1171,9 +1183,13 @@ function showReadyStatus() {
   const objective = document.querySelector<HTMLElement>('#careerObjective')!;
   objective.hidden = mode.kind !== 'computer' || finished;
   if (mode.kind === 'computer' && !finished) {
-    const stage = careerStages[mode.stage];
-    objective.textContent = t(stage.objective) + (stage.challenge
-      ? ' · ' + t('Attempts left: {count}', { count: stage.challenge.attempts - careerAttempts }) : '');
+    const stage = careerStage(mode.city, mode.stage);
+    const counter = stage.challenge ? t('Attempts left: {count}', { count: stage.challenge.attempts - careerAttempts })
+      : stage.bestOfThree ? t('Racks won: You {player} · Computer {computer}', { player: careerRacks[0], computer: careerRacks[1] }) : '';
+    const goal = stage.challenge ? careerAttempts === 0 : careerClean;
+    const hint = mode.city.id === 'helsinki' && stage.challenge?.kind === 'bank' && careerAttempts > 0
+      ? t('Aim the object ball at a cushion and use enough power for the rebound.') : '';
+    objective.textContent = [t(stage.objective), counter, goal ? t(careerGoal(mode.city, mode.stage)) : '', hint].filter(Boolean).join(' · ');
   }
   if (tvEnabled) { updateTvControls(); return; }
   if (online.departureDeadline !== undefined) {
@@ -1463,11 +1479,15 @@ document.querySelector<HTMLButtonElement>('#camera')!.onclick = event => {
   button.querySelector<HTMLElement>('.hud-label')!.textContent = t(overhead ? '3D view' : 'Top view');
   button.setAttribute('aria-label', t(overhead ? 'Switch to perspective view' : 'Switch to top-down view'));
 };
-function resetMatch() {
+function resetMatch(continueCareer = false) {
   wonByForfeit = false;
   applyTableFinish();
   tvContext = '';
-  const preset = mode.kind === 'computer' ? careerLayout(mode.city, mode.stage) : undefined;
+  if (!continueCareer) {
+    careerClean = true;
+    careerRacks = [0, 0];
+  }
+  const preset = mode.kind === 'computer' ? careerLayout(mode.city, mode.stage, careerRacks[0] + careerRacks[1]) : undefined;
   balls = preset ?? rack(snooker, Math.random);
   careerAttempts = 0;
   careerBanked = false;
@@ -1624,6 +1644,8 @@ document.querySelector<HTMLButtonElement>('#openSettings')!.onclick = () => {
   select('difficulty').value = difficulty;
   for (const field of ['game', 'opponent', 'difficulty']) select(field).disabled = isTournament();
   select('cueStyle').disabled = mode.kind === 'computer';
+  refreshCityFinishes();
+  describeCue();
   document.querySelector<HTMLButtonElement>('#newMatch')!.disabled = isTournament();
   offlinePlayerTwoNameInput.value = offlinePlayerTwoName;
   syncOfflinePlayerNameVisibility();
@@ -1641,11 +1663,18 @@ const cueStyles: Record<string, [string, string]> = {
   Rosewood: ['#a95d45', '#572922'],
   'Carbon Black': ['#525762', '#171b23'],
 };
-const tableStyles: Record<string, [string, string, string]> = {
-  'Club Green': ['#199d85', '#116858', '#182e35'],
-  'Tournament Blue': ['#258bd0', '#125283', '#182b43'],
-  'Burgundy Lounge': ['#b44876', '#742c54', '#30233c'],
-};
+function describeCue() {
+  const note = document.querySelector<HTMLElement>('#trainingCueNote')!;
+  note.hidden = mode.kind !== 'training';
+  const style = careerCues.find(entry => entry.id === select('cueStyle').value);
+  if (!style || note.hidden) return;
+  const percent = new Intl.NumberFormat(document.documentElement.lang, { style: 'percent' });
+  const power = percent.format(1 - shotSpeed(.5 ** style.power) / shotSpeed(.5));
+  const spin = percent.format(style.spin - 1);
+  const effect = style.power !== 1 ? t('{amount} less cue-ball speed at half power', { amount: power })
+    : style.spin !== 1 ? t('{amount} more spin at half tip offset', { amount: spin }) : t(style.description);
+  note.textContent = t('Training preview: {effect}', { effect });
+}
 function updateCueStyle() {
   const [shaft, butt] = cueStyles[select('cueStyle').value];
   (cue.material as StandardMaterial).diffuseColor = Color3.FromHexString(shaft);
@@ -1655,12 +1684,13 @@ function updateCueStyle() {
   stroke.querySelector('.cue-stick')!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1260 -14 1265 32" preserveAspectRatio="none">' + cueArtwork(select('cueStyle').value) + '</svg>';
   const direction = document.body.classList.contains('vertical-controls') && !mobileLayout.matches ? 'down' : 'left';
   stroke.setAttribute('title', select('cueStyle').value + ' · Pull ' + direction + ' and release to shoot');
+  describeCue();
 }
 select('cueStyle').onchange = updateCueStyle;
 if (equippedCareerCue) select('cueStyle').value = equippedCareerCue.id;
 updateCueStyle();
 function applyTableFinish() {
-  const [felt, cushion, rail] = snooker ? ['#851e39', '#4d142c', '#211a29'] : tableStyles[select('tableStyle').value];
+  const [felt, cushion, rail] = tableFinish(select('tableStyle').value, snooker);
   document.body.classList.toggle('snooker-game', snooker);
   snookerLines.setEnabled(snooker);
   cloth.diffuseColor = Color3.FromHexString(felt);
@@ -1668,12 +1698,28 @@ function applyTableFinish() {
   wood.diffuseColor = Color3.FromHexString(rail);
   requestAnimationFrame(fitOverheadCamera);
 }
-select('tableStyle').onchange = applyTableFinish;
+function refreshCityFinishes() {
+  const field = select('tableStyle');
+  const progress = careerProgress();
+  for (const city of cities) {
+    if (careerCityStatus(city, progress) !== 'Completed' || [...field.options].some(option => option.value === city.id)) continue;
+    field.add(new Option(t(cityFinishes[city.id].name), city.id));
+  }
+}
+refreshCityFinishes();
+try {
+  const savedFinish = localStorage.getItem('billiard-table-finish');
+  if ([...select('tableStyle').options].some(option => option.value === savedFinish)) select('tableStyle').value = savedFinish!;
+} catch {}
+select('tableStyle').onchange = () => {
+  applyTableFinish();
+  try { localStorage.setItem('billiard-table-finish', select('tableStyle').value); } catch {}
+};
 function gameState(): SavedGame {
   return { version: 1, balls, snooker, versusComputer, onlineMode, turn, scores, groups, winner, breaking, shotWasBreak,
     colourAfterRed, finished, firstContact, shotTargets, previouslyPocketed, rolling, placement, aim: [aim.x, aim.z],
     strike, shotPower, tip: [tipX, tipY], aimLocked, calledPocket,
-    ...(mode.kind === 'computer' ? { careerAttempts, careerBanked } : {}) };
+    ...(mode.kind === 'computer' ? { careerAttempts, careerBanked, careerClean, careerRacks } : {}) };
 }
 function applyGame(s: SavedGame, preserveLocalAim = false) {
   balls = s.balls.map(ball => ({ ...ball }));
@@ -1685,6 +1731,8 @@ function applyGame(s: SavedGame, preserveLocalAim = false) {
   scores = [...s.scores];
   careerAttempts = s.careerAttempts ?? 0;
   careerBanked = s.careerBanked ?? false;
+  careerClean = s.careerClean ?? false;
+  careerRacks = s.careerRacks ? [...s.careerRacks] : [0, 0];
   groups = [...s.groups];
   winner = s.winner;
   breaking = s.breaking;
@@ -1723,12 +1771,14 @@ function saveGame() {
 }
 function recordComputerResult() {
   if (mode.kind === 'computer' && winner !== undefined) {
-    circuitMessage = finishCareerStage(mode.city, mode.stage, mode.matchId, winner === 0);
+    const stage = careerStage(mode.city, mode.stage);
+    circuitMessage = finishCareerStage(mode.city, mode.stage, mode.matchId, winner === 0, stage.challenge ? careerAttempts === 1 : careerClean);
+    showCareerProfile();
   }
 }
 function trackCareerRail(ball: typeof balls[number]) {
   if (mode.kind !== 'computer') return;
-  const challenge = careerStages[mode.stage].challenge;
+  const challenge = careerStage(mode.city, mode.stage).challenge;
   if (challenge?.kind === 'bank' && ball === balls[challenge.ball]) careerBanked = true;
 }
 online.onPaired = (resume, cityId) => {
@@ -1749,7 +1799,12 @@ online.onPaired = (resume, cityId) => {
 };
 online.onCircuitResult = result => {
   if (mode.kind === 'online' && result) {
-    circuitMessage = resultMessage(mode.city, online.seat === result.winner, result.firstWin);
+    const won = online.seat === result.winner;
+    circuitMessage = resultMessage(mode.city, won, result.firstWin);
+    if (won && result.firstWin) {
+      circuitMessage += ' ' + t('Online medal earned: {medal}.', { medal: onlineMedalName(mode.city) });
+      void online.refreshMedals();
+    }
   }
 };
 online.onCircuitSaveError = () => { circuitMessage = t('The server could not save your tournament result.'); };
@@ -1821,6 +1876,12 @@ if (launch.state) {
   applyGame(launch.state);
   if (mode.kind === 'computer' && finished) recordComputerResult();
 } else resetMatch();
+function showCareerProfile() {
+  const { points } = careerProgress();
+  const profile = document.querySelector<HTMLElement>('#careerProfile')!;
+  profile.textContent = t('{rank} · {points} career points', { rank: t(careerRank(points)), points });
+}
+showCareerProfile();
 if (onlineMode || mode.kind === 'casual') online.open();
 if (awaitingOnline) void online.findMatch();
 saveGame();
@@ -2155,7 +2216,9 @@ engine.runRenderLoop(() => {
   if (strike && authoritative) {
     strike = Math.max(0, strike - dt);
     if (!strike) {
-      const cue = mode.kind === 'computer' && turn === 0 ? equippedCareerCue : undefined;
+      const cue = mode.kind === 'computer' && turn === 0 ? equippedCareerCue
+        : mode.kind === 'training' && (turn === 0 || !versusComputer)
+          ? careerCues.find(entry => entry.id === select('cueStyle').value) : undefined;
       const speed = shotSpeed(shotPower ** (cue?.power ?? 1));
       strikeBall(cueBall, aim.x, aim.z, speed, tipX * (cue?.spin ?? 1), tipY * (cue?.spin ?? 1));
       sound.queue('cue', speed);
