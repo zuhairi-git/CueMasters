@@ -31,17 +31,6 @@
     </pattern>
     <g id="column"><path fill="#677e80" d="M-1 0h8v32h-8z"/><path fill="url(#stone)" d="M0 0h5v32H0z"/><path stroke="#f0e8d3" stroke-width=".6" d="M1 2v28M3 2v28"/><path fill="#d7d8c8" d="M-2 0h9v3h-9zm0 30h9v3h-9z"/></g>
   </defs>
-  <style>
-    .harbor-clouds { animation: harbor-drift 36s ease-in-out infinite alternate; }
-    .harbor-waves { animation: harbor-wave-travel var(--ripple-duration) linear infinite; }
-    .harbor-waves-far { --ripple-distance: -223px; --ripple-duration: 61s; }
-    .harbor-waves-near { --ripple-distance: -317px; --ripple-duration: 43s; }
-    .harbor-boat { transform-box: fill-box; transform-origin: center; animation: harbor-bob 6s ease-in-out infinite; }
-    @keyframes harbor-drift { to { transform: translateX(5px); } }
-    @keyframes harbor-wave-travel { to { transform: translateX(var(--ripple-distance)); } }
-    @keyframes harbor-bob { 0%, 100% { transform: translateY(0) rotate(-.2deg); } 50% { transform: translateY(.8px) rotate(.2deg); } }
-    @media (prefers-reduced-motion: reduce) { .harbor-clouds, .harbor-waves, .harbor-boat { animation: none; } }
-  </style>
   <path fill="url(#sky)" d="M0 0h640v215H0z"/>
   <circle cx="471" cy="66" r="90" fill="url(#halo)"/>
   <circle cx="471" cy="66" r="21" fill="url(#moon)"/>

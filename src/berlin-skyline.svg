@@ -1,20 +1,75 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" aria-hidden="true" focusable="false">
   <defs>
-    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#1d2748"/><stop offset=".55" stop-color="#71658e"/><stop offset="1" stop-color="#efb49e"/></linearGradient>
-    <linearGradient id="water" x2="0" y2="1"><stop stop-color="#71658e"/><stop offset="1" stop-color="#252740"/></linearGradient>
-    <radialGradient id="halo"><stop stop-color="#ffcfab" stop-opacity=".6"/><stop offset="1" stop-color="#ffcfab" stop-opacity="0"/></radialGradient>
+    <linearGradient id="berlin-sky" x2="0" y2="1">
+      <stop style="stop-color:var(--skyline-sky, #152c47)"/>
+      <stop offset="1" style="stop-color:var(--skyline-horizon, #638d91)"/>
+    </linearGradient>
+    <radialGradient id="berlin-glow">
+      <stop style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity=".42"/>
+      <stop offset="1" style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="berlin-waterline"><path d="M0 248h640v72H0z"/></clipPath>
+    <filter id="berlin-ripple-softness">
+      <feGaussianBlur stdDeviation=".55"/>
+    </filter>
+    <pattern id="berlin-far-ripples" y="248" width="223" height="72" patternUnits="userSpaceOnUse">
+      <path transform="scale(1 1.125)" fill="var(--skyline-trim, #b9d4d6)" opacity=".26" filter="url(#berlin-ripple-softness)"
+        d="M8 12q17-3 37 0-20-1-37 0z
+           M67 6q10-2 24 0-13-.7-24 0z
+           M110 18q22-4 50 0-28-1.5-50 0z
+           M177 9q15-2.7 33 0-18-.9-33 0z
+           M29 26q25-4.5 53 0-29-1.7-53 0z
+           M164 31q22-3.8 49 0-26-1.2-49 0z"/>
+    </pattern>
+    <pattern id="berlin-near-ripples" y="248" width="317" height="72" patternUnits="userSpaceOnUse">
+      <path transform="scale(1 1.125)" fill="var(--skyline-trim, #b9d4d6)" opacity=".3" filter="url(#berlin-ripple-softness)"
+        d="M12 40q22-4.2 48 0-26-1.4-48 0z
+           M39 59q36-6 77 0-41-2-77 0z
+           M92 34q18-3.3 40 0-22-1.2-40 0z
+           M130 49q32-5.6 67 0-36-1.8-67 0z
+           M212 37q15-3.6 35 0-19-1.3-35 0z
+           M234 57q31-5.8 68 0-36-2.1-68 0z"/>
+    </pattern>
+    <linearGradient id="berlin-water" x2="0" y2="1">
+      <stop style="stop-color:var(--skyline-horizon, #638d91)"/>
+      <stop offset=".45" style="stop-color:var(--skyline-distant, #476c7c)"/>
+      <stop offset="1" style="stop-color:var(--skyline-front, #183447)"/>
+    </linearGradient>
+    <linearGradient id="berlin-reflection" x2="0" y2="1">
+      <stop style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity=".5"/>
+      <stop offset="1" style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity="0"/>
+    </linearGradient>
   </defs>
-  <path fill="url(#sky)" d="M0 0h640v280H0z"/>
-  <circle cx="492" cy="94" r="89" fill="url(#halo)"/>
-  <circle cx="492" cy="94" r="31" fill="#ffcfab" opacity=".88"/>
-  <path fill="#fff1da" opacity=".15" d="M0 72q118-15 240 0-94-2-157 7L0 84zm297 37q110-16 343-9v8q-155-4-343 1zM0 123q94-10 202 2L0 134z"/>
-  <path fill="#514460" d="M0 178h30v-42h53v32h35v-27h31v25h59v-53h29v57h31v-21h57v25h27v-42h54v30h25v-16h37v24h69v-22h54v30h49v42H0z"/>
-  <path fill="#55425f" d="M478 210l4-103h6l5 103zm4-123 1-48h3l2 48z"/><circle cx="485" cy="99" r="13" fill="#9a7085"/><path stroke="#efb49e" opacity=".6" d="M473 99h24"/><path fill="#6c5367" d="M128 197h293v17H128z"/><path fill="#b68a83" d="M146 141h256v17H146zm17 17h15v40h-15zm41 0h15v40h-15zm41 0h15v40h-15zm41 0h15v40h-15zm41 0h15v40h-15zm41 0h15v40h-15z"/><path fill="#8f6c73" d="M136 136h276v8H136zm100-7h80v8h-80zm16-10h48v10h-48zm6-3 11-5 9 3 7-10 8 4-3 10h-32z"/><path fill="#45374e" d="M75 214v-50h55v50zm346 0v-38h33v38zm106 0v-41h79v41z"/>
-  <path fill="#252740" d="M0 208h640v12H0z"/>
-  <path fill="url(#water)" d="M0 218h640v62H0z" opacity=".9"/>
-  <g fill="none" stroke="#ffcfab" stroke-linecap="round">
-    <path opacity=".25" d="M18 229h84m35 7h49m30-8h89m71 2h76m29 10h97m-202 14h110m28 10h108m-551-6h103m29-13h38"/>
-    <path opacity=".42" d="M461 226h61m-46 6h36m-58 8h70m-43 9h47m-65 10h62"/>
+  <path fill="url(#berlin-sky)" d="M0 0h640v320H0z"/>
+  <circle cx="493" cy="91" r="89" fill="url(#berlin-glow)"/>
+  <circle cx="493" cy="91" r="29" fill="var(--skyline-light, #f5d9a2)"/>
+  <path class="harbor-clouds" fill="var(--skyline-light, #f5d9a2)" opacity=".17" d="M0 105q81-16 186-8-91 1-186 20zm248-26q83-14 161-5-87-1-161 12zm224 55q92-14 168-10v8q-68-3-168 9z"/>
+  <path class="harbor-distant" fill="var(--skyline-distant, #476c7c)" d="M0 235v-32h33v-24h21v13h26v-34h26v-10h21v44h48v-31h33v18h37v20h36v-14h51v18h43v-12h46v-16h35v27h37v-53h18v-11h27v62h55v-24h20v-18h27v77Z"/>
+  <g class="harbor-near">
+    <g fill="var(--skyline-front, #183447)" stroke="var(--skyline-trim, #9ac2c3)" stroke-width="1.7" stroke-linejoin="round">
+        <path d="M40 240v-73h27v-43h30v116m7 0v-96q0-40 40-63v159m8 0v-78h27v78"/>
+        <path d="m189 240 9-120h9l9 120m-15-143V53m-5 46h14m-18 22h21"/><circle cx="203" cy="108" r="14"/>
+        <path d="M229 241v-16h214v16m-208-16v-54h15v54m20 0v-54h14v54m20 0v-54h14v54m20 0v-54h14v54m20 0v-54h14v54m20 0v-54h15v54m-197-54-10-15h222l-9 15zm-4-15v-8h210v8m-132-8v-9h54v9m-41-9 5-12 9 4 6-12 5 12 10-4 5 12"/>
+        <path d="M447 240v-38h30v-13q20-33 41 0v13h36v38m-102-38h99m12 38v-49h42v49"/>
+    </g>
+    <g fill="none" stroke="var(--skyline-trim, #9ac2c3)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".82">
+        <path d="M238 162h196m-198 65h204m-195-49v40m32-40v40m34-40v40m34-40v40m34-40v40m34-40v40m62-9v24m14-24v24m15-24v24m15-24v24m15-24v24M195 108h15"/>
+    </g>
+    <path fill="var(--skyline-front, #183447)" d="M0 239h640v81H0z"/>
+    <path fill="url(#berlin-water)" d="M0 248h640v72H0z"/>
+    <path fill="url(#berlin-reflection)" opacity=".4" d="M483 248h20l30 72h-80z"/>
+    <g clip-path="url(#berlin-waterline)">
+      <path class="harbor-waves harbor-waves-far" fill="url(#berlin-far-ripples)" d="M0 248h863v72H0z"/>
+      <path class="harbor-waves harbor-waves-near" fill="url(#berlin-near-ripples)" d="M0 248h957v72H0z"/>
+    </g>
+    <g transform="translate(112 275)">
+      <ellipse cx="0" cy="13" rx="31" ry="2" fill="var(--skyline-trim, #a0cbcc)" opacity=".14"/>
+      <g class="harbor-boat">
+        <path d="m-29 5 58-2-8 8h-41z" fill="var(--skyline-front, #183447)" stroke="var(--skyline-trim, #a0cbcc)"/>
+        <path d="M-11 4v-8H7l9 7z" fill="var(--skyline-trim, #a0cbcc)"/>
+        <path d="M-8 1v-3h6v3zm8 0v-3h5l4 3z" fill="var(--skyline-front, #183447)"/>
+        <circle cx="18" cy="3" r="1.3" fill="var(--skyline-light, #f5d9a2)"/>
+      </g>
+    </g>
   </g>
-  <path fill="#252740" opacity=".7" d="M0 268q104 8 211 3t220 3q141 0 209-9v15H0z"/>
 </svg>

@@ -1,20 +1,76 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" aria-hidden="true" focusable="false">
   <defs>
-    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#292747"/><stop offset=".55" stop-color="#ae696e"/><stop offset="1" stop-color="#f4b48b"/></linearGradient>
-    <linearGradient id="water" x2="0" y2="1"><stop stop-color="#ae696e"/><stop offset="1" stop-color="#28374f"/></linearGradient>
-    <radialGradient id="halo"><stop stop-color="#ffce9b" stop-opacity=".6"/><stop offset="1" stop-color="#ffce9b" stop-opacity="0"/></radialGradient>
+    <linearGradient id="stockholm-sky" x2="0" y2="1">
+      <stop style="stop-color:var(--skyline-sky, #152c47)"/>
+      <stop offset="1" style="stop-color:var(--skyline-horizon, #638d91)"/>
+    </linearGradient>
+    <radialGradient id="stockholm-glow">
+      <stop style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity=".42"/>
+      <stop offset="1" style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="stockholm-waterline"><path d="M0 248h640v72H0z"/></clipPath>
+    <filter id="stockholm-ripple-softness">
+      <feGaussianBlur stdDeviation=".55"/>
+    </filter>
+    <pattern id="stockholm-far-ripples" y="248" width="223" height="72" patternUnits="userSpaceOnUse">
+      <path transform="scale(1 1.125)" fill="var(--skyline-trim, #b9d4d6)" opacity=".26" filter="url(#stockholm-ripple-softness)"
+        d="M8 12q17-3 37 0-20-1-37 0z
+           M67 6q10-2 24 0-13-.7-24 0z
+           M110 18q22-4 50 0-28-1.5-50 0z
+           M177 9q15-2.7 33 0-18-.9-33 0z
+           M29 26q25-4.5 53 0-29-1.7-53 0z
+           M164 31q22-3.8 49 0-26-1.2-49 0z"/>
+    </pattern>
+    <pattern id="stockholm-near-ripples" y="248" width="317" height="72" patternUnits="userSpaceOnUse">
+      <path transform="scale(1 1.125)" fill="var(--skyline-trim, #b9d4d6)" opacity=".3" filter="url(#stockholm-ripple-softness)"
+        d="M12 40q22-4.2 48 0-26-1.4-48 0z
+           M39 59q36-6 77 0-41-2-77 0z
+           M92 34q18-3.3 40 0-22-1.2-40 0z
+           M130 49q32-5.6 67 0-36-1.8-67 0z
+           M212 37q15-3.6 35 0-19-1.3-35 0z
+           M234 57q31-5.8 68 0-36-2.1-68 0z"/>
+    </pattern>
+    <linearGradient id="stockholm-water" x2="0" y2="1">
+      <stop style="stop-color:var(--skyline-horizon, #638d91)"/>
+      <stop offset=".45" style="stop-color:var(--skyline-distant, #476c7c)"/>
+      <stop offset="1" style="stop-color:var(--skyline-front, #183447)"/>
+    </linearGradient>
+    <linearGradient id="stockholm-reflection" x2="0" y2="1">
+      <stop style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity=".5"/>
+      <stop offset="1" style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity="0"/>
+    </linearGradient>
   </defs>
-  <path fill="url(#sky)" d="M0 0h640v280H0z"/>
-  <circle cx="495" cy="83" r="89" fill="url(#halo)"/>
-  <circle cx="495" cy="83" r="31" fill="#ffce9b" opacity=".88"/>
-  <path fill="#fff1da" opacity=".15" d="M0 72q118-15 240 0-94-2-157 7L0 84zm297 37q110-16 343-9v8q-155-4-343 1zM0 123q94-10 202 2L0 134z"/>
-  <path fill="#503c51" d="M0 177h32v-20h49v18h37v-45h36v32h32v-15h68v22h42v-38h29v33h58v-23h49v14h63v-23h44v28h47v-13h54v74H0z"/>
-  <path fill="#784c59" d="M41 213v-40l28-17 30 17v40zm59 0v-46l24-21 28 21v46zm53 0v-42l28-15 27 15v42zm58 0v-36l32-22 24 22v36zm60 0v-40l26-14 33 14v40z"/><path fill="#b57963" d="M44 176h51v35H44zm60-7h44v42h-44zm53 5h47v37h-47zm58 5h48v32h-48zm60-4h51v36h-51z"/><path fill="#403041" d="M334 212v-49h57v-30h33v30h19v49zm66-79v-44h17v44zm-5-44 13-19 14 19zm12-20V48h3v22z"/><path fill="#795265" d="M449 212v-36l30-15 25 15v36zm58 0v-51l27-18 24 18v51zm54 0v-39l26-19 34 19v39z"/><path stroke="#ffd1a0" stroke-width="3" stroke-dasharray="4 12" d="M50 187h275m-269 13h270m25-17h80m21 7h167"/>
-  <path fill="#28374f" d="M0 208h640v12H0z"/>
-  <path fill="url(#water)" d="M0 218h640v62H0z" opacity=".9"/>
-  <g fill="none" stroke="#ffce9b" stroke-linecap="round">
-    <path opacity=".25" d="M18 229h84m35 7h49m30-8h89m71 2h76m29 10h97m-202 14h110m28 10h108m-551-6h103m29-13h38"/>
-    <path opacity=".42" d="M464 226h61m-46 6h36m-58 8h70m-43 9h47m-65 10h62"/>
+  <path fill="url(#stockholm-sky)" d="M0 0h640v320H0z"/>
+  <circle cx="493" cy="94" r="89" fill="url(#stockholm-glow)"/>
+  <circle cx="493" cy="94" r="29" fill="var(--skyline-light, #f5d9a2)"/>
+  <path class="harbor-clouds" fill="var(--skyline-light, #f5d9a2)" opacity=".17" d="M0 105q81-16 186-8-91 1-186 20zm248-26q83-14 161-5-87-1-161 12zm224 55q92-14 168-10v8q-68-3-168 9z"/>
+  <path class="harbor-distant" fill="var(--skyline-distant, #476c7c)" d="M0 229v-37h32v-9h26v-22h20v22h21v12h62v-22h38v-16h21v34h42v-26h62v27h65v-29h35v15h34v-14h55v22h41v-26h24v24h62v45Z"/>
+  <g class="harbor-near">
+    <g fill="var(--skyline-front, #183447)" stroke="var(--skyline-trim, #9ac2c3)" stroke-width="1.7" stroke-linejoin="round">
+        <path d="M39 240v-64h45v64m-49-63 27-67 26 67zm73 63v-45h51v45m-3 0v-63h152v63m-159-63 26-22h115l25 22z"/>
+        <path d="M241 241v-108h73v108m-63-108V98h53v35m-46-35V78h39v20m-34-20q2-21 15-25 13 4 15 25zm15-25V39m-8 7h16M312 240v-42h37v42"/>
+        <path d="M364 240v-67h234v67m-239-66h244m-228-1q0-24 21-31 21 7 21 31m33 0q0-21 30-31 30 10 30 31m34 0q0-24 22-31 21 7 21 31m-191-31v-10m84 10v-19m86 19v-10"/>
+    </g>
+    <g fill="none" stroke="var(--skyline-trim, #9ac2c3)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".82">
+        <path d="M51 190h22m-22 16h22m-22 16h22m42-11h33m-33 15h33m27-34h64m-64 15h64m-64 15h64m24-113h30m-30 12h30"/>
+        <path d="M270 151a8 8 0 0 1 16 0v21h-16zm8 51v-13m-8 50v-20a8 8 0 0 1 16 0v20m88-54h214m-214 33h214m-185-33v33m38-33v33m78-33v33m37-33v33m-88 22v-14a12 12 0 0 1 24 0v14"/>
+        <circle cx="480" cy="160" r="4"/>
+    </g>
+    <path fill="var(--skyline-front, #183447)" d="M0 239h640v81H0z"/>
+    <path fill="url(#stockholm-water)" d="M0 248h640v72H0z"/>
+    <path fill="url(#stockholm-reflection)" opacity=".4" d="M483 248h20l30 72h-80z"/>
+    <g clip-path="url(#stockholm-waterline)">
+      <path class="harbor-waves harbor-waves-far" fill="url(#stockholm-far-ripples)" d="M0 248h863v72H0z"/>
+      <path class="harbor-waves harbor-waves-near" fill="url(#stockholm-near-ripples)" d="M0 248h957v72H0z"/>
+    </g>
+    <g transform="translate(135 275)">
+      <ellipse cx="0" cy="13" rx="31" ry="2" fill="var(--skyline-trim, #a0cbcc)" opacity=".14"/>
+      <g class="harbor-boat">
+        <path d="m-29 5 58-2-8 8h-41z" fill="var(--skyline-front, #183447)" stroke="var(--skyline-trim, #a0cbcc)"/>
+        <path d="M-11 4v-8H7l9 7z" fill="var(--skyline-trim, #a0cbcc)"/>
+        <path d="M-8 1v-3h6v3zm8 0v-3h5l4 3z" fill="var(--skyline-front, #183447)"/>
+        <circle cx="18" cy="3" r="1.3" fill="var(--skyline-light, #f5d9a2)"/>
+      </g>
+    </g>
   </g>
-  <path fill="#28374f" opacity=".7" d="M0 268q104 8 211 3t220 3q141 0 209-9v15H0z"/>
 </svg>

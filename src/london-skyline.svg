@@ -1,20 +1,80 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" aria-hidden="true" focusable="false">
   <defs>
-    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#1b2544"/><stop offset=".55" stop-color="#625979"/><stop offset="1" stop-color="#d68c83"/></linearGradient>
-    <linearGradient id="water" x2="0" y2="1"><stop stop-color="#625979"/><stop offset="1" stop-color="#242c49"/></linearGradient>
-    <radialGradient id="halo"><stop stop-color="#ffc9a2" stop-opacity=".6"/><stop offset="1" stop-color="#ffc9a2" stop-opacity="0"/></radialGradient>
+    <linearGradient id="london-sky" x2="0" y2="1">
+      <stop style="stop-color:var(--skyline-sky, #152c47)"/>
+      <stop offset="1" style="stop-color:var(--skyline-horizon, #638d91)"/>
+    </linearGradient>
+    <radialGradient id="london-glow">
+      <stop style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity=".42"/>
+      <stop offset="1" style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="london-waterline"><path d="M0 248h640v72H0z"/></clipPath>
+    <filter id="london-ripple-softness">
+      <feGaussianBlur stdDeviation=".55"/>
+    </filter>
+    <pattern id="london-far-ripples" y="248" width="223" height="72" patternUnits="userSpaceOnUse">
+      <path transform="scale(1 1.125)" fill="var(--skyline-trim, #b9d4d6)" opacity=".26" filter="url(#london-ripple-softness)"
+        d="M8 12q17-3 37 0-20-1-37 0z
+           M67 6q10-2 24 0-13-.7-24 0z
+           M110 18q22-4 50 0-28-1.5-50 0z
+           M177 9q15-2.7 33 0-18-.9-33 0z
+           M29 26q25-4.5 53 0-29-1.7-53 0z
+           M164 31q22-3.8 49 0-26-1.2-49 0z"/>
+    </pattern>
+    <pattern id="london-near-ripples" y="248" width="317" height="72" patternUnits="userSpaceOnUse">
+      <path transform="scale(1 1.125)" fill="var(--skyline-trim, #b9d4d6)" opacity=".3" filter="url(#london-ripple-softness)"
+        d="M12 40q22-4.2 48 0-26-1.4-48 0z
+           M39 59q36-6 77 0-41-2-77 0z
+           M92 34q18-3.3 40 0-22-1.2-40 0z
+           M130 49q32-5.6 67 0-36-1.8-67 0z
+           M212 37q15-3.6 35 0-19-1.3-35 0z
+           M234 57q31-5.8 68 0-36-2.1-68 0z"/>
+    </pattern>
+    <linearGradient id="london-water" x2="0" y2="1">
+      <stop style="stop-color:var(--skyline-horizon, #638d91)"/>
+      <stop offset=".45" style="stop-color:var(--skyline-distant, #476c7c)"/>
+      <stop offset="1" style="stop-color:var(--skyline-front, #183447)"/>
+    </linearGradient>
+    <linearGradient id="london-reflection" x2="0" y2="1">
+      <stop style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity=".5"/>
+      <stop offset="1" style="stop-color:var(--skyline-light, #f5d9a2)" stop-opacity="0"/>
+    </linearGradient>
   </defs>
-  <path fill="url(#sky)" d="M0 0h640v280H0z"/>
-  <circle cx="515" cy="87" r="89" fill="url(#halo)"/>
-  <circle cx="515" cy="87" r="31" fill="#ffc9a2" opacity=".88"/>
-  <path fill="#fff1da" opacity=".15" d="M0 72q118-15 240 0-94-2-157 7L0 84zm297 37q110-16 343-9v8q-155-4-343 1zM0 123q94-10 202 2L0 134z"/>
-  <path fill="#48445e" d="M0 172h46v-25h29v17h27v-41h28v42h54v-26h51v29h43v-15h32v17h55v-19h70v23h28v-36h62v29h43v-19h72v66H0z"/>
-  <path fill="#473a51" d="M60 211v-46h102v-13h115v13h35v46z"/><path fill="#785764" d="M79 169h221v41H79zm20-8 8-13 8 13zm48 0 8-13 8 13zm44-9 8-18 8 18zm44 0 8-18 8 18zm41 9 8-13 8 13z"/><path fill="#644958" d="M307 212V101h49v111z"/><path fill="#98716c" d="M312 112h39v99h-39zm-5-12 25-28 24 28zm17-28 8-25 8 25z"/><circle cx="332" cy="122" r="12" fill="#f3c897" stroke="#523e53" stroke-width="2"/><path stroke="#523e53" stroke-width="1.5" d="M332 114v8l5 3"/><path stroke="#e9b490" stroke-width="3" stroke-dasharray="3 10" d="M84 183h215m-215 13h215"/><path fill="none" stroke="#b9989d" stroke-width="2" opacity=".75" d="M395 197a53 53 0 1 1 105 0m-53-53v53m-40-35 40 35 40-35m-61 49 21-14 21 14"/>
-  <path fill="#242c49" d="M0 208h640v12H0z"/>
-  <path fill="url(#water)" d="M0 218h640v62H0z" opacity=".9"/>
-  <g fill="none" stroke="#ffc9a2" stroke-linecap="round">
-    <path opacity=".25" d="M18 229h84m35 7h49m30-8h89m71 2h76m29 10h97m-202 14h110m28 10h108m-551-6h103m29-13h38"/>
-    <path opacity=".42" d="M484 226h61m-46 6h36m-58 8h70m-43 9h47m-65 10h62"/>
+  <path fill="url(#london-sky)" d="M0 0h640v320H0z"/>
+  <circle cx="476" cy="87" r="89" fill="url(#london-glow)"/>
+  <circle cx="476" cy="87" r="29" fill="var(--skyline-light, #f5d9a2)"/>
+  <path class="harbor-clouds" fill="var(--skyline-light, #f5d9a2)" opacity=".17" d="M0 105q81-16 186-8-91 1-186 20zm248-26q83-14 161-5-87-1-161 12zm224 55q92-14 168-10v8q-68-3-168 9z"/>
+  <path class="harbor-distant" fill="var(--skyline-distant, #476c7c)" d="M0 231v-29h30v-23h27v29h53v-12h40v-20h38v25h42v-17h30v17h39v-21h41v13h38v-36h18l6-42 7 42h14v49h60v-31h38v-14h24v21h39v-20h56v70Z"/>
+  <g class="harbor-near">
+    <g fill="none" stroke="var(--skyline-trim, #9ac2c3)" stroke-width="2">
+        <circle cx="518" cy="176" r="56"/><circle cx="518" cy="176" r="51"/>
+        <path d="M518 120v112m-56-56h112m-96-40 80 80m0-80-80 80m62-92-44 104m74-74-104 44m0-44 104 44m-74-74 44 104m-43 12 21-64 21 64"/>
+        <circle cx="518" cy="176" r="5"/>
+      </g>
+    <g fill="var(--skyline-front, #183447)" stroke="var(--skyline-trim, #9ac2c3)" stroke-width="1.7" stroke-linejoin="round">
+        <path d="M68 240v-88h51v88m-56-88 31-40 30 40zm141 88V137h54v103m-59-103 32-43 32 43zm-85 27h94v13h-94zm-99 63h290v13H15z"/>
+        <path d="M333 241v-50h62v50m-21 0V122h37v119m-42-119 24-44 23 44zm24-44V54m18 187v-39h27v39"/>
+    </g>
+    <g fill="none" stroke="var(--skyline-trim, #9ac2c3)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".82">
+        <path d="M18 226q30-15 50-53m190-16q23 44 82 69m-73-56v56m15-36v36m18-22v22m19-10v10M84 166h19m-19 15h19m-19 15h19m-19 15h19m118-59h20m-20 16h20m-20 16h20m-20 16h20m-20 16h20m164-45v25"/>
+        <circle cx="393" cy="139" r="10" fill="var(--skyline-light, #f5d9a2)"/>
+        <path d="M393 133v7l4 3" stroke="var(--skyline-front, #183447)"/>
+    </g>
+    <path fill="var(--skyline-front, #183447)" d="M0 239h640v81H0z"/>
+    <path fill="url(#london-water)" d="M0 248h640v72H0z"/>
+    <path fill="url(#london-reflection)" opacity=".4" d="M466 248h20l30 72h-80z"/>
+    <g clip-path="url(#london-waterline)">
+      <path class="harbor-waves harbor-waves-far" fill="url(#london-far-ripples)" d="M0 248h863v72H0z"/>
+      <path class="harbor-waves harbor-waves-near" fill="url(#london-near-ripples)" d="M0 248h957v72H0z"/>
+    </g>
+    <g transform="translate(282 275)">
+      <ellipse cx="0" cy="13" rx="31" ry="2" fill="var(--skyline-trim, #a0cbcc)" opacity=".14"/>
+      <g class="harbor-boat">
+        <path d="m-29 5 58-2-8 8h-41z" fill="var(--skyline-front, #183447)" stroke="var(--skyline-trim, #a0cbcc)"/>
+        <path d="M-11 4v-8H7l9 7z" fill="var(--skyline-trim, #a0cbcc)"/>
+        <path d="M-8 1v-3h6v3zm8 0v-3h5l4 3z" fill="var(--skyline-front, #183447)"/>
+        <circle cx="18" cy="3" r="1.3" fill="var(--skyline-light, #f5d9a2)"/>
+      </g>
+    </g>
   </g>
-  <path fill="#242c49" opacity=".7" d="M0 268q104 8 211 3t220 3q141 0 209-9v15H0z"/>
 </svg>

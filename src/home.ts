@@ -2,11 +2,11 @@ import { cities, cityDifficulty, cityStatus, computerProgress, getPlayerSecret, 
 import { difficulties } from './difficulty';
 import { validGame, type SavedGame } from './saved-game';
 import { remoteKey } from './tv-controls';
-import helsinki from './helsinki-harbor.svg';
-import stockholm from './stockholm-skyline.svg';
-import copenhagen from './copenhagen-skyline.svg';
-import berlin from './berlin-skyline.svg';
-import london from './london-skyline.svg';
+import helsinki from './helsinki-harbor.svg?raw';
+import stockholm from './stockholm-skyline.svg?raw';
+import copenhagen from './copenhagen-skyline.svg?raw';
+import berlin from './berlin-skyline.svg?raw';
+import london from './london-skyline.svg?raw';
 
 const cityArt: Record<string, string> = { helsinki, stockholm, copenhagen, berlin, london };
 const trainingNotes = ['Learn the basics', 'Practice straightforward pots', 'Play a balanced opponent', 'Face planned shots', 'Face precise shots with position play'];
@@ -48,10 +48,10 @@ function selectionCard(options: { title: string; subtitle: string; detail: strin
     </span>`;
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   card.addEventListener('pointermove', event => {
-    if (!options.play || event.pointerType !== 'mouse' || motion.matches) return;
+    if (event.pointerType !== 'mouse' || motion.matches) return;
     const bounds = card.getBoundingClientRect();
-    card.style.setProperty('--scene-x', ((event.clientX - bounds.left) / bounds.width - .5) * 10 + 'px');
-    card.style.setProperty('--scene-y', ((event.clientY - bounds.top) / bounds.height - .5) * 6 + 'px');
+    card.style.setProperty('--scene-x', ((event.clientX - bounds.left) / bounds.width - .5) * 8 + 'px');
+    card.style.setProperty('--scene-y', ((event.clientY - bounds.top) / bounds.height - .5) * 4 + 'px');
   });
   card.addEventListener('pointerleave', () => {
     card.style.removeProperty('--scene-x');
@@ -208,7 +208,7 @@ export async function chooseGame() {
           title: city.name,
           subtitle: city.country + ' · Level ' + city.level + ' · ' + cityDifficulty(city),
           detail: locked ? 'Win in ' + prerequisite?.name + ' to unlock' : (stats?.wins ?? 0) + ' wins · ' + (stats?.losses ?? 0) + ' losses',
-          artwork: `<img class="selection-art" src="${cityArt[city.id]}" alt="" draggable="false">`,
+          artwork: cityArt[city.id],
           status: availability,
           action: locked ? undefined : availability === 'Completed' ? 'Replay' : mode === 'online' ? 'Join tournament' : 'Play tournament',
           play: locked ? undefined : () => {
