@@ -7,6 +7,15 @@ A static file host alone does not support online games.
 
 ## Play
 
+- Choose **Online Play**, **Against Computer**, or **Training** from the homepage.
+  Each tournament city is one eight-ball match. A win completes the city and
+  unlocks the next one. Online matchmaking pairs players in the same city.
+  Computer progress lives in your browser. Online progress follows your player ID
+  on the same server and is saved to `.billiard-circuit.json` by default. Set
+  `CIRCUIT_DATA_FILE` to a persistent writable path when hosting the game.
+- Training lets you control both seats or practice against the computer at any
+  difficulty. You can re-rack freely and change the ruleset in Settings.
+
 The default overhead table uses SVG artwork for the table, cushions, cue, and
 balls. The scoreboard and player details share the same SVG ball artwork.
 Choose **3D view** or **Orbit** to use the Babylon scene. TV mode retains its

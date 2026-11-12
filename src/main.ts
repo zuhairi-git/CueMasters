@@ -9,6 +9,9 @@ import { installFullscreenControl } from './fullscreen';
 import { cueLength, cuePose } from './cue-geometry';
 import { directionToBall, traceShot } from './aim-guide';
 import { OnlineGame } from './online';
+import { cities, cityDifficulty, finishComputerCity, resultMessage } from './circuit';
+import { clearSession, labelGame, launch, saveSession } from './home';
+import type { Difficulty } from './difficulty';
 import { groupOf, poolTargets, resolvePoolShot, type Groups } from './pool-rules';
 import { validGame, type SavedGame } from './saved-game';
 import { constrainOrbit } from './camera-bounds';
@@ -50,7 +53,7 @@ const actionDescriptions: Record<string, string> = {
   reset: 'Set up a fresh game',
   openOnline: 'Your profile, QR code & online play',
   openSettings: 'Game, equipment, sound & guides',
-  endGame: 'Return to city selection',
+  endGame: 'Return to game modes',
 };
 for (const button of tableActions.querySelectorAll<HTMLButtonElement>('button')) {
   const description = document.createElement('span');
@@ -597,9 +600,15 @@ snookerLines.color = Color3.FromHexString('#e7b5b0');
 snookerLines.alpha = 0.55;
 snookerLines.isPickable = false;
 snookerLines.setEnabled(false);
-let versusComputer = false;
-const online = new OnlineGame();
-let onlineMode = false;
+let mode = launch.mode;
+const isTournament = () => 'city' in mode;
+let difficulty: Difficulty = mode.kind === 'computer' ? cityDifficulty(mode.city) : mode.kind === 'training' ? mode.difficulty : 'Medium';
+let versusComputer = mode.kind === 'computer' || mode.kind === 'training' && mode.opponent === 'computer';
+const online = new OnlineGame(mode.kind === 'computer');
+let onlineMode = mode.kind === 'online';
+let awaitingOnline = onlineMode && (!launch.state || launch.awaitingOnline === true);
+let circuitMessage = '';
+online.setCircuit(mode.kind === 'online' ? mode.city : undefined);
 let wonByForfeit = false;
 let returningHome = false;
 let leavingMatch = false;
@@ -826,6 +835,11 @@ function finishShot() {
     breaking = false;
     calledPocket = undefined;
     cpuWait = 0.85;
+    if (finished && isTournament()) {
+      if (mode.kind === 'computer') recordComputerResult();
+      else if (online.active && online.seat === 0) online.send({ type: 'state', state: gameState() });
+      saveGame();
+    }
     showScore();
     showReadyStatus();
     return;
@@ -1130,10 +1144,11 @@ function showReadyStatus() {
     return;
   }
   if (finished) {
-    status.textContent = !snooker && winner !== undefined ? playerName(winner) + (wonByForfeit ? ' wins by forfeit!' : ' wins! Re-rack to play again.') :
+    status.textContent = !snooker && winner !== undefined ? playerName(winner) + (wonByForfeit ? ' wins by forfeit!' : ' wins!') :
       scores[0] === scores[1] ? 'Match drawn.' : playerName(scores[0] > scores[1] ? 0 : 1) + ' wins!';
     return;
   }
+  if (awaitingOnline) { status.textContent = 'Waiting for an opponent. Open Players to see matchmaking.'; return; }
   if (!canControl()) {
     status.textContent = onlineMode ? online.active ? playerName(turn) + ' is lining up a shot.' : 'Online game paused. Reconnect through Players or choose End game.' : 'Computer is lining up a shot.';
     return;
@@ -1464,7 +1479,7 @@ function confirmNewGame(fromSettings: boolean) {
   rerackDialog.showModal();
 }
 async function startSettingsMatch() {
-  if (leavingMatch) return;
+  if (leavingMatch || isTournament()) return;
   if (onlineMode) {
     leavingMatch = true;
     try { await online.leave(!wonByForfeit); }
@@ -1474,10 +1489,13 @@ async function startSettingsMatch() {
   }
   snooker = select('game').value === 'snooker';
   versusComputer = select('opponent').value === 'computer';
+  difficulty = select('difficulty').value as Difficulty;
+  mode = { kind: 'training', opponent: versusComputer ? 'computer' : 'solo', difficulty };
+  labelGame(mode);
   resetMatch();
 }
 document.querySelector<HTMLButtonElement>('#reset')!.onclick = () => {
-  if (onlineMode && (online.seat !== 0 || !online.active)) return;
+  if (isTournament() || onlineMode && (online.seat !== 0 || !online.active)) return;
   if (needsRerackConfirmation()) {
     confirmNewGame(false);
   } else resetMatch();
@@ -1494,7 +1512,7 @@ rerackDialog.addEventListener('close', () => {
   else if (!onlineMode || online.seat === 0 && online.active) resetMatch();
 });
 document.querySelector<HTMLButtonElement>('#noticeRematch')!.onclick = () => {
-  if (!onlineMode || online.active && online.seat === 0) resetMatch();
+  if (!isTournament() && (!onlineMode || online.active && online.seat === 0)) resetMatch();
 };
 const endGameDialog = document.querySelector<HTMLDialogElement>('#endGameConfirm')!;
 const endGameStatus = document.querySelector<HTMLElement>('#endGameStatus')!;
@@ -1503,9 +1521,9 @@ const keepPlaying = document.querySelector<HTMLButtonElement>('#keepPlaying')!;
 function openEndGame() {
   endGameStatus.hidden = true;
   document.querySelector<HTMLElement>('#endGameDescription')!.textContent =
-    onlineMode && !finished && online.departureDeadline === undefined
-      ? 'You’ll return to city selection. Your opponent wins when your timer runs out.'
-      : 'You’ll return to city selection. Your current game will be cleared.';
+    onlineMode && !awaitingOnline && !finished && online.departureDeadline === undefined
+      ? 'You’ll return to game modes. Your opponent wins when your timer runs out.'
+      : 'You’ll return to game modes. Your current game will be cleared.';
   endGameDialog.showModal();
 }
 document.querySelector<HTMLButtonElement>('#endGame')!.onclick = openEndGame;
@@ -1515,29 +1533,35 @@ confirmEndGame.onclick = async () => {
   if (leavingMatch) return;
   leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = true;
   try {
-    await online.leave(onlineMode && !wonByForfeit);
+    await online.leave(onlineMode && !awaitingOnline && !wonByForfeit);
     returningHome = true;
-    clearSavedGame();
+    clearSession();
     const home = new URL(location.href);
     home.searchParams.delete('join');
     home.searchParams.delete('table');
+    if ('city' in mode) home.searchParams.set('circuit', mode.kind);
     location.replace(home.href);
   } catch {
+    if (!endGameDialog.open) endGameDialog.showModal();
     endGameStatus.textContent = 'Could not reach the online game. Try again to end it.';
     endGameStatus.hidden = false;
     leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = false;
     confirmEndGame.focus();
   }
 };
+document.querySelector<HTMLButtonElement>('#noticeCircuit')!.onclick = () => confirmEndGame.click();
 document.querySelector<HTMLButtonElement>('#openSettings')!.onclick = () => {
   select('game').value = snooker ? 'snooker' : 'pool';
   select('opponent').value = versusComputer ? 'computer' : 'solo';
+  select('difficulty').value = difficulty;
+  for (const field of ['game', 'opponent', 'difficulty']) select(field).disabled = isTournament();
+  document.querySelector<HTMLButtonElement>('#newMatch')!.disabled = isTournament();
   offlinePlayerTwoNameInput.value = offlinePlayerTwoName;
   syncOfflinePlayerNameVisibility();
   settings.showModal();
 };
 settings.addEventListener('close', () => {
-  if (settings.returnValue !== 'start') return;
+  if (settings.returnValue !== 'start' || isTournament()) return;
   settings.returnValue = '';
   if (needsRerackConfirmation()) confirmNewGame(true);
   else startSettingsMatch();
@@ -1622,12 +1646,20 @@ function applyGame(s: SavedGame, preserveLocalAim = false) {
 }
 function saveGame() {
   if (returningHome || wonByForfeit) return;
-  try { localStorage.setItem('billiard-game-v1', JSON.stringify(gameState())); } catch {}
+  saveSession(mode, gameState(), awaitingOnline);
 }
-function clearSavedGame() {
-  try { localStorage.removeItem('billiard-game-v1'); } catch {}
+function recordComputerResult() {
+  if (mode.kind === 'computer' && winner !== undefined) {
+    circuitMessage = finishComputerCity(mode.city, mode.matchId, winner === 0);
+  }
 }
-online.onPaired = resume => {
+online.onPaired = (resume, cityId) => {
+  const city = cities.find(entry => entry.id === cityId);
+  mode = city ? { kind: 'online', city } : { kind: 'casual' };
+  labelGame(mode);
+  online.setCircuit(city);
+  awaitingOnline = false;
+  circuitMessage = '';
   setMobileMenu(false);
   wonByForfeit = false;
   onlineMode = true;
@@ -1635,7 +1667,14 @@ online.onPaired = resume => {
   snooker = false;
   if (validGame(resume)) applyGame(resume);
   else resetMatch();
+  saveGame();
 };
+online.onCircuitResult = result => {
+  if (mode.kind === 'online' && result) {
+    circuitMessage = resultMessage(mode.city, online.seat === result.winner, result.firstWin);
+  }
+};
+online.onCircuitSaveError = () => { circuitMessage = 'The server could not save your tournament result.'; };
 online.onProfile = showScore;
 online.onTimeout = expiredTurn => {
   if (!onlineMode || online.seat !== 0 || !online.active || turn !== expiredTurn || rolling || strike || finished) return;
@@ -1693,20 +1732,20 @@ online.onEnded = winningSeat => {
     winner = winningSeat;
     rolling = false;
     strike = 0;
-    clearSavedGame();
+    clearSession();
     showScore();
     showReadyStatus();
   } else if (online.seat === undefined) { onlineMode = false; resetMatch(); }
   else showReadyStatus();
 };
-try {
-  const saved: unknown = JSON.parse(localStorage.getItem('billiard-game-v1') ?? 'null');
-  if (validGame(saved)) {
-    onlineMode = saved.onlineMode;
-    applyGame(saved);
-    if (onlineMode) online.open();
-  }
-} catch {}
+if (launch.state) {
+  onlineMode = launch.state.onlineMode || mode.kind === 'online';
+  applyGame(launch.state);
+  if (mode.kind === 'computer' && finished) recordComputerResult();
+} else resetMatch();
+if (onlineMode || mode.kind === 'casual') online.open();
+if (awaitingOnline) void online.findMatch();
+saveGame();
 window.addEventListener('pagehide', saveGame);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
 showScore();
@@ -1954,7 +1993,7 @@ function celebrateWin() {
 function updateGameNotice() {
   const kind = finished ? 'win' : '';
   const winningPlayer = winner ?? (scores[0] === scores[1] ? undefined : scores[0] > scores[1] ? 0 : 1);
-  const key = [kind, turn, winningPlayer, online.active, online.seat, playerName(0), playerName(1), placement, tvEnabled].join(':');
+  const key = [kind, turn, winningPlayer, online.active, online.seat, playerName(0), playerName(1), placement, tvEnabled, circuitMessage].join(':');
   if (key === noticeKey) return;
   noticeKey = key;
   notice.hidden = !kind;
@@ -1969,11 +2008,12 @@ function updateGameNotice() {
     confetti.replaceChildren();
   }
   const rematch = document.querySelector<HTMLButtonElement>('#noticeRematch')!;
-  rematch.hidden = kind !== 'win' || wonByForfeit || onlineMode && online.seat !== 0;
+  document.querySelector<HTMLButtonElement>('#noticeCircuit')!.hidden = kind !== 'win' || !isTournament();
+  rematch.hidden = isTournament() || kind !== 'win' || wonByForfeit || onlineMode && online.seat !== 0;
   rematch.disabled = onlineMode && !online.active;
   document.querySelector<HTMLElement>('#noticeLabel')!.textContent = winningPlayer === undefined ? 'HONOURS EVEN' : 'VICTORY';
   document.querySelector<HTMLElement>('#noticeTitle')!.textContent = winningPlayer === undefined ? 'Match drawn' : playerName(winningPlayer) + ' wins!';
-  document.querySelector<HTMLElement>('#noticeDetail')!.textContent = wonByForfeit ? 'Your opponent left and their timer expired.' : onlineMode && online.seat !== 0 ? 'What a game! Waiting for the host to start the next round.' : winningPlayer === undefined ? 'A close match. Time for a rematch?' : 'What a finish. Ready for another round?';
+  document.querySelector<HTMLElement>('#noticeDetail')!.textContent = isTournament() ? circuitMessage || 'Saving tournament result…' : wonByForfeit ? 'Your opponent left and their timer expired.' : onlineMode && online.seat !== 0 ? 'What a game! Waiting for the host to start the next round.' : winningPlayer === undefined ? 'A close match. Time for a rematch?' : 'What a finish. Ready for another round?';
 }
 engine.runRenderLoop(() => {
   updateTvControls();
@@ -2007,14 +2047,14 @@ engine.runRenderLoop(() => {
   lockButton.querySelector<HTMLElement>('.hud-label')!.textContent = aimLocked ? 'Locked' : 'Aim lock';
   lockButton.setAttribute('aria-label', aimLocked ? 'Unlock aim' : 'Lock aim');
   lockButton.setAttribute('aria-pressed', String(aimLocked));
-  document.querySelector<HTMLButtonElement>('#reset')!.disabled = onlineMode && (online.seat !== 0 || !online.active);
+  document.querySelector<HTMLButtonElement>('#reset')!.disabled = isTournament() || onlineMode && (online.seat !== 0 || !online.active);
   const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
   const authoritative = !onlineMode || online.active && online.seat === 0;
   const cueBall = balls[0];
   if (versusComputer && !onlineMode && turn === 1 && !finished && !rolling && !strike && !settings.open) {
     cpuWait -= dt;
     if (cpuWait <= 0) {
-      const shot = chooseShot(balls, legalTargets(), select("difficulty").value);
+      const shot = chooseShot(balls, legalTargets(), difficulty);
       if (shot) {
         if (!snooker && legalTargets().includes(8)) {
           calledPocket = shot.pocket ?? pockets.reduce((best, p, index) => Math.hypot(p.x - balls[8].x, p.z - balls[8].z) < Math.hypot(pockets[best].x - balls[8].x, pockets[best].z - balls[8].z) ? index : best, 0);

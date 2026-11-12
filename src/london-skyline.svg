@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#1b2544"/><stop offset=".55" stop-color="#625979"/><stop offset="1" stop-color="#d68c83"/></linearGradient>
+    <linearGradient id="water" x2="0" y2="1"><stop stop-color="#625979"/><stop offset="1" stop-color="#242c49"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#ffc9a2" stop-opacity=".6"/><stop offset="1" stop-color="#ffc9a2" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h640v280H0z"/>
+  <circle cx="515" cy="87" r="89" fill="url(#halo)"/>
+  <circle cx="515" cy="87" r="31" fill="#ffc9a2" opacity=".88"/>
+  <path fill="#fff1da" opacity=".15" d="M0 72q118-15 240 0-94-2-157 7L0 84zm297 37q110-16 343-9v8q-155-4-343 1zM0 123q94-10 202 2L0 134z"/>
+  <path fill="#48445e" d="M0 172h46v-25h29v17h27v-41h28v42h54v-26h51v29h43v-15h32v17h55v-19h70v23h28v-36h62v29h43v-19h72v66H0z"/>
+  <path fill="#473a51" d="M60 211v-46h102v-13h115v13h35v46z"/><path fill="#785764" d="M79 169h221v41H79zm20-8 8-13 8 13zm48 0 8-13 8 13zm44-9 8-18 8 18zm44 0 8-18 8 18zm41 9 8-13 8 13z"/><path fill="#644958" d="M307 212V101h49v111z"/><path fill="#98716c" d="M312 112h39v99h-39zm-5-12 25-28 24 28zm17-28 8-25 8 25z"/><circle cx="332" cy="122" r="12" fill="#f3c897" stroke="#523e53" stroke-width="2"/><path stroke="#523e53" stroke-width="1.5" d="M332 114v8l5 3"/><path stroke="#e9b490" stroke-width="3" stroke-dasharray="3 10" d="M84 183h215m-215 13h215"/><path fill="none" stroke="#b9989d" stroke-width="2" opacity=".75" d="M395 197a53 53 0 1 1 105 0m-53-53v53m-40-35 40 35 40-35m-61 49 21-14 21 14"/>
+  <path fill="#242c49" d="M0 208h640v12H0z"/>
+  <path fill="url(#water)" d="M0 218h640v62H0z" opacity=".9"/>
+  <g fill="none" stroke="#ffc9a2" stroke-linecap="round">
+    <path opacity=".25" d="M18 229h84m35 7h49m30-8h89m71 2h76m29 10h97m-202 14h110m28 10h108m-551-6h103m29-13h38"/>
+    <path opacity=".42" d="M484 226h61m-46 6h36m-58 8h70m-43 9h47m-65 10h62"/>
+  </g>
+  <path fill="#242c49" opacity=".7" d="M0 268q104 8 211 3t220 3q141 0 209-9v15H0z"/>
+</svg>

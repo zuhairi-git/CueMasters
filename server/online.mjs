@@ -1,11 +1,16 @@
-import { createHash } from 'node:crypto';
+import { createCircuit, playerIdFor } from './circuit.mjs';
 import { WebSocketServer, WebSocket } from 'ws';
 import { expireShotClock, pauseShotClock, resumeShotClock, shotTimeMs, updateShotClock } from './shot-clock.mjs';
 
-export function attachOnline(server) {
+export function attachOnline(server, circuit = createCircuit()) {
   const sockets = new WebSocketServer({ noServer: true, maxPayload: 32 * 1024 });
   const players = new Map();
   const rooms = new Map();
+  const queues = new Map();
+  const dequeue = ws => {
+    queues.get(ws.cityQueue)?.delete(ws);
+    ws.cityQueue = undefined;
+  };
   const send = (ws, message) => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message)); };
   const sendClock = room => {
     if (!room.clock) return;
@@ -20,16 +25,24 @@ export function attachOnline(server) {
       if (host?.peer) { send(host, { type: 'timeout', turn: room.clock.turn }); sendClock(room); }
     }
   };
+  const settle = (room, winner) => {
+    try { return circuit.finish(room, winner); }
+    catch (error) {
+      console.error('Could not save tournament result:', error);
+      for (const id of [room.hostId, room.guestId]) send(players.get(id) ?? {}, { type: 'circuit-save-error' });
+    }
+  };
   const sendDeparture = room => {
     const departure = room.departure;
     const remaining = Math.max(0, departure.deadline - Date.now());
     const peer = players.get(departure.winnerId);
-    if (peer?.readyState !== WebSocket.OPEN) return;
     if (remaining > 0) {
-      send(peer, { type: 'departure', remaining, seat: departure.winner, peerName: departure.name });
+      if (peer) send(peer, { type: 'departure', remaining, seat: departure.winner, peerName: departure.name });
     } else {
+      const result = room.result ?? settle(room, departure.winner);
+      if (peer?.readyState !== WebSocket.OPEN) return;
       rooms.delete(departure.winnerId);
-      send(peer, { type: 'ended', winner: departure.winner, peerName: departure.name, message: 'You won because your opponent left the game.' });
+      send(peer, { type: 'ended', result, winner: departure.winner, peerName: departure.name, message: 'You won because your opponent left the game.' });
     }
   };
   const leave = ws => {
@@ -37,6 +50,7 @@ export function attachOnline(server) {
     const peer = ws.peer;
     ws.peer = undefined;
     ws.hosting = false;
+    dequeue(ws);
     rooms.delete(ws.playerId);
     if (peer) peer.peer = undefined;
     if (room && !room.departure) {
@@ -67,8 +81,9 @@ export function attachOnline(server) {
     host.isHost = true;
     guest.isHost = false;
     resumeShotClock(room);
-    send(host, { type: 'paired', seat: 0, peerId: guest.playerId, peerName: guest.playerName, resume: Boolean(room.state), state: room.state });
-    send(guest, { type: 'paired', seat: 1, peerId: host.playerId, peerName: host.playerName, resume: Boolean(room.state), state: room.state });
+    const match = { type: 'paired', resume: Boolean(room.state), state: room.state, city: room.city, result: room.result };
+    send(host, { ...match, seat: 0, peerId: guest.playerId, peerName: guest.playerName });
+    send(guest, { ...match, seat: 1, peerId: host.playerId, peerName: host.playerName });
     sendClock(room);
     if (room.clock?.expired) send(host, { type: 'timeout', turn: room.clock.turn });
   };
@@ -93,8 +108,8 @@ export function attachOnline(server) {
       try { data = JSON.parse(raw.toString()); } catch { return; }
       if (!data || typeof data !== 'object') return;
       if (data.type === 'register' && !ws.playerId) {
-        if (typeof data.secret !== 'string' || !/^[a-f0-9]{64}$/.test(data.secret)) return;
-        const id = createHash('sha256').update(data.secret).digest('hex').slice(0, 12).toUpperCase();
+        const id = playerIdFor(data.secret);
+        if (!id) return;
         if (players.has(id)) { send(ws, { type: 'error', message: 'This player ID is already open in another tab.' }); ws.close(); return; }
         ws.playerId = id;
         ws.playerName = typeof data.name === 'string' ? data.name.trim().slice(0, 24) || 'Player' : 'Player';
@@ -107,11 +122,33 @@ export function attachOnline(server) {
         return;
       }
       if (!ws.playerId) return;
-      if ((data.type === 'host' || data.type === 'join') && rooms.has(ws.playerId)) {
+      if (['host', 'join', 'city-queue'].includes(data.type) && rooms.has(ws.playerId)) {
         send(ws, { type: 'error', message: 'End your current online game before starting another.' });
         return;
       }
-      if (data.type === 'host') {
+      if (data.type === 'city-queue') {
+        if (!circuit.canEnter(ws.playerId, data.city)) {
+          send(ws, { type: 'error', message: 'This tournament is locked. Win the previous city first.' });
+          return;
+        }
+        dequeue(ws);
+        ws.hosting = false;
+        if (!queues.has(data.city)) queues.set(data.city, new Set());
+        const queue = queues.get(data.city);
+        const host = queue.values().next().value;
+        if (!host) {
+          queue.add(ws);
+          ws.cityQueue = data.city;
+          send(ws, { type: 'city-waiting' });
+          return;
+        }
+        dequeue(host);
+        const room = { hostId: host.playerId, guestId: ws.playerId, city: data.city, updated: Date.now() };
+        rooms.set(host.playerId, room);
+        rooms.set(ws.playerId, room);
+        pair(room);
+      } else if (data.type === 'host') {
+        dequeue(ws);
         ws.hosting = true;
         send(ws, { type: 'waiting' });
       } else if (data.type === 'join' && !ws.peer) {
@@ -120,6 +157,7 @@ export function attachOnline(server) {
           send(ws, { type: 'error', message: 'That player is not waiting for a game. Ask them to create an invite.' });
           return;
         }
+        dequeue(ws);
         const room = { hostId: host.playerId, guestId: ws.playerId, state: undefined, updated: Date.now() };
         rooms.set(host.playerId, room);
         rooms.set(ws.playerId, room);
@@ -127,9 +165,18 @@ export function attachOnline(server) {
       } else if (data.type === 'state' && ws.peer && ws.isHost) {
         const room = rooms.get(ws.playerId);
         if (room) {
+          if (room.city && room.result) return;
           room.state = data.state;
           room.updated = Date.now();
           updateShotClock(room, data.state);
+          const winner = data.state?.winner;
+          if (room.city && data.state?.finished === true && (winner === 0 || winner === 1)) {
+            const result = settle(room, winner);
+            if (result) {
+              send(ws, { type: 'circuit-result', result });
+              send(ws.peer, { type: 'circuit-result', result });
+            }
+          }
           if (Date.now() - (room.lastClockSent ?? 0) >= 500) { sendClock(room); room.lastClockSent = Date.now(); }
         }
         send(ws.peer, { type: 'state', state: data.state });
@@ -143,6 +190,7 @@ export function attachOnline(server) {
       } else if (data.type === 'leave') leave(ws);
     });
     ws.on('close', () => {
+      dequeue(ws);
       clearTimeout(registrationTimeout);
       // Keep the last authoritative state for ten minutes so refresh can resume.
       const peer = ws.peer;

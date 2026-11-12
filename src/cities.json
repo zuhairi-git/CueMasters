@@ -1,0 +1,7 @@
+[
+  { "id": "helsinki", "name": "Helsinki", "country": "Finland", "level": 1 },
+  { "id": "stockholm", "name": "Stockholm", "country": "Sweden", "level": 2, "requires": "helsinki" },
+  { "id": "copenhagen", "name": "Copenhagen", "country": "Denmark", "level": 3, "requires": "stockholm" },
+  { "id": "berlin", "name": "Berlin", "country": "Germany", "level": 4, "requires": "copenhagen" },
+  { "id": "london", "name": "London", "country": "United Kingdom", "level": 5, "requires": "berlin" }
+]

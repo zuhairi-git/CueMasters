@@ -1,2 +1,5 @@
 node_modules
 dist
+
+.billiard-circuit.json
+.billiard-circuit.json.tmp

@@ -4,93 +4,186 @@
   position: fixed;
   inset: 0;
   overflow: auto;
-  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
-    max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
   background: radial-gradient(ellipse at 50% 0%, #16334d, #080f20 72%);
   color: #f3f7ff;
 }
 .city-picker-content {
+  max-width: 1080px;
+  margin: auto;
+  padding-block: clamp(8px, 6vh, 72px);
+}
+.city-picker-brand { display: block; width: 170px; height: auto; margin: 0 auto 24px; }
+.city-picker h1, #setupTitle {
+  margin: 0 0 28px;
+  font: 500 clamp(2.3rem, 5vw, 4rem)/1.08 Georgia, serif;
+}
+.city-picker h1 { text-align: center; }
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.mode-card {
+  --mode-accent: #8de4f1;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100%;
-  max-width: 540px;
-  margin: auto;
-  text-align: center;
+  align-items: flex-start;
+  padding: clamp(20px, 3vw, 34px);
+  border: 1px solid #41617b;
+  border-top: 3px solid var(--mode-accent);
+  border-radius: 18px;
+  background: linear-gradient(155deg, #1b3048, #101d30 68%);
+  box-shadow: 0 16px 36px #030a1680;
 }
-.city-picker-brand { width: 170px; height: auto; margin-bottom: clamp(18px, 5vh, 48px); }
-.city-picker .eyebrow { margin: 0; color: #8de4f1; }
-.city-picker h1 {
-  margin: 8px 0 0;
-  font: 500 clamp(2.3rem, 7vw, 4rem)/1.1 Georgia, serif;
+.mode-icon svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.mode-computer { --mode-accent: #ffd08b; }
+.mode-training { --mode-accent: #9ce4ba; }
+.mode-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--mode-accent);
+  font-size: 1.65rem;
 }
-.city-picker-intro { margin: 12px 0 24px; color: #b5c7dd; }
-.city-card {
+.mode-card h2 { margin: 22px 0 0; font: 500 clamp(1.4rem, 2.5vw, 2rem)/1.15 Georgia, serif; }
+.mode-card p, #setupStatus { color: #c0d0e3; }
+.mode-card p { margin: 12px 0 24px; }
+.mode-card button { margin-top: auto; }
+.home-action, .home-back {
+  min-height: 44px;
+  padding: 9px 15px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--mode-accent, #8de4f1);
+  color: #102236;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.home-back { border-color: #526e86; background: #101d30; color: #e3efff; }
+.home-action:hover, .home-back:hover { filter: brightness(1.15); }
+.city-picker :focus-visible { outline: 2px solid #f3f7ff; outline-offset: 4px; }
+.home-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 26px; }
+#setupTitle { margin: 18px 0 10px; }
+#setupStatus:empty { display: none; }
+.city-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+.city-list[data-layout="training"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 780px;
+}
+.selection-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   padding: 0;
   overflow: hidden;
-  border: 1px solid #41617b;
-  border-radius: var(--panel-radius);
+  border: 1px solid #42637d;
+  border-radius: 16px;
   background: #101e34;
+  box-shadow: 0 14px 30px #030a1670;
   color: inherit;
   text-align: left;
   font: inherit;
-  cursor: pointer;
-  box-shadow: 0 18px 44px #030a16a0;
 }
-.city-card-scene {
+button.selection-card { cursor: pointer; }
+button.selection-card:hover, button.selection-card:focus-visible {
+  border-color: #8de4f1;
+  background: #172b43;
+}
+.selection-scene {
   position: relative;
   display: block;
-  aspect-ratio: 640 / 280;
+  width: 100%;
+  aspect-ratio: 16 / 8;
   overflow: hidden;
+  isolation: isolate;
+  background: #263d50;
 }
-.city-card-scene svg {
+.selection-scene::after {
   position: absolute;
   inset: 0;
+  background: linear-gradient(180deg, #060e205e, transparent 40%, #101e3429);
+  content: "";
+}
+.selection-art {
+  display: block;
   width: 100%;
   height: 100%;
+  object-fit: cover;
 }
-@media (prefers-reduced-motion: no-preference) {
-  .harbor-distant, .harbor-near {
-    transform-origin: center;
-    transition: transform 400ms ease-out;
-  }
-  .harbor-distant {
-    transform: translate(calc(var(--harbor-x, 0px) * .3), calc(var(--harbor-y, 0px) * .3)) scaleX(1.01);
-  }
-  .harbor-near {
-    transform: translate(var(--harbor-x, 0px), var(--harbor-y, 0px)) scale(1.02);
-  }
+.selection-copy {
+  display: grid;
+  justify-items: start;
+  flex: 1;
+  gap: 5px;
+  padding: 16px 18px 18px;
 }
-.city-card-info {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: clamp(14px, 4vw, 24px);
-}
-.city-card-country {
-  display: block;
-  color: #b5c7dd;
-  font-size: .66rem;
+.selection-subtitle {
+  color: #a9c4dc;
+  font-size: .7rem;
   font-weight: 700;
-  letter-spacing: .16em;
+  letter-spacing: .08em;
   text-transform: uppercase;
 }
-.city-card strong { display: block; margin-top: 3px; font: 500 1.8rem/1.1 Georgia, serif; }
-.city-card-action {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius);
-  background: #8de4f1;
-  color: #082337;
+.selection-title { font: 500 clamp(1.6rem, 3vw, 2.25rem)/1.08 Georgia, serif; }
+.selection-detail { color: #bfcede; font-size: .88rem; }
+.selection-action {
+  align-self: end;
+  margin-top: 9px;
+  color: #8de4f1;
   font-weight: 700;
 }
-.city-card:hover, .city-card:focus { border-color: #8de4f1; background: #192e45; }
-.city-card:focus { outline: 2px solid #8de4f1; outline-offset: 4px; }
+.selection-action span { margin-left: .25em; }
+.city-status {
+  position: absolute;
+  z-index: 1;
+  top: 11px;
+  right: 11px;
+  padding: 5px 9px;
+  border: 1px solid #7cbdd0;
+  border-radius: 20px;
+  background: #0d1b2e;
+  color: #a6ecf5;
+  font-size: .74rem;
+  font-weight: 700;
+}
+[data-status="locked"] .city-status { border-color: #8192a8; color: #d0dbea; }
+[data-status="locked"] .selection-art { filter: saturate(.62) brightness(.84); }
+[data-status="completed"] .city-status { border-color: #79bc99; color: #9ce4ba; }
+@media (prefers-reduced-motion: no-preference) {
+  .selection-card { animation: selection-arrive 300ms ease-out both; }
+  .selection-card:nth-child(2) { animation-delay: 30ms; }
+  .selection-card:nth-child(3) { animation-delay: 60ms; }
+  .selection-card:nth-child(n + 4) { animation-delay: 90ms; }
+  @keyframes selection-arrive {
+    from { opacity: 0; transform: translateY(7px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  button.selection-card .selection-art { transition: transform 380ms ease-out; }
+  button.selection-card:hover .selection-art,
+  button.selection-card:focus-visible .selection-art {
+    transform: translate(var(--scene-x, 0px), var(--scene-y, 0px)) scale(1.055);
+  }
+}
+@media (max-width: 800px) {
+  .city-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 510px) {
+  .city-list, .city-list[data-layout="training"] { grid-template-columns: 1fr; }
+}
+.city-picker [hidden], #casualInviteControls[hidden] { display: none; }
+
 .game-city {
   display: block;
   color: var(--accent);
@@ -98,12 +191,9 @@
   letter-spacing: .12em;
   text-transform: uppercase;
 }
-
-@media (max-height: 500px) and (min-width: 500px) {
-  .city-picker-brand { margin-bottom: 12px; }
-  .city-picker h1 { font-size: 2.3rem; }
-  .city-picker-intro { margin-bottom: 14px; }
-  .city-card { max-width: 400px; }
-  .city-card-scene { max-height: 122px; }
-  .city-card-info { padding: 12px 16px; }
+@media (max-width: 680px) {
+  .mode-grid { grid-template-columns: 1fr; }
+  .mode-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 14px; }
+  .mode-card h2, .mode-card p, .mode-card button { margin: 0; align-self: center; }
+  .mode-card p, .mode-card button { grid-column: 2; justify-self: start; }
 }

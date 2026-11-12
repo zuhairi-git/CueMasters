@@ -2,10 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { WebSocket } from 'ws';
 import QRCode from 'qrcode';
 import jsQR from 'jsqr';
 import { attachOnline } from '../server/online.mjs';
+import { createCircuit } from '../server/circuit.mjs';
 
 function inbox(socket) {
   const queue = [], waiting = [];
@@ -86,6 +90,53 @@ test('online IDs, host authority, profile names, and refresh reconnection', { ti
   assert.deepEqual(await rejoined.next('departure'), {type: 'departure', remaining: 20000, seat: 1, peerName: 'Alice'});
   now += 20000;
   assert.equal((await rejoined.next('ended')).winner, 1);
+});
+
+test('city matchmaking enforces unlocks and persists each result once', { timeout: 10000 }, async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'billiard-circuit-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const file = join(directory, 'progress.json');
+  const circuit = createCircuit(file);
+  const server = createServer((request, response) => {
+    if (!circuit.handleRequest(request, response)) response.writeHead(404).end();
+  });
+  const sockets = attachOnline(server, circuit);
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => { for (const ws of sockets.clients) ws.terminate(); server.close(); });
+  const address = '127.0.0.1:' + server.address().port;
+  async function player(secret) {
+    const ws = new WebSocket('ws://' + address + '/play');
+    const next = inbox(ws);
+    await once(ws, 'open');
+    const send = message => ws.send(JSON.stringify(message));
+    send({ type: 'register', secret });
+    const { playerId } = await next('registered');
+    return { next, send, playerId, secret };
+  }
+  const host = await player('a'.repeat(64));
+  const guest = await player('b'.repeat(64));
+  const progress = async ({ secret }) => (await fetch('http://' + address + '/circuit-progress', {
+    method: 'POST', headers: { 'X-Player-Secret': secret },
+  })).json();
+  host.send({ type: 'city-queue', city: 'stockholm' });
+  await host.next('error');
+  host.send({ type: 'city-queue', city: 'helsinki' });
+  await host.next('city-waiting');
+  guest.send({ type: 'city-queue', city: 'helsinki' });
+  assert.equal((await host.next('paired')).city, 'helsinki');
+  assert.equal((await guest.next('paired')).seat, 1);
+  guest.send({ type: 'state', state: { finished: true, winner: 1 } });
+  const finalState = { type: 'state', state: { turn: 0, finished: true, winner: 0 } };
+  host.send(finalState);
+  host.send(finalState);
+  assert.deepEqual((await host.next('circuit-result')).result, { winner: 0, firstWin: true });
+  assert.deepEqual((await guest.next('circuit-result')).result, { winner: 0, firstWin: true });
+  assert.deepEqual(await progress(host), { helsinki: { wins: 1, losses: 0 } });
+  assert.deepEqual(await progress(guest), { helsinki: { wins: 0, losses: 1 } });
+  const reopened = createCircuit(file);
+  assert.equal(reopened.canEnter(host.playerId, 'stockholm'), true);
+  assert.equal(reopened.canEnter(guest.playerId, 'stockholm'), false);
 });
 
 test('profile QR codes round-trip through the same decoder used by the scanner', () => {

@@ -1,5 +1,8 @@
 import QRCode from 'qrcode';
 import jsQR from 'jsqr';
+import { getPlayerSecret } from './circuit';
+
+export type CircuitResult = { winner: number; firstWin: boolean };
 
 export class OnlineGame {
   seat: number | undefined;
@@ -9,7 +12,9 @@ export class OnlineGame {
   name = 'Player';
   connected = false;
   active = false;
-  onPaired: (resume?: unknown) => void = () => {};
+  onPaired: (resume?: unknown, city?: string) => void = () => {};
+  onCircuitResult: (result?: CircuitResult) => void = () => {};
+  onCircuitSaveError = () => {};
   onProfile = () => {};
   onTimeout: (turn: number) => void = () => {};
   private clockRemaining = 30000;
@@ -31,8 +36,11 @@ export class OnlineGame {
   private stream?: MediaStream;
   private scanFrame = 0;
   private scanGeneration = 0;
+  private secret = getPlayerSecret();
+  private city?: string;
+  private findButton = document.querySelector<HTMLButtonElement>('#findCityMatch')!;
 
-  constructor() {
+  constructor(private profileOnly = false) {
     try { this.name = localStorage.getItem('billiard-player-name') || 'Player'; this.playerId = localStorage.getItem('billiard-player-id') || ''; } catch {}
     const nameInput = document.querySelector<HTMLInputElement>('#profileName')!;
     nameInput.value = this.name;
@@ -78,7 +86,7 @@ export class OnlineGame {
       catch { this.message.textContent = 'Select the invite link to copy or share it.'; }
     };
     const id = new URL(location.href).searchParams.get('join');
-    if (id && /^[A-Fa-f0-9]{12}$/.test(id)) {
+    if (!profileOnly && id && /^[A-Fa-f0-9]{12}$/.test(id)) {
       this.opponentId.value = id.toUpperCase();
       this.open();
     }
@@ -86,22 +94,27 @@ export class OnlineGame {
 
   open() {
     if (!this.dialog.open) this.dialog.showModal();
+    if (this.profileOnly) return;
     void this.drawInvite();
     void this.connect().catch(() => {});
   }
 
-  getSecret(): string {
-    let secret = '';
+  setCircuit(city?: { id: string; name: string }) {
+    this.city = city?.id;
+    document.querySelector<HTMLElement>('#casualInviteControls')!.hidden = Boolean(city) || this.profileOnly;
+    document.querySelector<HTMLElement>('#onlineTitle')!.textContent = city ? city.name + ' · Online tournament' : 'Your player profile';
+    this.findButton.hidden = !city;
+    this.findButton.onclick = () => { void this.findMatch(); };
+  }
+
+  async findMatch() {
+    this.findButton.disabled = true;
     try {
-      secret = localStorage.getItem('billiard-player-secret') ?? '';
-      if (!/^[a-f0-9]{64}$/.test(secret)) {
-        secret = Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
-        localStorage.setItem('billiard-player-secret', secret);
-      }
+      await this.connect();
+      if (!this.active && this.city) this.send({ type: 'city-queue', city: this.city });
     } catch {
-      secret = Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('');
+      this.findButton.disabled = false;
     }
-    return secret;
   }
 
   async initPlayerId() {
@@ -110,7 +123,7 @@ export class OnlineGame {
       void this.drawInvite();
       return;
     }
-    const secret = this.getSecret();
+    const secret = this.secret;
     try {
       const data = new TextEncoder().encode(secret);
       const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -132,7 +145,7 @@ export class OnlineGame {
     if (this.connection) return this.connection;
     this.message.textContent = 'Connecting…';
     this.connection = new Promise<void>((resolve, reject) => {
-      const secret = this.getSecret();
+      const secret = this.secret;
       const socket = this.socket = new WebSocket(`${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/play`);
       const timeout = window.setTimeout(() => socket.close(), 10000);
       socket.onopen = () => this.send({ type: 'register', secret, name: this.name });
@@ -145,11 +158,13 @@ export class OnlineGame {
           this.playerId = data.playerId;
           try { localStorage.setItem('billiard-player-id', this.playerId); } catch {}
           document.querySelector<HTMLElement>('#playerId')!.textContent = this.playerId;
-          this.message.textContent = 'Create an invite, or enter the other player’s ID.';
+          this.message.textContent = this.city ? 'Ready to find an opponent.' : 'Create an invite, or enter the other player’s ID.';
           resolve();
           void this.drawInvite();
         } else if (data.type === 'waiting') {
           this.message.textContent = 'Waiting for your opponent to join…';
+        } else if (data.type === 'city-waiting') {
+          this.message.textContent = 'Waiting for another player to join this city…';
         } else if (data.type === 'paired') {
           this.departureDeadline = undefined;
           if (!data.resume) { this.clockRemaining = 30000; this.clockRunning = false; }
@@ -158,8 +173,14 @@ export class OnlineGame {
           this.peerId = data.peerId;
           this.peerName = data.peerName || 'Player';
           this.message.textContent = 'Connected to player ' + this.peerId;
-          this.dialog.close();
-          this.onPaired(data.resume ? data.state : undefined);
+          this.findButton.disabled = true;
+          if (this.dialog.open) this.dialog.close();
+          this.onPaired(data.resume ? data.state : undefined, data.city);
+          if (data.result) this.onCircuitResult(data.result);
+        } else if (data.type === 'circuit-result') {
+          this.onCircuitResult(data.result);
+        } else if (data.type === 'circuit-save-error') {
+          this.onCircuitSaveError();
         } else if (data.type === 'state') this.onState(data.state);
         else if (data.type === 'clock') {
           if (typeof data.remaining === 'number' && Number.isFinite(data.remaining)) {
@@ -186,10 +207,14 @@ export class OnlineGame {
             this.peerName = data.peerName || 'Player';
           }
           this.message.textContent = data.message;
+          if (data.result) this.onCircuitResult(data.result);
           this.onEnded(data.winner);
         } else if (data.type === 'left') {
           this.acknowledgeLeave?.();
-        } else if (data.type === 'error') this.message.textContent = data.message;
+        } else if (data.type === 'error') {
+          this.findButton.disabled = this.active;
+          this.message.textContent = data.message;
+        }
       };
       socket.onclose = () => {
         clearTimeout(timeout);
@@ -197,6 +222,7 @@ export class OnlineGame {
         this.connection = undefined;
         const wasActive = this.active;
         this.active = false;
+        this.findButton.disabled = false;
         this.message.textContent = 'Connection closed. Reopen Online to reconnect.';
         if (wasActive) this.onEnded();
         reject(new Error('Online connection closed'));

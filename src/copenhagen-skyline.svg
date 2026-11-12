@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 280">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#2c2f50"/><stop offset=".55" stop-color="#99728b"/><stop offset="1" stop-color="#ffd3a4"/></linearGradient>
+    <linearGradient id="water" x2="0" y2="1"><stop stop-color="#99728b"/><stop offset="1" stop-color="#33465f"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#ffdfa9" stop-opacity=".6"/><stop offset="1" stop-color="#ffdfa9" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h640v280H0z"/>
+  <circle cx="163" cy="76" r="89" fill="url(#halo)"/>
+  <circle cx="163" cy="76" r="31" fill="#ffdfa9" opacity=".88"/>
+  <path fill="#fff1da" opacity=".15" d="M0 72q118-15 240 0-94-2-157 7L0 84zm297 37q110-16 343-9v8q-155-4-343 1zM0 123q94-10 202 2L0 134z"/>
+  <path fill="#62536c" d="M0 172h62v-23h42v20h35v-14h61v17h57v-41h20v-28h10v28h14v43h55v-20h58v18h76v-23h55v24h95v52H0z"/>
+  <path fill="#e5ab65" d="M25 208v-50l32-28 32 28v50z"/><path fill="#bd7467" d="M91 208v-61l30-26 27 26v61z"/><path fill="#e4bd8e" d="M150 208v-48l26-27 28 27v48z"/><path fill="#78a89d" d="M206 208v-62l27-23 25 23v62z"/><path fill="#d89777" d="M260 208v-48l25-25 30 25v48z"/><path fill="#b9a1a6" d="M317 208v-61l27-23 30 23v61z"/><path fill="#deaa72" d="M376 208v-56l24-23 33 23v56z"/><path fill="#885c69" d="M435 208v-47l26-21 31 21v47zm60 0v-60l30-28 28 28v60zm60 0v-47l29-25 28 25v47z"/><path stroke="#423544" stroke-width="4" stroke-dasharray="5 13" d="M33 171h574m-574 13h574m-574 13h574"/><path fill="#e5b59c" d="M355 221h122l-16 10h-86z"/><path stroke="#e7c9a8" d="M417 220v-85m0 12-34 70m34-58 35 58"/>
+  <path fill="#33465f" d="M0 208h640v12H0z"/>
+  <path fill="url(#water)" d="M0 218h640v62H0z" opacity=".9"/>
+  <g fill="none" stroke="#ffdfa9" stroke-linecap="round">
+    <path opacity=".25" d="M18 229h84m35 7h49m30-8h89m71 2h76m29 10h97m-202 14h110m28 10h108m-551-6h103m29-13h38"/>
+    <path opacity=".42" d="M132 226h61m-46 6h36m-58 8h70m-43 9h47m-65 10h62"/>
+  </g>
+  <path fill="#33465f" opacity=".7" d="M0 268q104 8 211 3t220 3q141 0 209-9v15H0z"/>
+</svg>
