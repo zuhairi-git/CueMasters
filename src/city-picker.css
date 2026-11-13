@@ -40,8 +40,9 @@
   padding-block: clamp(8px, 6vh, 72px);
 }
 .city-picker-brand { display: block; width: clamp(220px, 36vw, 300px); max-width: 100%; height: auto; margin: 0 auto 24px; }
-.home-languages { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
-.home-languages [aria-pressed="true"] { text-decoration: underline; text-underline-offset: 4px; }
+.home-preferences { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.settings-languages { display: flex; flex-wrap: wrap; gap: 8px; }
+.settings-languages [aria-pressed="true"] { background: var(--accent); color: var(--surface); }
 [data-theme="ivory"] .city-picker-brand { background: #2b2319; border-radius: 8px; padding: 6px 10px; }
 .city-picker h1, #setupTitle {
   margin: 0 0 28px;

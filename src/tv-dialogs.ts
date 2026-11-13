@@ -1,3 +1,5 @@
+import type { RemoteKey } from './tv-controls';
+
 export function dismissDialog(dialog: HTMLDialogElement) {
   if (dialog.dispatchEvent(new Event('cancel', { cancelable: true }))) dialog.close('');
 }
@@ -79,4 +81,32 @@ export function installDialogFallback() {
     event.preventDefault();
     dismissDialog(dialog);
   });
+}
+
+export function navigateTvDialog(dialog: HTMLDialogElement, key: RemoteKey) {
+  if (key === 'back') {
+    dismissDialog(dialog);
+    return;
+  }
+  const controls = [...dialog.querySelectorAll<HTMLElement>('button, input, select, a[href]')]
+    .filter(el => !el.matches(':disabled') && el.getClientRects().length > 0);
+  const active = document.activeElement as HTMLElement;
+  const index = controls.indexOf(active);
+  if (key === 'left' || key === 'right') {
+    const direction = key === 'right' ? 1 : -1;
+    if (active instanceof HTMLSelectElement) {
+      active.selectedIndex = Math.max(0, Math.min(active.options.length - 1, active.selectedIndex + direction));
+      active.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
+    if (active instanceof HTMLInputElement && active.type === 'range') {
+      direction > 0 ? active.stepUp() : active.stepDown();
+      active.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+  }
+  if (key === 'ok' && index >= 0 && !(active instanceof HTMLSelectElement)) { active.click(); return; }
+  const next = controls[(index + (key === 'up' || key === 'left' ? -1 : 1) + controls.length) % controls.length];
+  next?.focus();
+  next?.scrollIntoView({ block: 'nearest' });
 }

@@ -1,11 +1,13 @@
 import { t } from './i18n';
+import { avatarMarkup, playerAvatar } from './player-avatars';
 import { cueArtwork } from './svg-cue';
 import { ballBadge } from './svg-ball';
 import { GameAudio } from './audio';
-import { RemoteShot, remoteKey, remotePlacement, type RemoteKey } from './tv-controls';
+import { soundPreference, tvPreference } from './app-settings';
+import { RemoteShot, remoteKey, remotePlacement } from './tv-controls';
 import { SvgTable } from './svg-table';
 import { TvTable, calledPocketBorderWidth, calledPocketColor } from './tv-table';
-import { dismissDialog } from './tv-dialogs';
+import { navigateTvDialog } from './tv-dialogs';
 import { installFullscreenControl } from './fullscreen';
 import { cueLength, cuePose } from './cue-geometry';
 import { directionToBall, traceShot } from './aim-guide';
@@ -45,19 +47,17 @@ const hudHeader = document.querySelector<HTMLElement>('header')!;
 const menuDialog = document.querySelector<HTMLDialogElement>('#mobileGameMenu')!;
 const menuActions = document.querySelector<HTMLElement>('#gameMenuActions')!;
 const mobileLayout = window.matchMedia('(max-width: 600px)');
-let tvEnabled = false;
+const tvEnabled = tvPreference() === 'on';
 const remote = new RemoteShot();
 let tvContext = '';
 let tvPresentation = '';
-try { tvEnabled = localStorage.getItem('billiard-tv') === 'on'; } catch {}
-if (document.documentElement.dataset.tvChoice) tvEnabled = document.documentElement.dataset.tvChoice === 'on';
 const actionDescriptions: Record<string, string> = {
   fullscreen: t('Hide browser navigation while you play'),
   viewMode: t('Look around the table'),
   camera: t('Switch between top-down and 3D'),
   reset: t('Set up a fresh game'),
   openOnline: t('Your profile, QR code & online play'),
-  openSettings: t('Game, equipment, sound & guides'),
+  openSettings: t('Game, equipment & guides'),
   endGame: t('Return to game modes'),
 };
 for (const button of tableActions.querySelectorAll<HTMLButtonElement>('button')) {
@@ -165,30 +165,7 @@ guidesToggle.onclick = () => {
 };
 updateGuides();
 const sound = new GameAudio();
-const soundToggle = document.querySelector<HTMLButtonElement>('#soundToggle')!;
-const volume = document.querySelector<HTMLInputElement>('#volume')!;
-const volumeLabel = document.querySelector<HTMLOutputElement>('#volumeLabel')!;
-function updateSound() {
-  sound.configure(sound.enabled, Number(volume.value) / 100);
-  soundToggle.textContent = t(sound.enabled ? 'Sound on' : 'Sound off');
-  soundToggle.setAttribute('aria-pressed', String(sound.enabled));
-  volumeLabel.value = volume.value + '%';
-  try { localStorage.setItem('3dbilliard-sound', JSON.stringify({ enabled: sound.enabled, volume: sound.volume })); } catch {}
-}
-try {
-  const saved = JSON.parse(localStorage.getItem('3dbilliard-sound') ?? 'null');
-  if (saved && typeof saved.enabled === 'boolean' && typeof saved.volume === 'number' && Number.isFinite(saved.volume)) {
-    sound.enabled = saved.enabled;
-    volume.value = String(Math.max(0, Math.min(100, saved.volume * 100)));
-  }
-} catch {}
-updateSound();
-soundToggle.onclick = () => {
-  sound.enabled = !sound.enabled;
-  updateSound();
-  void sound.unlock();
-};
-volume.oninput = updateSound;
+sound.configure(soundPreference.enabled, soundPreference.volume);
 document.addEventListener('pointerdown', () => { void sound.unlock(); });
 document.addEventListener('keydown', () => { void sound.unlock(); });
 let webglUnavailable = false;
@@ -517,26 +494,11 @@ const offlinePlayerTwoNameInput = document.querySelector<HTMLInputElement>('#off
 const offlinePlayerTwoNameRow = document.querySelector<HTMLElement>('#offlinePlayerTwoNameRow')!;
 const offlinePlayerNameInput = document.querySelector<HTMLInputElement>('#offlinePlayerName')!;
 const offlinePlayerNameRow = document.querySelector<HTMLElement>('#offlinePlayerNameRow')!;
-const offlineAvatarPicker = document.querySelector<HTMLElement>('#offlineAvatarPicker')!;
-const offlineAvatarOptions = document.querySelector<HTMLElement>('#offlineAvatarOptions')!;
 let offlinePlayerOneName = '';
 let offlinePlayerTwoName = 'Player 2';
-const avatarOptions = [
-  { id: 'man-classic', label: t('Male · Classic'), group: 'Male', background: '#8ad6e6', skin: '#f2c6a0', hair: '#26334a', shirt: '#315b8e', hairShape: 'M10 19C7 8 14 3 21 4c8 1 11 8 8 16l-4-4c-4 0-7-2-9-5-1 4-3 6-6 8Z', fringe: 'M10 13c4-1 6-4 7-7 2 4 5 6 10 6l1 5c-5-1-8-3-10-6-2 3-4 4-8 5Z', beard: '' },
-  { id: 'man-curly', label: t('Male · Curls'), group: 'Male', background: '#b7a2ef', skin: '#bb7959', hair: '#182333', shirt: '#397b78', hairShape: 'M9 19C5 12 8 4 13 6c1-5 7-5 9-2 5-2 9 3 7 8 3 3 1 8-2 9l-2-7c-5 1-8-1-10-4-1 4-3 6-6 9Z', fringe: 'M10 14c2-5 5-5 6-9 2 4 5 5 10 4l2 7c-4-1-7-3-9-6-2 3-5 4-8 4Z', beard: 'M12 24c4 3 8 3 12 0l-2 5h-8Z' },
-  { id: 'man-beard', label: t('Male · Beard'), group: 'Male', background: '#f3bd83', skin: '#e5b18c', hair: '#51372f', shirt: '#8a4c55', hairShape: 'M10 19C7 9 12 4 20 4c8 0 11 8 8 16l-4-4c-5 0-8-2-10-5-1 4-2 6-4 8Z', fringe: 'M10 14c4-1 6-4 7-7 2 4 5 6 10 6l1 5c-5-1-8-3-10-6-2 3-4 4-8 5Z', beard: 'M11 22c2 4 5 7 9 7s7-3 9-7l-2 8-7 5-7-5Z' },
-  { id: 'woman-waves', label: t('Female · Waves'), group: 'Female', background: '#f3a5bb', skin: '#edc2a5', hair: '#48304d', shirt: '#a54f83', hairShape: 'M8 24C3 11 8 3 19 3c12 0 17 12 12 23l-4 5-1-16c-4 0-8-2-10-5-2 5-4 8-8 9Z', fringe: 'M9 14c4-1 6-5 7-9 2 4 6 6 11 6l1 7c-5-1-9-3-11-7-2 4-4 5-8 6Z', beard: '' },
-  { id: 'woman-bob', label: t('Female · Bob'), group: 'Female', background: '#84c8b7', skin: '#bc8062', hair: '#202a42', shirt: '#396a85', hairShape: 'M8 22C5 8 11 3 20 3s15 7 12 20l-4 7-2-14c-5 0-9-2-11-5-1 5-3 8-6 10Z', fringe: 'M9 13c4 0 7-3 8-7 2 4 5 6 11 6l1 7c-5 0-9-3-11-6-2 3-4 4-8 5Z', beard: '' },
-  { id: 'woman-curls', label: t('Female · Curls'), group: 'Female', background: '#e5a56e', skin: '#80503e', hair: '#211c2c', shirt: '#54734f', hairShape: 'M8 25C3 15 5 5 12 6c1-5 7-5 9-2 6-3 12 3 9 9 5 4 2 12-2 15l-1-14c-5 1-8-1-10-5-2 5-4 8-8 9Z', fringe: 'M9 14c2-5 5-5 6-9 2 4 5 5 10 4l2 8c-5-1-8-3-10-6-2 3-4 4-8 5Z', beard: '' },
-] as const;
-let offlinePlayerAvatars: [string, string] = ['man-classic', 'woman-waves'];
 try {
   offlinePlayerOneName = localStorage.getItem('billiard-player-one-name')?.trim().slice(0, 24) || '';
   offlinePlayerTwoName = localStorage.getItem('billiard-player-two-name')?.trim().slice(0, 24) || offlinePlayerTwoName;
-  for (const seat of [0, 1]) {
-    const saved = localStorage.getItem('billiard-player-' + (seat + 1) + '-avatar');
-    if (avatarOptions.some(option => option.id === saved)) offlinePlayerAvatars[seat] = saved!;
-  }
 } catch {}
 offlinePlayerTwoNameInput.value = offlinePlayerTwoName;
 function syncOfflinePlayerNameVisibility() {
@@ -660,10 +622,6 @@ function canControl() {
 function playerName(seat: number) {
   return onlineMode ? seat === online.seat ? online.name : online.peerName : seat === 0 ? offlinePlayerOneName || online.name : versusComputer ? t('Computer') : offlinePlayerTwoName;
 }
-function avatarMarkup(id: string) {
-  const avatar = avatarOptions.find(option => option.id === id) ?? avatarOptions[0];
-  return `<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false"><circle cx="20" cy="20" r="20" fill="${avatar.background}"/><path d="${avatar.hairShape}" fill="${avatar.hair}"/><rect x="17" y="23" width="6" height="9" rx="3" fill="${avatar.skin}"/><ellipse cx="20" cy="17" rx="8.5" ry="10" fill="${avatar.skin}"/><path d="${avatar.fringe}" fill="${avatar.hair}"/><path d="${avatar.beard}" fill="${avatar.hair}"/><path d="M16 17h1m6 0h1" stroke="#293142" stroke-width="1.5" stroke-linecap="round"/><path d="M18 22q2 1.5 4 0" fill="none" stroke="#a75450" stroke-width="1.2" stroke-linecap="round"/><path d="M6 40c1-7 5-10 11-11l3 3 3-3c6 1 10 4 11 11Z" fill="${avatar.shirt}"/></svg>`;
-}
 const colourNames = ['yellow', 'green', 'brown', 'blue', 'pink', 'black'];
 
 function legalTargets() {
@@ -685,34 +643,7 @@ document.getElementById('openProfileFromDetails')?.addEventListener('click', () 
 function renderPlayerDetails() {
   document.getElementById('playerDetailsTitle')!.textContent = playerName(detailsSeat);
   offlinePlayerNameRow.hidden = onlineMode;
-  offlineAvatarPicker.hidden = onlineMode;
   offlinePlayerNameInput.value = playerName(detailsSeat);
-  offlineAvatarOptions.replaceChildren();
-  for (const group of ['Male', 'Female']) {
-    const category = document.createElement('div');
-    category.className = 'avatar-choice-group';
-    const label = document.createElement('span');
-    label.textContent = t(group);
-    const choices = document.createElement('div');
-    choices.className = 'avatar-choice-buttons';
-    for (const avatar of avatarOptions.filter(option => option.group === group)) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'avatar-choice';
-      button.setAttribute('aria-label', avatar.label);
-      button.setAttribute('aria-pressed', String(offlinePlayerAvatars[detailsSeat] === avatar.id));
-      button.title = avatar.label;
-      button.innerHTML = avatarMarkup(avatar.id);
-      button.onclick = () => {
-        offlinePlayerAvatars[detailsSeat] = avatar.id;
-        try { localStorage.setItem('billiard-player-' + (detailsSeat + 1) + '-avatar', avatar.id); } catch {}
-        showScore();
-      };
-      choices.append(button);
-    }
-    category.append(label, choices);
-    offlineAvatarOptions.append(category);
-  }
   const current = finished ? winner === detailsSeat ? t('Winner') : t('Game finished') : turn === detailsSeat ? t('At the table now') : t('Waiting for their turn');
   const group = groups[detailsSeat];
   let summaryText = current + ' · ' + (snooker ? t('Score: {score}. Balls below are shared table totals.', { score: scores[detailsSeat] })
@@ -768,10 +699,10 @@ function showScore() {
     const left = balls.filter((ball, index) => !ball.pocketed && groupOf(index) === groups[seat]).length;
     const name = document.createElement('strong');
     name.className = 'player-name';
-    if (!onlineMode) {
+    if (!onlineMode || seat === online.seat) {
       const avatar = document.createElement('span');
       avatar.className = 'player-avatar';
-      avatar.innerHTML = avatarMarkup(offlinePlayerAvatars[seat]);
+      avatar.innerHTML = avatarMarkup(playerAvatar(onlineMode ? 0 : seat));
       name.append(avatar);
     }
     name.append(document.createTextNode(playerName(seat)));
@@ -2032,7 +1963,6 @@ function applyGraphicsPreset() {
   }
   resize();
 }
-quality.onchange = applyGraphicsPreset;
 window.addEventListener('resize', resize);
 new ResizeObserver(resize).observe(canvas);
 new ResizeObserver(fitOverheadCamera).observe(tvCanvas);
@@ -2041,7 +1971,6 @@ controlsObserver.observe(document.querySelector('header')!);
 controlsObserver.observe(document.querySelector('footer')!);
 applyGraphicsPreset();
 
-const tvToggle = document.querySelector<HTMLButtonElement>('#tvToggle')!;
 const tvPanel = document.querySelector<HTMLElement>('#tvControls')!;
 function updateTvControls() {
   if (!tvEnabled) return;
@@ -2071,11 +2000,6 @@ function applyTvMode() {
   document.body.classList.toggle('compatibility-table', webglUnavailable);
   tvPanel.hidden = !tvEnabled;
   syncTableSurface();
-  tvToggle.textContent = t(tvEnabled ? 'TV on' : 'TV off');
-  tvToggle.setAttribute('aria-pressed', String(tvEnabled));
-  const compatibility = document.querySelector<HTMLElement>('#tvCompatibility')!;
-  compatibility.hidden = !webglUnavailable;
-  compatibility.textContent = webglUnavailable ? t('This browser could not start 3D. The compatibility table is active; you can turn TV controls on or off.') : '';
   tvContext = '';
   if (tvEnabled) {
     if (viewMode) viewToggle.click();
@@ -2089,48 +2013,7 @@ function applyTvMode() {
   } else if (!rolling && !strike) showReadyStatus();
   requestAnimationFrame(fitOverheadCamera);
 }
-tvToggle.onclick = () => {
-  tvEnabled = !tvEnabled;
-  try { localStorage.setItem('billiard-tv', tvEnabled ? 'on' : 'off'); } catch {}
-  if (!tvEnabled && headlessGraphics && !webglUnavailable) {
-    // The 3D scene needs a real engine. Restore this match after restarting it.
-    saveGame();
-    const url = new URL(location.href);
-    url.searchParams.set('table', '3d');
-    url.searchParams.set('game', currentGame());
-    location.replace(url.href);
-    return;
-  }
-  applyTvMode();
-};
 document.querySelector<HTMLButtonElement>('#tvMenu')!.onclick = () => setMobileMenu(true);
-function navigateTvDialog(dialog: HTMLDialogElement, key: RemoteKey) {
-  if (key === 'back') {
-    dismissDialog(dialog);
-    return;
-  }
-  const controls = [...dialog.querySelectorAll<HTMLElement>('button, input, select, a[href]')]
-    .filter(el => !el.matches(':disabled') && el.getClientRects().length > 0);
-  const active = document.activeElement as HTMLElement;
-  const index = controls.indexOf(active);
-  if (key === 'left' || key === 'right') {
-    const direction = key === 'right' ? 1 : -1;
-    if (active instanceof HTMLSelectElement) {
-      active.selectedIndex = Math.max(0, Math.min(active.options.length - 1, active.selectedIndex + direction));
-      active.dispatchEvent(new Event('change', { bubbles: true }));
-      return;
-    }
-    if (active instanceof HTMLInputElement && active.type === 'range') {
-      direction > 0 ? active.stepUp() : active.stepDown();
-      active.dispatchEvent(new Event('input', { bubbles: true }));
-      return;
-    }
-  }
-  if (key === 'ok' && index >= 0 && !(active instanceof HTMLSelectElement)) { active.click(); return; }
-  const next = controls[(index + (key === 'up' || key === 'left' ? -1 : 1) + controls.length) % controls.length];
-  next?.focus();
-  next?.scrollIntoView({ block: 'nearest' });
-}
 document.addEventListener('keydown', event => {
   if (!tvEnabled && !webglUnavailable) return;
   const key = remoteKey(event.key, event.keyCode);

@@ -15,7 +15,7 @@ export function t(message: string, values?: Record<string, string | number>) {
   return values ? translated.replace(/\{(\w+)\}/g, (token, name) => String(values[name] ?? token)) : translated;
 }
 
-export function installLanguagePicker() {
+export function installLanguagePicker(onChange?: () => void) {
   const picker = document.querySelector<HTMLElement>('#languagePicker')!;
   const staticText: { source: string; write: (value: string) => void }[] = [];
   const walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_TEXT);
@@ -50,6 +50,7 @@ export function installLanguagePicker() {
     document.documentElement.lang = code;
     for (const entry of staticText) entry.write(t(entry.source));
     for (const { code: option, button } of buttons) button.setAttribute('aria-pressed', String(option === code));
+    onChange?.();
   }
   picker.append(...buttons.map(({ button }) => button));
   let saved: string | null = null;

@@ -16,11 +16,39 @@
   <link rel="stylesheet" href="/src/city-picker.css">
 </head>
 <body>
+  <dialog class="ui-dialog" id="appSettings" aria-labelledby="appSettingsTitle">
+    <form method="dialog">
+      <div class="dialog-body">
+        <h2 id="appSettingsTitle">App settings</h2>
+        <fieldset>
+          <legend>Language</legend>
+          <div id="languagePicker" class="settings-languages" role="group" aria-label="Language"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Choose an avatar</legend>
+          <label class="ui-field"><span>Player</span><span class="ui-select-wrap"><select class="ui-select" id="avatarSeat"><option value="0">Player 1 (you)</option><option value="1">Player 2 (local)</option></select></span></label>
+          <div id="avatarChoices" class="avatar-choice-buttons"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Display</legend>
+          <label class="ui-field"><span>Theme</span><span class="ui-select-wrap"><select class="ui-select" id="theme"><option value="club">Clubhouse</option><option value="midnight">Midnight</option><option value="ivory">Ivory</option></select></span></label>
+          <label class="ui-field"><span>Graphics</span><span class="ui-select-wrap"><select class="ui-select" id="quality"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High" selected>High</option><option value="Ultra">Ultra</option></select></span></label>
+          <div class="sound-row"><div><strong>Play on TV</strong><small>Lightweight TV table with remote controls. Arrows to aim, OK to play, Back for the menu. In menus: ↑ ↓ move, ← → change, OK select.</small></div><button class="ui-button" id="tvToggle" type="button" aria-pressed="false">TV off</button></div>
+        </fieldset>
+        <fieldset>
+          <legend>Sound</legend>
+          <div class="sound-row"><div><strong>Ball &amp; pocket sounds</strong><small>Soft clicks and pocket drops</small></div><button class="ui-button" id="soundToggle" type="button" aria-pressed="true">Sound on</button></div>
+          <label class="volume-row" for="volume"><span>Volume</span><input id="volume" type="range" min="0" max="100" value="45"><output id="volumeLabel" for="volume">45%</output></label>
+        </fieldset>
+      </div>
+      <div class="ui-dialog-actions"><button class="ui-button" value="close">Done</button></div>
+    </form>
+  </dialog>
   <section id="cityPicker" class="city-picker" aria-labelledby="cityPickerTitle">
     <div class="city-picker-content">
       <img class="city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker">
       <div id="homeModes">
-        <div id="languagePicker" class="home-languages" role="group" aria-label="Language"></div>
+        <div class="home-preferences"><button class="home-back" id="openAppSettings" type="button" aria-haspopup="dialog">Settings</button></div>
         <h1 id="cityPickerTitle">Choose your game</h1>
         <div class="home-games" role="group" aria-label="Game type">
           <button class="home-back" type="button" data-game="pool" aria-pressed="true">Billiard</button>
@@ -113,7 +141,7 @@
   <dialog class="ui-dialog tv-detection" id="tvDetection" aria-labelledby="tvDetectionTitle" aria-describedby="tvDetectionDescription">
     <div class="dialog-body">
     <div class="settings-heading"><span class="eyebrow">WELCOME TO THE TABLE</span><h2 id="tvDetectionTitle">Playing on a TV?</h2></div>
-    <p id="tvDetectionDescription">This looks like a TV browser. TV mode uses a lightweight table and simple arrow, OK and Back controls. You can change this in Settings anytime.</p>
+    <p id="tvDetectionDescription">This looks like a TV browser. TV mode uses a lightweight table and simple arrow, OK and Back controls. You can change this in Settings on the home screen.</p>
     </div>
     <div class="ui-dialog-actions"><button class="ui-button ui-button--primary" type="button" autofocus>Yes, use TV mode</button><button class="ui-button" type="button">Use regular 3D</button></div>
   </dialog>
@@ -166,7 +194,7 @@
     </div>
   </footer>
   <dialog class="ui-dialog" id="playerDetails" aria-labelledby="playerDetailsTitle">
-    <div class="dialog-body"><div class="spin-heading"><div class="settings-heading"><span class="eyebrow">PLAYER DETAILS</span><h2 id="playerDetailsTitle"></h2></div><button class="ui-button" id="closePlayerDetails" type="button" aria-label="Close player details" autofocus>×</button></div><label id="offlinePlayerNameRow" class="offline-player-name" hidden><span>Player name</span><input class="ui-select" id="offlinePlayerName" maxlength="24" autocomplete="off"></label><fieldset id="offlineAvatarPicker" class="offline-avatar-picker" hidden><legend>Choose an avatar</legend><div id="offlineAvatarOptions" class="offline-avatar-options"></div></fieldset><p id="playerDetailsSummary"></p><div id="playerDetailsBalls"></div></div>
+    <div class="dialog-body"><div class="spin-heading"><div class="settings-heading"><span class="eyebrow">PLAYER DETAILS</span><h2 id="playerDetailsTitle"></h2></div><button class="ui-button" id="closePlayerDetails" type="button" aria-label="Close player details" autofocus>×</button></div><label id="offlinePlayerNameRow" class="offline-player-name" hidden><span>Player name</span><input class="ui-select" id="offlinePlayerName" maxlength="24" autocomplete="off"></label><p id="playerDetailsSummary"></p><div id="playerDetailsBalls"></div></div>
     <div class="ui-dialog-actions"><button class="ui-button" id="openProfileFromDetails" type="button">Profile &amp; Barcode</button><form method="dialog"><button class="ui-button ui-button--primary">Back to game</button></form></div>
   </dialog>
   <dialog class="ui-dialog spin-dialog" id="spinDialog" aria-labelledby="spinTitle" aria-describedby="spinHelp">
@@ -182,26 +210,20 @@
   <dialog class="ui-dialog" id="settings" aria-labelledby="settingsTitle">
   <form method="dialog">
     <div class="dialog-body">
-    <div class="settings-heading"><span class="eyebrow">MAKE IT YOURS</span><h2 id="settingsTitle">Your room, your game.</h2></div>
-    <p>Set the pace, choose your finish, and settle in.</p><fieldset><legend>Play</legend>
+    <div class="settings-heading"><h2 id="settingsTitle">Game settings</h2></div>
+    <fieldset><legend>Play</legend>
     <label class="ui-field"><span>Game</span><span class="ui-select-wrap"><select class="ui-select" id="game"><option value="pool">Pool · Eight-ball</option><option value="snooker">Snooker</option></select></span></label>
     <label class="ui-field"><span>Play</span><span class="ui-select-wrap"><select class="ui-select" id="opponent"><option value="solo">Practice · Control both players</option><option value="computer">Against computer</option></select></span></label>
     <label class="ui-field" id="offlinePlayerTwoNameRow"><span>Player 2 name</span><input class="ui-select" id="offlinePlayerTwoName" maxlength="24" autocomplete="off"></label>
     <label class="ui-field"><span>Difficulty</span><span class="ui-select-wrap"><select class="ui-select" id="difficulty"><option value="Beginner">Beginner</option><option value="Easy">Easy</option><option value="Medium" selected>Medium</option><option value="Hard">Hard</option><option value="Expert">Expert</option></select></span></label>
-    <div class="sound-row"><div><strong>Play on TV</strong><small>Lightweight TV table with remote controls. Arrows to aim, OK to play, Back for the menu. In menus: ↑ ↓ move, ← → change, OK select.</small><small id="tvCompatibility" hidden></small></div><button class="ui-button" id="tvToggle" type="button" aria-pressed="false">TV off</button></div>
     <div class="sound-row"><div><strong>Shot guides</strong><small>Aim line, object-ball path and pocket highlight</small></div><button class="ui-button" id="guidesToggle" type="button" aria-pressed="true">Guides on</button></div>
     </fieldset><fieldset><legend>Room &amp; equipment</legend>
     <label class="ui-field"><span>Cue</span><span class="ui-select-wrap"><select class="ui-select" id="cueStyle"><option value="Classic Maple">Classic Maple</option><option value="Rosewood">Rosewood</option><option value="Carbon Black" selected>Carbon Black</option></select></span></label>
     <p class="settings-note" id="trainingCueNote" hidden></p>
     <label class="ui-field"><span>Table</span><span class="ui-select-wrap"><select class="ui-select" id="tableStyle"><option value="Club Green" selected>Club Green</option><option value="Tournament Blue">Tournament Blue</option><option value="Burgundy Lounge">Burgundy Lounge</option></select></span></label>
-    <label class="ui-field"><span>Theme</span><span class="ui-select-wrap"><select class="ui-select" id="theme"><option value="club">Clubhouse</option><option value="midnight">Midnight</option><option value="ivory">Ivory</option></select></span></label>
-    <label class="ui-field"><span>Graphics</span><span class="ui-select-wrap"><select class="ui-select" id="quality"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High" selected>High</option><option value="Ultra">Ultra</option></select></span></label>
     </fieldset><fieldset class="desktop-control-settings"><legend>Controls</legend>
     <label class="ui-field desktop-control-layout"><span>Shot controls</span><span class="ui-select-wrap"><select class="ui-select" id="controlLayout"><option value="horizontal">Horizontal · Bottom</option><option value="vertical" selected>Vertical · Side</option></select></span></label>
     <label class="ui-field desktop-control-side"><span>Vertical side</span><span class="ui-select-wrap"><select class="ui-select" id="controlSide"><option value="right" selected>Shot controls right · Zoom/aim left</option><option value="left">Shot controls left · Zoom/aim right</option></select></span></label>
-    </fieldset><fieldset><legend>Sound</legend>
-      <div class="sound-row"><div><strong>Ball &amp; pocket sounds</strong><small>Soft clicks and pocket drops</small></div><button class="ui-button" id="soundToggle" type="button" aria-pressed="true">Sound on</button></div>
-      <label class="volume-row" for="volume"><span>Volume</span><input id="volume" type="range" min="0" max="100" value="45"><output id="volumeLabel" for="volume">45%</output></label>
     </fieldset>
     <p class="settings-note">Game and opponent changes apply when you start a new game.</p>
     </div>

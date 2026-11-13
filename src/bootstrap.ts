@@ -4,32 +4,28 @@ import { chooseGame } from './home';
 import { shouldAskAboutTv } from './tv-detection';
 import { remoteKey } from './tv-controls';
 import { installDialogFallback, installDialogDismissal } from './tv-dialogs';
-import { installLanguagePicker, t } from './i18n';
+import { t } from './i18n';
+import { installAppSettings, setTvPreference, tvPreference } from './app-settings';
 import { setupPwa } from './pwa';
 
 async function start() {
-  installLanguagePicker();
-  setupPwa();
-  await chooseGame();
   installDialogFallback();
   installDialogDismissal();
-  let preference: string | null = null;
-  try { preference = localStorage.getItem('billiard-tv'); } catch {}
+  installAppSettings();
+  setupPwa();
+  await chooseGame();
   const url = new URL(location.href);
   if (url.searchParams.get('table') === '3d') {
-    preference = 'off';
-    document.documentElement.dataset.tvChoice = 'off';
+    setTvPreference(false, false);
     url.searchParams.delete('table');
     try { history.replaceState(null, '', url.href); } catch {}
   }
-  if (shouldAskAboutTv(navigator.userAgent, preference)) {
+  if (shouldAskAboutTv(navigator.userAgent, tvPreference())) {
     const dialog = document.querySelector<HTMLDialogElement>('#tvDetection')!;
     const choices = [...dialog.querySelectorAll<HTMLButtonElement>('button')];
     await new Promise<void>(resolve => {
       const choose = (enabled: boolean) => {
-        // The attribute also works if browser storage is unavailable.
-        document.documentElement.dataset.tvChoice = enabled ? 'on' : 'off';
-        try { localStorage.setItem('billiard-tv', enabled ? 'on' : 'off'); } catch {}
+        setTvPreference(enabled);
         document.removeEventListener('keydown', navigate, true);
         dialog.close();
         resolve();
