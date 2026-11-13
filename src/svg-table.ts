@@ -3,7 +3,7 @@ import { tableFinish } from './table-finishes';
 import { ballArtwork } from './svg-ball';
 import { ballMarkings } from './ball-markings';
 import { traceShot } from './aim-guide';
-import { cushions, width, length, radius, pockets, type BallOrientation } from './physics';
+import { cushions, width, length, radius, pockets, pocketMouthRadius, type BallOrientation } from './physics';
 import { calledPocketBorderWidth, calledPocketColor, type TableState } from './tv-table';
 
 const ns = 'http://www.w3.org/2000/svg';
@@ -114,7 +114,7 @@ export class SvgTable {
       const end = (v: typeof a, first: boolean) => {
         const jaw = cushions.find(j => j.jaw && Math.abs(j.ax*1000-v.x)<.01 && Math.abs(-j.az*1000-v.y)<.01)!;
         const p = pockets.reduce((best,p) => Math.hypot(p.x-jaw.bx,p.z-jaw.bz)<Math.hypot(best.x-jaw.bx,best.z-jaw.bz)?p:best);
-        const center = {x:p.x*1000,y:-p.z*1000}, r = (p.z===0?67:85)+3;
+        const center = {x:p.x*1000,y:-p.z*1000}, r = pocketMouthRadius(p) * 1000 + 3;
         const sideRail = c.ax === c.bx;
         const inwardX = -Math.sign(p.x);
         const inwardY = p.z === 0 ? Math.sign(v.y) : Math.sign(p.z);
@@ -144,7 +144,7 @@ export class SvgTable {
     // Paint the complete pocket over the cushion ends so the rim stays continuous.
     s += '<g class="sv-pockets">';
     for (const p of pockets) {
-      const r = p.z === 0 ? 67 : 85;
+      const r = pocketMouthRadius(p) * 1000;
       const center = `<circle cx="${p.x * 1000}" cy="${-p.z * 1000}"`;
       s += `${center} r="${r + 5}" fill="#342b2b" stroke="#b7a27e" stroke-width="2"/>`;
       s += `${center} r="${r}" fill="url(#sv-pocket)"/>`;
@@ -160,10 +160,14 @@ export class SvgTable {
     if (key !== this.finish) { this.artwork(state); this.finish = key; }
     state.balls.forEach((b, i) => {
       const g = this.balls[i];
-      g.style.display = b.pocketed ? 'none' : '';
-      g.setAttribute('transform', 'translate('+b.x*1000+' '+(-b.z*1000)+')');
+      const drop = state.pocketDrops?.get(i);
+      g.style.display = b.pocketed && !drop ? 'none' : '';
+      g.style.opacity = drop ? String(drop.opacity) : '';
+      const x = drop?.x ?? b.x, z = drop?.z ?? b.z;
+      g.setAttribute('transform', 'translate(' + x * 1000 + ' ' + (-z * 1000) + ')' +
+        (drop ? ' scale(' + drop.scale + ')' : ''));
       const orientation = b.orientation ?? null;
-      if (b.pocketed || state.snooker && i > 0 || this.orientations[i] === orientation) return;
+      if ((b.pocketed && !drop) || state.snooker && i > 0 || this.orientations[i] === orientation) return;
       this.orientations[i] = orientation;
       const { mark, caps } = ballMarkings(b.orientation, i > 8, i === 0);
       const size = radius * 1000;

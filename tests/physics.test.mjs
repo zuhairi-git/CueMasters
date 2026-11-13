@@ -102,6 +102,26 @@ test('each pocket admits a straight shot without an invisible cushion', () => {
   }
 });
 
+test('corner and side pockets drop a ball at half overlap, even at rest', () => {
+  for (const p of pockets) {
+    // These distances bracket the half-area point of the visible circular opening.
+    const [inside, outside] = p.z === 0 ? [0.0638, 0.0639] : [0.0825, 0.0826];
+    const toward = Math.hypot(p.x, p.z);
+    const atDistance = distance => ball(p.x - distance * p.x / toward, p.z - distance * p.z / toward);
+    const hanging = atDistance(outside);
+    step([hanging], 1 / 300);
+    assert.equal(hanging.pocketed, false, JSON.stringify(p));
+
+    const dropping = atDistance(inside);
+    const sounds = [];
+    step([dropping], 1 / 300, type => sounds.push(type));
+    assert.equal(dropping.pocketed, true, JSON.stringify(p));
+    assert.equal(isMoving(dropping), false);
+    step([dropping], 1 / 300, type => sounds.push(type));
+    assert.deepEqual(sounds, ['pocket']);
+  }
+});
+
 test('a ball grazing a pocket jaw rebounds rather than disappearing', () => {
   const b = ball(width / 2 - 0.1, 0.09, 1);
   advance([b], 0.15);

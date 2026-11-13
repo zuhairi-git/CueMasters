@@ -1,4 +1,4 @@
-import { cushions, pockets, radius, type Ball } from './physics';
+import { cushions, pocketDropDistance, pockets, radius, type Ball } from './physics';
 type Point = { x: number; z: number };
 export function directionToBall(cue: Point, target: Point) {
   const x = target.x - cue.x, z = target.z - cue.z;
@@ -31,8 +31,8 @@ function path(origin: Point, dx: number, dz: number) {
   let distance = Math.min(4, railDistance(origin, dx, dz));
   let pocket: Point | undefined;
   for (const p of pockets) {
-    const t = circle(origin, dx, dz, p, 0.058);
-    if (t < distance) { distance = t; pocket = p; }
+    const t = circle(origin, dx, dz, p, pocketDropDistance(p));
+    if (Number.isFinite(t) && t <= distance) { distance = t; pocket = p; }
   }
   return { end: {x: origin.x + dx * distance, z: origin.z + dz * distance}, distance, pocket };
 }

@@ -9,6 +9,29 @@ export const pockets = [-1, 1].flatMap(side =>
   }))
 );
 
+export const pocketMouthRadius = (pocket: { z: number }) => pocket.z === 0 ? 0.067 : 0.085;
+
+function halfOverlapDistance(mouth: number) {
+  // The overlap of the two discs is the sum of their circular segments.
+  const segment = (r: number, offset: number) =>
+    r * r * Math.acos(offset / r) - offset * Math.sqrt(Math.max(0, r * r - offset * offset));
+  let low = mouth - radius;
+  let high = mouth;
+  const halfBallArea = Math.PI * radius * radius / 2;
+  for (let i = 0; i < 40; i++) {
+    const distance = (low + high) / 2;
+    const chord = (distance * distance + radius * radius - mouth * mouth) / (2 * distance);
+    const area = segment(radius, chord) + segment(mouth, distance - chord);
+    if (area >= halfBallArea) low = distance;
+    else high = distance;
+  }
+  return low;
+}
+
+const sideDropDistance = halfOverlapDistance(pocketMouthRadius({ z: 0 }));
+const cornerDropDistance = halfOverlapDistance(pocketMouthRadius({ z: 1 }));
+export const pocketDropDistance = (pocket: { z: number }) => pocket.z === 0 ? sideDropDistance : cornerDropDistance;
+
 export type BallOrientation = [number, number, number, number];
 
 export interface Ball {
@@ -52,13 +75,12 @@ export const rollingDeceleration = 0.25;
 const slidingDeceleration = 1.96;
 const ballRestitution = 0.96;
 const cushionRestitution = 0.78;
-const pocketCaptureRadius = 0.058;
 const stopSpeed = 0.005;
 export const maxShotSpeed = 4.3;
 export const maxBallSpeed = 8;
 export const shotSpeed = (power: number) => maxShotSpeed * Math.max(0, Math.min(1, Number.isFinite(power) ? power : 0)) ** 1.35;
 
-type Sound = (kind: 'ball' | 'rail' | 'pocket', strength: number) => void;
+type Sound = (kind: 'ball' | 'rail' | 'pocket', strength: number, ball?: Ball) => void;
 type Cushion = { ax: number; az: number; bx: number; bz: number; jaw?: boolean };
 // Match the six visible cushions, leaving actual openings at all six pockets.
 export const cushions: Cushion[] = [];
@@ -208,9 +230,23 @@ function rotateBall(ball: Ball, x: number, y: number, z: number, dt: number) {
   ball.orientation = [next[0] / norm, next[1] / norm, next[2] / norm, next[3] / norm];
 }
 
+function dropIntoPocket(ball: Ball, sound?: Sound) {
+  for (const pocket of pockets) {
+    const dx = pocket.x - ball.x, dz = pocket.z - ball.z;
+    const distance = pocketDropDistance(pocket);
+    if (dx * dx + dz * dz > distance * distance) continue;
+    sound?.('pocket', Math.max(0.6, Math.hypot(ball.vx, ball.vz)), ball);
+    ball.pocketed = true;
+    ball.vx = ball.vz = ball.spinX = ball.spinZ = ball.sideSpin = 0;
+    return true;
+  }
+  return false;
+}
+
 function substep(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball) => void) {
   for (const ball of balls) {
     if (ball.pocketed) continue;
+    if (dropIntoPocket(ball, sound)) continue;
     const { spinX, spinZ, sideSpin } = ball;
     clothFriction(ball, dt);
     // Use angular velocity at the cloth, including the transition from skid to roll.
@@ -218,11 +254,7 @@ function substep(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball)
       (sideSpin + ball.sideSpin) / 2, -(spinX + ball.spinX) / (2 * radius), dt);
     ball.x += ball.vx * dt;
     ball.z += ball.vz * dt;
-    if (pockets.some(p => Math.hypot(p.x - ball.x, p.z - ball.z) < pocketCaptureRadius)) {
-      sound?.('pocket', Math.max(0.6, Math.hypot(ball.vx, ball.vz)));
-      ball.pocketed = true;
-      ball.vx = ball.vz = ball.spinX = ball.spinZ = ball.sideSpin = 0;
-    }
+    dropIntoPocket(ball, sound);
   }
   let firstContact: number | undefined;
   // Revisit contacts so a packed rack transmits impulses during the same step.
@@ -255,9 +287,11 @@ function substep(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball)
       }
     }
     for (const ball of balls) {
-      if (!ball.pocketed) for (const cushion of cushions) {
+      if (ball.pocketed || dropIntoPocket(ball, sound)) continue;
+      for (const cushion of cushions) {
         if (cushionContact(ball, cushion, sound) && !cushion.jaw) onRail?.(ball);
       }
+      if (dropIntoPocket(ball, sound)) continue;
       guardBall(ball);
     }
   }

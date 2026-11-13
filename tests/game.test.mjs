@@ -5,7 +5,23 @@ const { poolTargets, resolvePoolShot } = await loadSource('pool-rules');
 const { cuePose, cueLength } = await loadSource('cue-geometry');
 const { rack, radius, width, isMoving, shotSpeed, step, strikeBall } = await loadSource('physics');
 const { validGame } = await loadSource('saved-game');
+const { pocketDropDuration, pocketDropImpact, pocketDropPose, startPocketDrop } = await loadSource('pocket-drop');
 const shot = overrides => resolvePoolShot({ turn: 0, groups: [null, null], targets: [1,2,3,4,5,6,7,9,10,11,12,13,14,15], firstContact: 1, potted: [], scratch: false, breaking: false, ...overrides });
+
+test('a pocket drop starts at the lip, sinks toward the centre, and fades out', () => {
+  const ball = { ...rack()[0], x: width / 2 - 0.03, z: 0, pocketed: true };
+  const drop = startPocketDrop(ball, 1);
+  assert.deepEqual(pocketDropPose(drop), { x: ball.x, z: 0, y: radius, scale: 1, opacity: 1 });
+  drop.elapsed = pocketDropImpact;
+  const impact = pocketDropPose(drop);
+  assert.ok(impact.x > ball.x && impact.x < drop.pocket.x);
+  assert.ok(impact.y < 0 && impact.opacity > 0);
+  drop.elapsed = pocketDropDuration;
+  const end = pocketDropPose(drop);
+  assert.equal(end.x, drop.pocket.x);
+  assert.equal(end.opacity, 0);
+  assert.ok(end.y < impact.y && end.scale < impact.scale);
+});
 
 test('a legal pot assigns solids and stripes and retains the turn', () => {
   const result = shot({ potted: [1] });

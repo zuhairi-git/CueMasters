@@ -80,7 +80,9 @@ test('cue, ball, rail, and pocket impacts have distinct sounds and responsive in
   assert.equal(sources.length, 5);
   const durations = sources.map(item => item.buffer.duration);
   assert.ok(durations.filter(duration => duration < 0.3).length === 4);
-  assert.ok(durations.some(duration => duration > 0.45));
+  assert.ok(durations.some(duration => duration >= 0.36));
+  const pocketImpact = sources.find(item => item.buffer.duration >= 0.36);
+  assert.equal(pocketImpact.buffer.numberOfChannels, 1);
   assert.ok(sources.every(item => item.buffer.data.some(sample => sample !== 0)));
   const [ballImpact, , railImpact] = sources;
   assert.equal(ballImpact.buffer.numberOfChannels, 2);

@@ -1,7 +1,9 @@
 import { traceShot } from './aim-guide';
 import { tableFinish } from './table-finishes';
 import { ballMarkings } from './ball-markings';
-import { cushions, length, pockets, radius, width, type Ball } from './physics';
+import { cushions, length, pocketMouthRadius, pockets, radius, width, type Ball } from './physics';
+
+import type { PocketDropPose } from './pocket-drop';
 
 export const calledPocketColor = '#ffdc38';
 export const calledPocketBorderWidth = 0.018;
@@ -16,6 +18,7 @@ export function tvViewport(screenWidth: number, screenHeight: number, top: numbe
 
 export interface TableState {
   balls: Ball[];
+  pocketDrops?: ReadonlyMap<number, PocketDropPose>;
   aim: { x: number; z: number };
   rolling: boolean;
   finished: boolean;
@@ -111,7 +114,7 @@ export class TvTable {
     ctx.globalAlpha = 1;
     for (let i = 0; i < pockets.length; i++) {
       const p = pockets[i];
-      const mouth = p.z === 0 ? 0.067 : 0.085;
+      const mouth = pocketMouthRadius(p);
       const called = state.callEligible && state.calledPocket === i;
       circle(p.x, p.z, mouth + 0.012, '#c5ab79');
       circle(p.x, p.z, mouth + 0.009, '#21191c');
@@ -145,18 +148,21 @@ export class TvTable {
     const colors = ['#eee9dc', '#e6b92f', '#315baf', '#c24135', '#7854a2', '#e57c2f', '#328c60', '#8e3340', '#151515'];
     const snookerColors = ['#e6b92f', '#328c60', '#8a542d', '#315baf', '#e09bb0', '#151515'];
     state.balls.forEach((ball, i) => {
-      if (ball.pocketed) return;
-      circle(ball.x + 0.003, ball.z + 0.003, radius * 1.08, '#00000055');
+      const drop = state.pocketDrops?.get(i);
+      if (ball.pocketed && !drop) return;
+      const x = drop?.x ?? ball.x, z = drop?.z ?? ball.z;
+      const size = radius * (drop?.scale ?? 1);
+      if (drop) ctx.globalAlpha = drop.opacity;
+      else circle(x + 0.003, z + 0.003, radius * 1.08, '#00000055');
       const color = state.snooker ? i === 0 ? colors[0] : i <= 15 ? '#c24135' : snookerColors[i - 16] : colors[i > 8 ? i - 8 : i];
-      circle(ball.x, ball.z, radius, color, '#00000066');
+      circle(x, z, size, color, '#00000066');
       if (!state.snooker || i === 0) {
-        const p = point(ball.x, ball.z);
-        const size = radius * scale;
+        const p = point(x, z);
         const { mark, caps } = ballMarkings(ball.orientation, i > 8, i === 0);
         ctx.save();
         ctx.translate(p.x, p.y);
         if (this.view.landscape) ctx.rotate(Math.PI / 2);
-        ctx.scale(size, size);
+        ctx.scale(size * scale, size * scale);
         ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.clip();
         ctx.fillStyle = '#eee9dc';
         for (const points of caps) {
@@ -177,6 +183,7 @@ export class TvTable {
         }
         ctx.restore();
       }
+      if (drop) ctx.globalAlpha = 1;
     });
   }
 }

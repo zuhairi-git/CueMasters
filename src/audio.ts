@@ -1,5 +1,5 @@
 export type SoundKind = 'cue' | 'ball' | 'rail' | 'pocket';
-type RecordedSoundKind = Exclude<SoundKind, 'rail'>;
+type RecordedSoundKind = Extract<SoundKind, 'cue' | 'ball'>;
 
 type SoundEvent = { kind: SoundKind; strength: number };
 
@@ -79,7 +79,7 @@ export class GameAudio {
   }
 
   private play(context: AudioContext, kind: SoundKind, strength: number) {
-    if (kind !== 'rail') {
+    if (kind === 'cue' || kind === 'ball') {
       const recordedVariants = this.recordings?.[kind];
       if (recordedVariants?.length) {
         this.playRecording(context, kind, strength, recordedVariants[Math.floor(Math.random() * recordedVariants.length)]);
@@ -87,7 +87,7 @@ export class GameAudio {
       }
     }
 
-    const duration = kind === 'pocket' ? 0.3 : kind === 'cue' ? 0.13 : kind === 'rail' ? 0.11 : 0.085;
+    const duration = kind === 'pocket' ? 0.36 : kind === 'cue' ? 0.13 : kind === 'rail' ? 0.11 : 0.085;
     const buffer = context.createBuffer(1, Math.ceil(context.sampleRate * duration), context.sampleRate);
     const data = buffer.getChannelData(0);
     const variation = 0.92 + Math.random() * 0.16;
@@ -98,7 +98,7 @@ export class GameAudio {
       : kind === 'rail'
         ? [[180, 42, 0.48], [340, 58, 0.32], [680, 86, 0.18]]
         : kind === 'pocket'
-          ? [[185, 16, 0.48], [390, 23, 0.3], [970, 38, 0.22], [2100, 55, 0.13]]
+          ? [[148, 17, 0.58], [286, 24, 0.35], [625, 42, 0.20], [1390, 74, 0.12]]
           : [[1320, 62, 0.49], [2230, 78, 0.36], [3690, 100, 0.23], [5870, 130, 0.12]];
     const noiseDecay = kind === 'cue' ? 520 : kind === 'pocket' ? 120 : 420;
     let previousNoise = 0;
@@ -118,9 +118,14 @@ export class GameAudio {
       if (kind === 'rail') {
         cushionNoise += (noise - cushionNoise) * Math.min(1, 4400 / context.sampleRate);
         data[i] = attack * (resonance + cushionNoise * 0.7 * Math.exp(-time * 135));
+      } else if (kind === 'pocket') {
+        cushionNoise += (noise - cushionNoise) * Math.min(1, 1200 / context.sampleRate);
+        const rebound = Math.max(0, time - 0.048);
+        const rattle = (1 - Math.exp(-rebound * 850)) * Math.exp(-rebound * 52) *
+          (Math.sin(rebound * Math.PI * 2 * 212 * pitch) * 0.28 + cushionNoise * 0.4);
+        data[i] = attack * (resonance + cushionNoise * 0.55 * Math.exp(-time * 36)) + rattle;
       } else {
-        const bodyNoise = kind === 'pocket' ? noise * 0.7 * Math.exp(-time * 30) : 0;
-        data[i] = attack * (resonance + brightTransient * 0.45 + bodyNoise);
+        data[i] = attack * (resonance + brightTransient * 0.45);
       }
     }
 
@@ -129,7 +134,7 @@ export class GameAudio {
     const filter = context.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = kind === 'pocket' ? 2400 : kind === 'rail' ? 1450 + intensity * 500 : 7800 + intensity * 5000;
-    gain.gain.value = Math.min(0.55, 0.018 + 0.48 * intensity ** 0.82);
+    gain.gain.value = Math.min(0.55, (kind === 'pocket' ? 0.095 : 0.018) + 0.48 * intensity ** 0.82);
     source.buffer = buffer;
     source.connect(filter);
     filter.connect(gain);
@@ -165,7 +170,6 @@ export class GameAudio {
           this.recordings = {
             cue: [slice(0.025, 0.24)],
             ball: [slice(0.24, 0.46), slice(0.47, 0.72), slice(0.73, 0.96)],
-            pocket: [slice(0.71, recording.duration)],
           };
         } catch (error) {
           this.recordings = {};
@@ -177,7 +181,7 @@ export class GameAudio {
   }
 
   private playRecording(context: AudioContext, kind: RecordedSoundKind, strength: number, buffer: AudioBuffer) {
-    const intensity = Math.min(1, Math.max(0, strength / (kind === 'cue' ? 4 : kind === 'pocket' ? 3 : 2.5)));
+    const intensity = Math.min(1, Math.max(0, strength / (kind === 'cue' ? 4 : 2.5)));
     const source = context.createBufferSource();
     const gain = context.createGain();
     const filter = context.createBiquadFilter();
@@ -185,7 +189,7 @@ export class GameAudio {
     source.buffer = buffer;
     source.playbackRate.value = variation;
     filter.type = 'lowpass';
-    filter.frequency.value = kind === 'pocket' ? 2600 : 12000;
+    filter.frequency.value = 12000;
     gain.gain.value = Math.min(0.55, 0.025 + 0.48 * intensity ** 0.82);
     source.connect(filter);
     filter.connect(gain);

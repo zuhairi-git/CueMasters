@@ -1,5 +1,5 @@
 import { DynamicTexture, Mesh, MeshBuilder, Scene, StandardMaterial, Vector3 } from '@babylonjs/core';
-import { cornerOpening, length, width } from './physics';
+import { cornerOpening, length, pocketMouthRadius, width } from './physics';
 
 type Point = [number, number];
 type Pocket = { x: number; z: number };
@@ -9,7 +9,6 @@ export const railTop = 0.063;
 export const railBase = -0.143;
 export const railBevel = 0.006;
 export const sideOpening = 0.085;
-export const pocketMouthRadius = (pocket: Pocket) => pocket.z === 0 ? 0.067 : 0.085;
 
 export function railGrain(scene: Scene) {
   const texture = new DynamicTexture('satin rail grain', { width: 1024, height: 256 }, scene, true);

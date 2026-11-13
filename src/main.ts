@@ -24,9 +24,10 @@ import {
   HemisphericLight, ShadowGenerator, Matrix, Mesh, VertexData, MeshBuilder, Quaternion, Scene, StandardMaterial, Vector3,
 } from '@babylonjs/core';
 import { furnishRoom, tableReflections } from './room';
-import { buildPocket, buildStraightRail, pocketMouthRadius, railBase, railDepth, railGrain, railTop, sideOpening } from './table-trim';
+import { buildPocket, buildStraightRail, railBase, railDepth, railGrain, railTop, sideOpening } from './table-trim';
+import { pocketDropDuration, pocketDropImpact, pocketDropPose, startPocketDrop } from './pocket-drop';
 import { chooseShot } from './opponent';
-import { cushions, cornerOpening, isMoving, length, pockets, rack, radius, shotSpeed, step, strikeBall, width } from './physics';
+import { cushions, cornerOpening, isMoving, length, pocketMouthRadius, pockets, rack, radius, shotSpeed, step, strikeBall, width } from './physics';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#table')!;
 const tvCanvas = document.querySelector<HTMLCanvasElement>('#tvTable')!;
@@ -638,6 +639,21 @@ let shotTargets: number[] = [];
 let previouslyPocketed: boolean[] = [];
 let cpuWait = 0;
 let balls = rack(false, Math.random);
+const pocketDrops = new Map<number, ReturnType<typeof startPocketDrop>>();
+
+function shotSound(kind: Parameters<typeof sound.queue>[0], strength: number, ball?: typeof balls[number]) {
+  if (kind === 'pocket' && ball) pocketDrops.set(balls.indexOf(ball), startPocketDrop(ball, strength));
+  else sound.queue(kind, strength);
+}
+
+function updatePocketDrops(dt: number) {
+  for (const [index, drop] of pocketDrops) {
+    const previous = drop.elapsed;
+    drop.elapsed += dt;
+    if (previous < pocketDropImpact && drop.elapsed >= pocketDropImpact) sound.queue('pocket', drop.strength);
+    if (drop.elapsed >= pocketDropDuration) pocketDrops.delete(index);
+  }
+}
 function canControl() {
   return onlineMode ? online.active && turn === online.seat && online.remainingMs() > 0 : !versusComputer || turn === 0;
 }
@@ -1506,6 +1522,7 @@ document.querySelector<HTMLButtonElement>('#camera')!.onclick = event => {
   button.setAttribute('aria-label', t(overhead ? 'Switch to perspective view' : 'Switch to top-down view'));
 };
 function resetMatch(continueCareer = false) {
+  pocketDrops.clear();
   wonByForfeit = false;
   applyTableFinish();
   tvContext = '';
@@ -1758,7 +1775,15 @@ function gameState(): SavedGame {
     ...(mode.kind === 'computer' ? { careerClean, careerRacks }
       : mode.kind === 'challenge' ? { careerAttempts, careerBanked } : {}) };
 }
-function applyGame(s: SavedGame, preserveLocalAim = false) {
+function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = false) {
+  if (animatePockets && (rolling || s.rolling || strike || s.strike)) {
+    s.balls.forEach((ball, index) => {
+      if (ball.pocketed && balls[index] && !balls[index].pocketed) {
+        pocketDrops.set(index, startPocketDrop(ball, Math.max(0.6, Math.hypot(balls[index].vx, balls[index].vz))));
+      }
+    });
+  } else if (!animatePockets) pocketDrops.clear();
+  s.balls.forEach((ball, index) => { if (!ball.pocketed) pocketDrops.delete(index); });
   balls = s.balls.map(ball => ({ ...ball }));
   const gameChanged = snooker !== s.snooker;
   snooker = s.snooker;
@@ -1860,7 +1885,7 @@ online.onTimeout = expiredTurn => {
 online.onState = value => {
   if (!onlineMode || online.seat !== 1 || !validGame(value)) return;
   const keepAim = canControl() && !value.rolling && !value.strike && turn === value.turn;
-  applyGame(value, keepAim);
+  applyGame(value, keepAim, true);
 };
 online.onInput = value => {
   if (!onlineMode || online.seat !== 0 || turn !== 1 || rolling || strike || finished || !value || typeof value !== 'object') return;
@@ -2269,19 +2294,21 @@ engine.runRenderLoop(() => {
       status.textContent = t('Balls in motion');
     }
   }
+  updatePocketDrops(dt);
   if (rolling && authoritative) {
     accumulator += dt;
     while (accumulator >= fixedStep) {
-      const contact = step(balls, fixedStep, sound.queue, trackCareerRail);
+      const contact = step(balls, fixedStep, shotSound, trackCareerRail);
       firstContact ??= contact;
       accumulator -= fixedStep;
     }
-    if (!balls.some(isMoving)) {
+    if (!balls.some(isMoving) && !pocketDrops.size) {
       rolling = false;
       accumulator = 0;
       finishShot();
     }
   }
+  const dropPoses = new Map(Array.from(pocketDrops, ([index, drop]) => [index, pocketDropPose(drop)] as const));
   if (!uses2dTable()) {
     balls.forEach((ball, index) => {
       const mesh = ballMeshes[index];
@@ -2289,8 +2316,10 @@ engine.runRenderLoop(() => {
         ballRotation.copyFromFloats(...ball.orientation);
         ballRotation.multiplyToRef(ballTextureRotation, mesh.rotationQuaternion!);
       } else mesh.rotationQuaternion!.copyFrom(ballTextureRotation);
-      mesh.position.set(ball.x, ball.pocketed ? Math.max(-0.12, mesh.position.y - dt * 0.48) : radius, ball.z);
-      mesh.isVisible = mesh.position.y > -0.04;
+      const drop = dropPoses.get(index);
+      mesh.position.set(drop?.x ?? ball.x, drop?.y ?? radius, drop?.z ?? ball.z);
+      mesh.isVisible = !ball.pocketed || Boolean(drop);
+      mesh.visibility = drop?.opacity ?? 1;
       contacts[index].position.set(ball.x, 0.0008, ball.z);
       contacts[index].isVisible = !ball.pocketed;
     });
@@ -2325,7 +2354,7 @@ engine.runRenderLoop(() => {
   sound.flush();
   updateSession(dt);
   if (uses2dTable()) tvTable?.draw({
-    balls, aim, rolling, finished, placement: Boolean(placement), guides: guidesEnabled,
+    balls, pocketDrops: dropPoses, aim, rolling, finished, placement: Boolean(placement), guides: guidesEnabled,
     callEligible: callEligible && canControl(), calledPocket, snooker,
     tableStyle: select('tableStyle').value, cueStyle: select('cueStyle').value,
     pull: strike ? strike * shotPower * 5 : tvEnabled ? remote.stage === 'power' ? remote.power : 0 : pull,
