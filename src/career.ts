@@ -1,69 +1,24 @@
-import { cities, computerProgress, type City } from './circuit';
+import { cities, computerProgress, type City, type Game } from './circuit';
 import { difficulties } from './difficulty';
 import { t } from './i18n';
-import { rack } from './physics';
 import { cityFinishes } from './table-finishes';
 
-type Position = [number, number, number];
-type Challenge = { kind: 'pot' | 'bank' | 'contact'; attempts: number; ball: number };
-type Stage = {
-  title: string;
-  objective: string;
-  rating: number;
-  layout?: Position[];
-  challenge?: Challenge;
-  oneVisit?: boolean;
-  bestOfThree?: boolean;
-};
+const stageRatings = [0, 0, 1, 1, 1, 2, 1, 2, 2, 2];
+export const careerStages = stageRatings.map((rating, index) => ({
+  title: index === 0 ? 'Opening Match' : index === 8 ? 'Semifinal' : index === 9 ? 'City Final' : 'City Match',
+  rating,
+}));
 
-export const careerStages: Stage[] = [
-  { title: 'Opening Match', objective: 'Win a standard eight-ball rack.', rating: 0 },
-  { title: 'Two-Ball Finish', objective: 'Pot your last ball, then call and pot the eight.', rating: 0,
-    layout: [[0, .09, -.38], [1, .41, -.13], [8, -.42, .22]] },
-  { title: 'The Cut Shot', objective: 'Pot ball 1 within two attempts.', rating: 1,
-    layout: [[0, -.19, -.27], [1, .35, .14]], challenge: { kind: 'pot', attempts: 2, ball: 1 } },
-  { title: 'Comeback Rack', objective: 'Win with three balls left while your opponent is on the eight.', rating: 1,
-    layout: [[0, -.17, -.48], [1, .39, -.16], [2, -.31, .26], [3, .29, .68], [8, -.32, .81]] },
-  { title: 'Position Play', objective: 'Pot both solids in the same visit.', rating: 1,
-    layout: [[0, .10, -.32], [1, .43, -.12], [2, -.38, .22]], oneVisit: true },
-  { title: 'Bank Shot', objective: 'Pot ball 1 after it hits a cushion, within three attempts.', rating: 2,
-    layout: [[0, .17, -.42], [1, .22, -.03]], challenge: { kind: 'bank', attempts: 3, ball: 1 } },
-  { title: 'Safety Escape', objective: 'Hit ball 1 first without scratching, within two attempts.', rating: 1,
-    layout: [[0, -.29, -.58], [1, -.29, .33], [9, -.29, -.11], [10, -.13, -.11]],
-    challenge: { kind: 'contact', attempts: 2, ball: 1 } },
-  { title: 'Club Match', objective: 'Win a full rack against a stronger opponent.', rating: 2 },
-  { title: 'Semifinal', objective: 'Win the eight-ball endgame on a crowded table.', rating: 2,
-    layout: [[0, -.22, -.35], [1, .28, -.44], [2, .13, .46], [3, -.34, .77], [8, .16, .91], [9, .32, -.27], [10, -.17, .24], [11, .35, .72]] },
-  { title: 'City Final', objective: 'Beat the city champion on a spread table.', rating: 2,
-    layout: [[0, -.05, -.56], [1, -.46, -.29], [2, .27, -.83], [3, -.19, -.96], [4, .33, -.38],
-      [5, .38, .27], [6, -.25, .42], [7, .22, .82], [8, .05, .28], [9, -.45, .87],
-      [10, .44, .96], [11, .04, -.23], [12, -.38, .12], [13, .48, -.73], [14, -.39, -.76], [15, -.08, .98]] },
-];
-
-const cityStages: Record<string, Record<number, Partial<Stage>>> = {
-  helsinki: {
-    5: { layout: [[0, .13, -.30], [1, .22, -.03]] },
-  },
-  stockholm: {
-    4: { title: 'Stockholm Run', objective: 'Clear all your solids in one visit.',
-      layout: [[0, .10, -.32], [1, .43, -.12], [2, -.38, .22], [3, -.38, .92]] },
-  },
-  copenhagen: {
-    5: { title: 'Copenhagen Long Bank', objective: 'Bank ball 1 into any pocket within two attempts.',
-      layout: [[0, .17, -.55], [1, .20, -.19]], challenge: { kind: 'bank', ball: 1, attempts: 2 } },
-  },
-  berlin: {
-    6: { title: 'Berlin Safety', objective: 'Escape the snooker in one attempt. Hit ball 1 first without scratching.',
-      layout: [[0, -.40, -.66], [1, -.11, .39], [9, -.25, -.15], [10, -.12, -.15], [11, .01, -.15]],
-      challenge: { kind: 'contact', ball: 1, attempts: 1 } },
-  },
-  london: {
-    9: { title: 'London Championship', objective: 'Win two racks against the city champion.', bestOfThree: true },
-  },
-};
-
-export function careerStage(city: City, index: number): Stage {
-  return { ...careerStages[index], ...cityStages[city.id]?.[index] };
+export function careerStage(city: City, index: number, game: Game = 'pool') {
+  const bestOfThree = city.id === 'london' && index === careerStages.length - 1;
+  return {
+    ...careerStages[index],
+    title: bestOfThree ? 'London Championship' : careerStages[index].title,
+    objective: game === 'snooker'
+      ? bestOfThree ? 'Win two full snooker frames.' : 'Win a full snooker frame.'
+      : bestOfThree ? 'Win two full eight-ball racks.' : 'Win a full eight-ball rack.',
+    bestOfThree,
+  };
 }
 
 export const careerCues = [
@@ -84,14 +39,14 @@ type Career = {
 export const careerRank = (points: number) => points >= 2750 ? 'Champion' : points >= 1650 ? 'Professional'
   : points >= 1000 ? 'Contender' : points >= 500 ? 'Club Player' : 'Rookie';
 export const careerBonus = { coins: 10, points: 25 };
-export function careerGoal(city: City, index: number) {
-  return careerStage(city, index).challenge ? 'Clear on your first attempt' : 'Clear without scratching';
-}
+export const careerGoal = 'Win without scratching';
 
 const key = 'billiard-career-v1';
-export function careerProgress(): Career {
+const careerKey = (game: Game) => game === 'snooker' ? 'snooker-career-v1' : key;
+
+export function careerProgress(game: Game = 'pool'): Career {
   try {
-    const saved = JSON.parse(localStorage.getItem(key) ?? 'null') as Career | null;
+    const saved = JSON.parse(localStorage.getItem(careerKey(game)) ?? 'null') as Career | null;
     if (saved?.clears && typeof saved.clears === 'object' && Array.isArray(saved.owned)
       && Number.isSafeInteger(saved.coins) && saved.coins >= 0
       && Number.isSafeInteger(saved.points) && saved.points >= 0
@@ -100,17 +55,17 @@ export function careerProgress(): Career {
   return { clears: {}, bonuses: {}, coins: 0, points: 0, owned: ['Carbon Black'], equipped: 'Carbon Black' };
 }
 
-export function careerCue() {
-  return careerCues.find(cue => cue.id === careerProgress().equipped) ?? careerCues[0];
+export function careerCue(game: Game = 'pool') {
+  return careerCues.find(cue => cue.id === careerProgress(game).equipped) ?? careerCues[0];
 }
 
-function saveCareer(progress: Career) {
-  try { localStorage.setItem(key, JSON.stringify(progress)); return true; }
+function saveCareer(progress: Career, game: Game) {
+  try { localStorage.setItem(careerKey(game), JSON.stringify(progress)); return true; }
   catch { return false; }
 }
 
-export function equipCareerCue(id: CareerCue) {
-  const progress = careerProgress();
+export function equipCareerCue(id: CareerCue, game: Game = 'pool') {
+  const progress = careerProgress(game);
   const cue = careerCues.find(entry => entry.id === id);
   if (!cue) return false;
   if (!progress.owned.includes(id)) {
@@ -119,21 +74,21 @@ export function equipCareerCue(id: CareerCue) {
     progress.owned.push(id);
   }
   progress.equipped = id;
-  return saveCareer(progress);
+  return saveCareer(progress, game);
 }
 
 export function careerClears(city: City, progress: Career) {
   return careerStages.filter((_, index) => progress.clears[city.id]?.[index]).length;
 }
 
-export function careerCityStatus(city: City, progress: Career) {
+export function careerCityStatus(city: City, progress: Career, game: Game = 'pool') {
   const previous = cities.find(entry => entry.id === city.requires);
-  if (previous && careerClears(previous, progress) < careerStages.length && !computerProgress()[previous.id]?.wins) return 'Locked';
+  if (previous && careerClears(previous, progress) < careerStages.length && !(game === 'pool' && computerProgress()[previous.id]?.wins)) return 'Locked';
   return careerClears(city, progress) === careerStages.length ? 'Completed' : 'Unlocked';
 }
 
-export function careerStageStatus(city: City, index: number, progress: Career) {
-  if (!careerStages[index] || careerCityStatus(city, progress) === 'Locked') return 'Locked';
+export function careerStageStatus(city: City, index: number, progress: Career, game: Game = 'pool') {
+  if (!careerStages[index] || careerCityStatus(city, progress, game) === 'Locked') return 'Locked';
   const cleared = progress.clears[city.id] ?? {};
   if (cleared[index]) return 'Completed';
   if (index === 0) return 'Unlocked';
@@ -149,9 +104,9 @@ export function careerReward(index: number) {
   return { coins: index === 9 ? 175 : index === 8 ? 125 : 75, points: (index + 1) * 10 };
 }
 
-export function finishCareerStage(city: City, index: number, matchId: string, won: boolean, skillGoal = false) {
-  const progress = careerProgress();
-  const status = careerStageStatus(city, index, progress);
+export function finishCareerStage(city: City, index: number, matchId: string, won: boolean, skillGoal = false, game: Game = 'pool') {
+  const progress = careerProgress(game);
+  const status = careerStageStatus(city, index, progress, game);
   if (status === 'Locked') return '';
   if (!won) return t('Return to the game list to try again.');
   const reward = careerReward(index);
@@ -166,7 +121,7 @@ export function finishCareerStage(city: City, index: number, matchId: string, wo
     progress.coins += careerBonus.coins;
     progress.points += careerBonus.points;
   }
-  if ((status !== 'Completed' || newBonus) && !saveCareer(progress)) return t('This browser could not save your tournament result.');
+  if ((status !== 'Completed' || newBonus) && !saveCareer(progress, game)) return t('This browser could not save your tournament result.');
   const firstClear = progress.clears[city.id][index] === matchId;
   const earned = firstClear ? t('Game cleared! +{coins} coins · +{points} career points', reward) : t('Game cleared again.');
   const bonus = progress.bonuses[city.id]?.[index] === matchId
@@ -177,17 +132,4 @@ export function finishCareerStage(city: City, index: number, matchId: string, wo
     ? t('{city} completed. {next} is now unlocked!', { city: t(city.name), next: t(next.name) })
     : t('{city} completed. You won the circuit!', { city: t(city.name) }))
     + ' ' + t('Table finish unlocked: {finish}.', { finish: t(cityFinishes[city.id].name) });
-}
-
-export function careerLayout(city: City, index: number, rackNumber = 0) {
-  const stage = careerStage(city, index);
-  if (!stage.layout) return;
-  const balls = rack();
-  for (const ball of balls) ball.pocketed = true;
-  const side = (city.level + rackNumber) % 2 ? 1 : -1;
-  for (const [number, x, z] of stage.layout) {
-    const offset = number === 0 ? (city.level - 1) * .065 : 0;
-    Object.assign(balls[number], { x: side * (x + offset), z: (rackNumber === 2 ? -1 : 1) * (z + (number === 0 ? offset * .6 : 0)), pocketed: false });
-  }
-  return balls;
 }

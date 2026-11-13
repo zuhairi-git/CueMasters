@@ -48,9 +48,11 @@
   font: 500 clamp(2.3rem, 5vw, 4rem)/1.08 Georgia, serif;
 }
 .city-picker h1 { text-align: center; }
+.home-games { display: flex; justify-content: center; gap: 8px; margin-bottom: 24px; }
+.home-games [aria-pressed="true"] { background: var(--accent); color: var(--surface); }
 .mode-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 16px;
 }
 .mode-card {
@@ -67,6 +69,7 @@
 }
 .mode-icon svg { width: 32px; height: 32px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .mode-computer { --mode-accent: #ffd08b; }
+.mode-challenges { --mode-accent: #d5b7f4; }
 .mode-training { --mode-accent: #9ce4ba; }
 .mode-icon {
   display: grid;

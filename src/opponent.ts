@@ -2,7 +2,7 @@ import { isMoving, length, pockets, radius, rollingDeceleration, shotSpeed, step
 import type { Difficulty } from './difficulty';
 
 const settings = {
-  Beginner: { error: 0.15, trials: 0 },
+  Beginner: { error: 0.038, trials: 2 },
   Easy: { error: 0.065, trials: 0 },
   Medium: { error: 0.024, trials: 0 },
   Hard: { error: 0.006, trials: 3 },
@@ -79,7 +79,8 @@ export function chooseShot(balls: Ball[], legal: number[], difficulty: Difficult
   const target = nearest.find(index => clearPath(balls, cue.x, cue.z, balls[index].x, balls[index].z, index)) ?? nearest[0];
   const direct = { angle: Math.atan2(balls[target].x - cue.x, balls[target].z - cue.z), power: 0.55, cost: 3 };
   const { error, trials } = settings[difficulty];
-  const candidates = difficulty === 'Beginner' ? [] : potCandidates(balls, difficulty === 'Easy' ? nearest.slice(0, 3) : legal);
+  const candidates = potCandidates(balls, difficulty === 'Beginner' ? nearest.slice(0, 2)
+    : difficulty === 'Easy' ? nearest.slice(0, 3) : legal);
   let shot: Candidate = candidates[0] ?? direct;
   if (trials && candidates.length) {
     const options = candidates.slice(0, difficulty === 'Expert' ? 4 : trials - 1);
@@ -93,5 +94,6 @@ export function chooseShot(balls: Ball[], legal: number[], difficulty: Difficult
       if (score > best) { best = score; shot = option; }
     }
   }
-  return { angle: shot.angle + (random() * 2 - 1) * error, power: shot.power, pocket: shot.pocket };
+  const aimError = legal.length === 1 && shot.pocket !== undefined ? error * 0.65 : error;
+  return { angle: shot.angle + (random() * 2 - 1) * aimError, power: shot.power, pocket: shot.pocket };
 }

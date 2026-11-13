@@ -3,7 +3,7 @@ import test from 'node:test';
 import { loadSource } from './load-source.mjs';
 const { poolTargets, resolvePoolShot } = await loadSource('pool-rules');
 const { cuePose, cueLength } = await loadSource('cue-geometry');
-const { rack, radius, width } = await loadSource('physics');
+const { rack, radius, width, isMoving, shotSpeed, step, strikeBall } = await loadSource('physics');
 const { validGame } = await loadSource('saved-game');
 const shot = overrides => resolvePoolShot({ turn: 0, groups: [null, null], targets: [1,2,3,4,5,6,7,9,10,11,12,13,14,15], firstContact: 1, potted: [], scratch: false, breaking: false, ...overrides });
 
@@ -104,4 +104,18 @@ test('the black eight must enter the called pocket', () => {
   assert.equal(shot({...base, calledPocket: 2, eightPocket: 2}).winner, 0);
   assert.equal(shot({...base, calledPocket: 2, eightPocket: 3}).winner, 1);
   assert.equal(shot({...base, eightPocket: 2}).winner, 1);
+});
+
+test('the beginner computer can win by calling and potting a makeable eight', async () => {
+  const { chooseShot } = await loadSource('opponent');
+  const balls = rack();
+  balls.forEach((ball, index) => { ball.pocketed = index !== 0 && index !== 8; });
+  Object.assign(balls[0], { x: .15, z: .02 });
+  Object.assign(balls[8], { x: .43, z: 0 });
+  const shot = chooseShot(balls, [8], 'Beginner', () => .8);
+  assert.equal(shot.pocket, 4);
+  strikeBall(balls[0], Math.sin(shot.angle), Math.cos(shot.angle), shotSpeed(shot.power));
+  for (let tick = 0; tick < 1800 && balls.some(isMoving); tick++) step(balls, 1 / 300);
+  assert.equal(balls[8].pocketed, true);
+  assert.equal(balls[0].pocketed, false);
 });

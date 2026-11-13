@@ -7,8 +7,10 @@ A static file host alone does not support online games.
 
 ## Play
 
-- Choose **Online Play**, **Computer Career**, or **Training** from the homepage.
-  In Computer Career, clear all ten games in each city to open the next city.
+- Choose **Billiard** (eight-ball) or **Snooker** on the homepage. Each game
+  has its own career progress, equipment, challenge completions, and saved match.
+  Win ten full games in each city in **Computer Career** to open the next city.
+  Open **Challenges** for preset shots and **Training** for practice.
   First clears earn career points and coins. Optional skill goals pay a one-time
   bonus and can be earned on replays. Points determine your career rank, and
   finishing a city unlocks a themed table finish in **Settings → Table**.
@@ -16,7 +18,7 @@ A static file host alone does not support online games.
   Spend coins on cue upgrades in
   the **Equipment shop** on the career screen. Career progress and equipment
   live in your browser, and cities unlocked before the update remain accessible.
-  In the online circuit, your first win in each city completes the city and adds
+  In the Billiard online circuit, your first win in each city completes the city and adds
   its cosmetic medal to your player profile. Matchmaking pairs players in the
   same city. Online progress and medals follow your player ID
   on the same server and is saved to `.billiard-circuit.json` by default. Set

@@ -4,13 +4,15 @@ import { t } from './i18n';
 
 export const cities = cityData;
 export type City = typeof cities[number];
+export type Game = 'pool' | 'snooker';
 export type Circuit = 'online' | 'computer';
 export type Progress = Record<string, { wins: number; losses: number }>;
 export type Mode =
   | { kind: 'casual' }
-  | { kind: 'training'; opponent: 'solo' | 'computer'; difficulty: Difficulty }
+  | { kind: 'training'; game: Game; opponent: 'solo' | 'computer'; difficulty: Difficulty }
+  | { kind: 'challenge'; game: Game; challenge: string }
   | { kind: 'online'; city: City }
-  | { kind: 'computer'; city: City; stage: number; matchId: string };
+  | { kind: 'computer'; game: Game; city: City; stage: number; matchId: string };
 
 const computerKey = 'billiard-computer-circuit-v1';
 
