@@ -89,7 +89,7 @@
     <div class="background-art home-backdrop" data-background="sapphire" aria-hidden="true"></div>
     <div class="city-picker-content">
       <div class="home-header">
-        <img class="city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker">
+        <img class="brand-logo city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker">
         <button class="avatar-choice home-avatar" id="openAppSettings" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="appSettings"></button>
       </div>
       <div id="homeModes">
@@ -150,7 +150,7 @@
   </section>
   <header class="game-hud">
     <div class="game-heading">
-      <strong class="game-brand"><img src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker"><span id="gameCity" class="game-city"></span></strong>
+      <strong class="game-brand"><img class="brand-logo" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker"><span id="gameCity" class="game-city"></span></strong>
       <span id="shotClock" role="timer" aria-label="Online time remaining" hidden>30s</span>
       <small id="status" role="status">Tap or drag either side of the cue ball to aim.</small>
       <small id="careerObjective" hidden></small>
@@ -171,7 +171,7 @@
   <dialog id="mobileGameMenu" class="ui-dialog game-menu" aria-labelledby="gameMenuTitle">
     <div class="dialog-body">
     <div class="game-menu-heading">
-      <div class="settings-heading"><img class="menu-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker"><h2 id="gameMenuTitle">Game menu</h2></div>
+      <div class="settings-heading"><img class="brand-logo menu-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker"><h2 id="gameMenuTitle">Game menu</h2></div>
       <button class="ui-button game-menu-close" id="closeGameMenu" type="button" aria-label="Close game menu" autofocus><span aria-hidden="true">×</span></button>
     </div>
     <div id="gameMenuActions"></div>
@@ -189,11 +189,12 @@
     </div>
     <div class="ui-dialog-actions"><button class="ui-button ui-button--primary" type="button" autofocus>Yes, use TV mode</button><button class="ui-button" type="button">Use regular 3D</button></div>
   </dialog>
-  <section id="gameNotice" class="game-notice" role="status" aria-live="polite" hidden>
-    <div class="victory-emblem" aria-hidden="true">
-      <svg viewBox="0 0 100 100" focusable="false"><defs><linearGradient id="victoryGold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0b7"/><stop offset=".5" stop-color="#eac16a"/><stop offset="1" stop-color="#bd8030"/></linearGradient></defs><g stroke="#c38d3d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M29 28H17v9c0 12 9 18 20 18m34-27h12v9c0 12-9 18-20 18" fill="none"/><path d="M28 19h44v22c0 17-10 25-22 25S28 58 28 41Z" fill="url(#victoryGold)"/><path d="M50 67v14m-17 7h34l-5-7H38Z" fill="url(#victoryGold)"/></g><path d="m50 29 4 8 9 1-7 6 2 9-8-4-8 4 2-9-7-6 9-1Z" fill="#fff5d4"/><path d="m13 14 2 5 5 2-5 2-2 5-2-5-5-2 5-2Zm73 42 2 5 5 2-5 2-2 5-2-5-5-2 5-2Z" fill="#eac16a"/></svg>
+  <div id="resultBackdrop" class="result-backdrop" aria-hidden="true" hidden></div>
+  <section id="gameNotice" class="game-notice" aria-labelledby="noticeTitle" hidden>
+    <div id="resultPlayers" class="result-players"></div>
+    <div class="result-summary" role="status">
+      <span class="eyebrow" id="noticeLabel"></span><strong id="noticeTitle"></strong><small id="noticeDetail"></small>
     </div>
-    <span class="eyebrow" id="noticeLabel"></span><strong id="noticeTitle"></strong><small id="noticeDetail"></small>
     <button class="ui-button ui-button--primary" id="noticeRematch" type="button" hidden>Play again</button><button class="ui-button ui-button--primary" id="noticeCircuit" type="button" hidden>Return to cities</button><button class="ui-button" id="noticeRetry" type="button" hidden>Try again</button>
     <button class="ui-button" id="noticeNext" type="button" hidden>Next game</button>
     <button class="ui-button" id="noticeShop" type="button" hidden>Equipment shop</button>

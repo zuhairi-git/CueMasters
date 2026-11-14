@@ -88,8 +88,13 @@ export function navigateTvDialog(dialog: HTMLDialogElement, key: RemoteKey) {
     dismissDialog(dialog);
     return;
   }
-  const controls = [...dialog.querySelectorAll<HTMLElement>('button, input, select, a[href]')]
+  navigateTvControls(dialog, key);
+}
+
+export function navigateTvControls(container: HTMLElement, key: RemoteKey) {
+  const controls = [...container.querySelectorAll<HTMLElement>('button, input, select, a[href]')]
     .filter(el => !el.matches(':disabled') && el.getClientRects().length > 0);
+  if (!controls.length) return;
   const active = document.activeElement as HTMLElement;
   const index = controls.indexOf(active);
   if (key === 'left' || key === 'right') {
@@ -106,7 +111,7 @@ export function navigateTvDialog(dialog: HTMLDialogElement, key: RemoteKey) {
     }
   }
   if (key === 'ok' && index >= 0 && !(active instanceof HTMLSelectElement)) { active.click(); return; }
-  const next = controls[(index + (key === 'up' || key === 'left' ? -1 : 1) + controls.length) % controls.length];
+  const next = index < 0 ? controls[0] : controls[(index + (key === 'up' || key === 'left' ? -1 : 1) + controls.length) % controls.length];
   next?.focus();
   next?.scrollIntoView({ block: 'nearest' });
 }

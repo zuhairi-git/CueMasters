@@ -10,6 +10,9 @@
   --on-accent: #082337;
   --border: #ffffff25;
   --scrim: #030916cc;
+  --home-image-tint: 8, 15, 32;
+  --brand-surface: #101e34;
+  --brand-border: #d9bf885c;
   --font: 15px system-ui, sans-serif;
   --radius: 9px;
   --panel-radius: 16px;
@@ -29,6 +32,9 @@
   --accent: #9cc5ff;
   --on-accent: #0d1930;
   --scrim: #070d1ccc;
+  --home-image-tint: 28, 29, 66;
+  --brand-surface: #141b30;
+  --brand-border: #a5bdf16b;
 }
 :root[data-theme="ivory"] {
   color-scheme: light;
@@ -42,6 +48,19 @@
   --on-accent: #fff9ee;
   --border: #56391f35;
   --scrim: #21170fb0;
+  --home-image-tint: 96, 64, 34;
+  --brand-surface: #38291c;
+  --brand-border: #c59b68;
+}
+.brand-logo {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius);
+  background: var(--brand-surface);
+  box-shadow: 0 3px 12px #0003;
 }
 .ui-button, .ui-select {
   min-height: var(--target-size);

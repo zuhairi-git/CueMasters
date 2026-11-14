@@ -48,12 +48,21 @@
   gap: 12px;
   margin-bottom: 24px;
 }
-.city-picker-brand { display: block; width: calc(var(--home-logo-height) * 300 / 72); max-width: 100%; height: var(--home-logo-height); object-fit: contain; object-position: left center; }
-.home-avatar.avatar-choice { width: var(--home-logo-height); height: var(--home-logo-height); }
-.home-avatar:hover { border-color: var(--accent); }
+.city-picker-brand {
+  --logo-rim-width: 3px;
+  --logo-content-height: calc(var(--home-logo-height) - 2 * (var(--space-2) + var(--logo-rim-width)));
+  width: calc(var(--logo-content-height) * 300 / 72 + 2 * (var(--space-3) + var(--logo-rim-width)));
+  height: var(--home-logo-height);
+  object-fit: contain;
+  border: var(--logo-rim-width) solid var(--surface);
+  box-shadow: 0 0 0 1px var(--border), 0 3px 12px #0003;
+}
+.home-avatar.avatar-choice {
+  width: var(--home-logo-height);
+  height: var(--home-logo-height);
+}
 .settings-languages { display: flex; flex-wrap: wrap; gap: 8px; }
 .settings-languages [aria-pressed="true"] { background: var(--accent); color: var(--surface); }
-[data-theme="ivory"] .city-picker-brand { background: #2b2319; border-radius: 8px; padding: 6px 10px; }
 .city-picker h1, #setupTitle {
   margin: 0 0 28px;
   font: 500 clamp(2.3rem, 5vw, 4rem)/1.08 Georgia, serif;
@@ -74,16 +83,21 @@
 }
 .background-art[data-background="sapphire"] { --background-image: url('/home-backgrounds/sapphire-lounge.jpg'); }
 .background-art[data-background="golden"] { --background-image: url('/home-backgrounds/golden-lounge.jpg'); }
-.home-backdrop[data-background="sapphire"],
-.home-backdrop[data-background="golden"] {
-  --background-overlay: linear-gradient(180deg, #080f20a8, #080f204d 53%, #080f20b3);
+.background-art:is([data-background="sapphire"], [data-background="golden"]) {
+  --background-overlay: linear-gradient(180deg,
+    rgba(var(--home-image-tint), .66),
+    rgba(var(--home-image-tint), .30) 53%,
+    rgba(var(--home-image-tint), .70));
 }
 .city-picker:is([data-background-screen="cities"], [data-background-screen="levels"]) .home-backdrop::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: 1;
-  background: linear-gradient(180deg, #080f2066, #080f2040 55%, #080f2066);
+  background: linear-gradient(180deg,
+    rgba(var(--home-image-tint), .40),
+    rgba(var(--home-image-tint), .25) 55%,
+    rgba(var(--home-image-tint), .40));
 }
 .home-backdrop[data-background="classic"],
 .city-picker[data-background-screen="other"] .home-backdrop,
@@ -93,7 +107,7 @@
 .city-picker[data-background-screen="cities"] .home-backdrop:not([data-background="classic"]):not([data-hide-background-cities]) ~ .city-picker-content :is(#setupTitle, #setupStatus),
 .city-picker[data-background-screen="levels"] .home-backdrop:not([data-background="classic"]):not([data-hide-background-levels]) ~ .city-picker-content :is(#setupTitle, #setupStatus) {
   color: #f3f7ff;
-  text-shadow: 0 2px 12px #080f20;
+  text-shadow: 0 2px 12px rgb(var(--home-image-tint));
 }
 .background-art[data-background="emerald"] {
   --background-base: #091a19;

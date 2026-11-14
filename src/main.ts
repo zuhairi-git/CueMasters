@@ -7,7 +7,7 @@ import { soundPreference, tvPreference } from './app-settings';
 import { RemoteShot, remoteKey, remotePlacement } from './tv-controls';
 import { SvgTable } from './svg-table';
 import { TvTable, calledPocketBorderWidth, calledPocketColor } from './tv-table';
-import { navigateTvDialog } from './tv-dialogs';
+import { navigateTvControls, navigateTvDialog } from './tv-dialogs';
 import { installFullscreenControl } from './fullscreen';
 import { cueLength, cuePose } from './cue-geometry';
 import { directionToBall, traceShot } from './aim-guide';
@@ -2027,6 +2027,7 @@ document.addEventListener('keydown', event => {
   event.stopImmediatePropagation();
   if ((key === 'ok' || key === 'back') && event.repeat) return;
   if (dialog) { navigateTvDialog(dialog, key); return; }
+  if (finished && key !== 'back') { navigateTvControls(notice, key); return; }
   updateTvControls();
   if (key === 'back' && (rolling || strike || !canControl() || finished)) { setMobileMenu(true); return; }
   if (rolling || strike || !canControl() || finished) return;
@@ -2053,6 +2054,8 @@ applyTvMode();
 let networkElapsed = 0, saveElapsed = 0;
 let noticeKey = '';
 const notice = document.querySelector<HTMLElement>('#gameNotice')!;
+const resultBackdrop = document.querySelector<HTMLElement>('#resultBackdrop')!;
+const resultPlayers = document.querySelector<HTMLElement>('#resultPlayers')!;
 const confetti = document.querySelector<HTMLElement>('#victoryConfetti')!;
 let celebratedWin = false;
 let confettiCleanup: number | undefined;
@@ -2079,12 +2082,36 @@ function celebrateWin() {
 function updateGameNotice() {
   const kind = finished ? 'win' : '';
   const winningPlayer = winner ?? (scores[0] === scores[1] ? undefined : scores[0] > scores[1] ? 0 : 1);
-  const key = [kind, turn, winningPlayer, online.active, online.seat, playerName(0), playerName(1), placement, tvEnabled, circuitMessage].join(':');
+  const names = [playerName(0), playerName(1)];
+  const localAvatar = playerAvatar(0);
+  // Online profiles don't share avatar selections, so give the peer a distinct portrait.
+  const peerAvatar = localAvatar === 'illustrated-2' ? 'illustrated-1' : 'illustrated-2';
+  const avatars = onlineMode
+    ? online.seat === 0 ? [localAvatar, peerAvatar] : [peerAvatar, localAvatar]
+    : [localAvatar, playerAvatar(1)];
+  const key = JSON.stringify([kind, winningPlayer, wonByForfeit, onlineMode, online.active, online.seat, names, avatars, document.documentElement.lang, circuitMessage]);
   if (key === noticeKey) return;
   noticeKey = key;
-  notice.hidden = !kind;
-  notice.dataset.kind = kind;
-  notice.dataset.outcome = winningPlayer === undefined ? 'draw' : 'winner';
+  resultBackdrop.hidden = notice.hidden = !kind;
+  document.body.classList.toggle('results-visible', Boolean(kind));
+  if (kind === 'win') {
+    resultPlayers.replaceChildren(...names.map((name, seat) => {
+      const player = document.createElement('div');
+      player.className = 'result-player';
+      player.innerHTML = avatarMarkup(avatars[seat]);
+      const label = document.createElement('span');
+      label.textContent = name;
+      player.append(label);
+      if (seat === winningPlayer) {
+        player.classList.add('is-winner');
+        const badge = document.createElement('span');
+        badge.className = 'result-winner';
+        badge.textContent = t('Winner');
+        player.append(badge);
+      }
+      return player;
+    }));
+  }
   if (kind === 'win' && winningPlayer !== undefined && (!isTournament() || winningPlayer === 0) && !celebratedWin) {
     celebratedWin = true;
     celebrateWin();
