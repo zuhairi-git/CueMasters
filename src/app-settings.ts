@@ -97,6 +97,7 @@ function installHomeBackground(settings: HTMLDialogElement) {
   const open = document.querySelector<HTMLButtonElement>('#openHomeBackground')!;
   const currentName = document.querySelector<HTMLElement>('#currentHomeBackground')!;
   const backdrop = document.querySelector<HTMLElement>('.home-backdrop')!;
+  const screenOptions = dialog.querySelectorAll<HTMLInputElement>('[data-background-screen]');
   const choices = [...dialog.querySelectorAll<HTMLButtonElement>('[data-background-choice]')];
   let selected = choices[0];
 
@@ -121,6 +122,21 @@ function installHomeBackground(settings: HTMLDialogElement) {
     choice.onclick = () => {
       apply(choice);
       try { localStorage.setItem(backgroundKey, backdrop.dataset.background!); } catch {}
+    };
+  }
+  for (const option of screenOptions) {
+    const screen = option.dataset.backgroundScreen!;
+    const key = backgroundKey + '-' + screen;
+    const attribute = 'data-hide-background-' + screen;
+    const updateScreen = () => {
+      if (option.checked) backdrop.removeAttribute(attribute);
+      else backdrop.setAttribute(attribute, '');
+    };
+    try { option.checked = localStorage.getItem(key) !== 'off'; } catch {}
+    updateScreen();
+    option.onchange = () => {
+      updateScreen();
+      try { localStorage.setItem(key, option.checked ? 'on' : 'off'); } catch {}
     };
   }
   open.onclick = () => {

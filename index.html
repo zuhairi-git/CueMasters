@@ -76,18 +76,23 @@
             <span class="background-name">Classic</span>
           </button>
         </div>
+        <fieldset>
+          <legend>Show background on</legend>
+          <label><input type="checkbox" data-background-screen="cities" checked> City selection</label>
+          <label><input type="checkbox" data-background-screen="levels" checked> Level selection</label>
+        </fieldset>
       </div>
       <div class="ui-dialog-actions"><button class="ui-button" value="close">Done</button></div>
     </form>
   </dialog>
   <section id="cityPicker" class="city-picker" aria-labelledby="cityPickerTitle">
+    <div class="background-art home-backdrop" data-background="sapphire" aria-hidden="true"></div>
     <div class="city-picker-content">
       <div class="home-header">
         <img class="city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker">
         <button class="avatar-choice home-avatar" id="openAppSettings" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="appSettings"></button>
       </div>
       <div id="homeModes">
-        <div class="background-art home-backdrop" data-background="sapphire" aria-hidden="true"></div>
         <h1 id="cityPickerTitle">Choose your game</h1>
         <div class="home-games" role="group" aria-label="Game type">
           <button class="home-back" type="button" data-game="pool" aria-pressed="true">Billiard</button>

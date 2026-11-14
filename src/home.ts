@@ -177,6 +177,7 @@ export async function chooseGame() {
         return;
       }
       view = undefined;
+      delete picker.dataset.backgroundScreen;
       modes.hidden = false;
       setup.hidden = true;
       previousButton?.focus();
@@ -190,6 +191,7 @@ export async function chooseGame() {
     function showStages(city: typeof cities[number]) {
       selectedCity = city;
       view = 'stages';
+      picker.dataset.backgroundScreen = 'levels';
       shop.hidden = false;
       back.textContent = t('← Cities');
       title.textContent = t(city.name) + ' · ' + gameName();
@@ -215,6 +217,7 @@ export async function chooseGame() {
 
     function showShop(focusIndex = -1) {
       view = 'shop';
+      picker.dataset.backgroundScreen = 'other';
       shop.hidden = true;
       back.textContent = selectedCity ? t('← Games') : t('← Cities');
       title.textContent = t('Equipment shop');
@@ -242,6 +245,7 @@ export async function chooseGame() {
 
     function showTraining() {
       view = 'training';
+      picker.dataset.backgroundScreen = 'other';
       back.textContent = t('← Game modes');
       title.textContent = t('Training') + ' · ' + gameName();
       list.dataset.layout = 'training';
@@ -250,6 +254,7 @@ export async function chooseGame() {
         artwork: tableArt(5), action: t('Choose difficulty'),
         play: () => {
           view = 'difficulty';
+          picker.dataset.backgroundScreen = 'levels';
           back.textContent = t('← Training');
           title.textContent = t('Choose your opponent');
           list.dataset.layout = 'difficulty';
@@ -271,6 +276,7 @@ export async function chooseGame() {
     async function showSetup(mode: Setup) {
       request?.abort();
       view = mode;
+      picker.dataset.backgroundScreen = mode === 'computer' || mode === 'online' ? 'cities' : 'other';
       selectedCity = undefined;
       shop.hidden = mode !== 'computer';
       modes.hidden = true;

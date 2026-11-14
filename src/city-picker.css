@@ -78,8 +78,20 @@
 .home-backdrop[data-background="golden"] {
   --background-overlay: linear-gradient(180deg, #080f20a8, #080f204d 53%, #080f20b3);
 }
-.home-backdrop[data-background="classic"] { display: none; }
-.home-backdrop:not([data-background="classic"]) ~ h1 {
+.city-picker:is([data-background-screen="cities"], [data-background-screen="levels"]) .home-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, #080f2066, #080f2040 55%, #080f2066);
+}
+.home-backdrop[data-background="classic"],
+.city-picker[data-background-screen="other"] .home-backdrop,
+.city-picker[data-background-screen="cities"] .home-backdrop[data-hide-background-cities],
+.city-picker[data-background-screen="levels"] .home-backdrop[data-hide-background-levels] { display: none; }
+.city-picker:not([data-background-screen]) .home-backdrop:not([data-background="classic"]) ~ .city-picker-content h1,
+.city-picker[data-background-screen="cities"] .home-backdrop:not([data-background="classic"]):not([data-hide-background-cities]) ~ .city-picker-content :is(#setupTitle, #setupStatus),
+.city-picker[data-background-screen="levels"] .home-backdrop:not([data-background="classic"]):not([data-hide-background-levels]) ~ .city-picker-content :is(#setupTitle, #setupStatus) {
   color: #f3f7ff;
   text-shadow: 0 2px 12px #080f20;
 }
