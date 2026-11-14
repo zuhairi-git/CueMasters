@@ -29,9 +29,15 @@
           <label class="ui-field"><span>Player</span><span class="ui-select-wrap"><select class="ui-select" id="avatarSeat"><option value="0">Player 1 (you)</option><option value="1">Player 2 (local)</option></select></span></label>
           <div id="avatarChoices" class="avatar-choice-buttons"></div>
         </fieldset>
-        <fieldset>
+        <fieldset class="display-settings">
           <legend>Display</legend>
           <label class="ui-field"><span>Theme</span><span class="ui-select-wrap"><select class="ui-select" id="theme"><option value="club">Clubhouse</option><option value="midnight">Midnight</option><option value="ivory">Ivory</option></select></span></label>
+          <div class="ui-field">
+            <span id="homeBackgroundLabel">Background</span>
+            <span class="ui-select-wrap">
+              <button class="ui-button background-trigger" id="openHomeBackground" type="button" aria-labelledby="homeBackgroundLabel currentHomeBackground" aria-haspopup="dialog" aria-controls="homeBackgroundSettings"><span id="currentHomeBackground"></span></button>
+            </span>
+          </div>
           <label class="ui-field"><span>Graphics</span><span class="ui-select-wrap"><select class="ui-select" id="quality"><option value="Low">Low</option><option value="Medium">Medium</option><option value="High" selected>High</option><option value="Ultra">Ultra</option></select></span></label>
           <div class="sound-row"><div><strong>Play on TV</strong><small>Lightweight TV table with remote controls. Arrows to aim, OK to play, Back for the menu. In menus: ↑ ↓ move, ← → change, OK select.</small></div><button class="ui-button" id="tvToggle" type="button" aria-pressed="false">TV off</button></div>
         </fieldset>
@@ -44,11 +50,44 @@
       <div class="ui-dialog-actions"><button class="ui-button" value="close">Done</button></div>
     </form>
   </dialog>
+  <dialog class="ui-dialog modal-child" id="homeBackgroundSettings" aria-labelledby="homeBackgroundTitle">
+    <form method="dialog">
+      <div class="dialog-body">
+        <h2 id="homeBackgroundTitle">Home screen background</h2>
+        <div class="background-options" role="group" aria-label="Home screen background">
+          <button class="ui-button background-option" type="button" data-background-choice="sapphire" aria-pressed="true">
+            <span class="background-art" data-background="sapphire" aria-hidden="true"></span>
+            <span class="background-name">Sapphire Lounge</span>
+          </button>
+          <button class="ui-button background-option" type="button" data-background-choice="golden" aria-pressed="false">
+            <span class="background-art" data-background="golden" aria-hidden="true"></span>
+            <span class="background-name">Golden Lounge</span>
+          </button>
+          <button class="ui-button background-option" type="button" data-background-choice="emerald" aria-pressed="false">
+            <span class="background-art" data-background="emerald" aria-hidden="true"></span>
+            <span class="background-name">Emerald Glow</span><small>Animated</small>
+          </button>
+          <button class="ui-button background-option" type="button" data-background-choice="twilight" aria-pressed="false">
+            <span class="background-art" data-background="twilight" aria-hidden="true"></span>
+            <span class="background-name">Twilight Glow</span><small>Animated</small>
+          </button>
+          <button class="ui-button background-option" type="button" data-background-choice="classic" aria-pressed="false">
+            <span class="background-art" data-background="classic" aria-hidden="true"></span>
+            <span class="background-name">Classic</span>
+          </button>
+        </div>
+      </div>
+      <div class="ui-dialog-actions"><button class="ui-button" value="close">Done</button></div>
+    </form>
+  </dialog>
   <section id="cityPicker" class="city-picker" aria-labelledby="cityPickerTitle">
     <div class="city-picker-content">
-      <img class="city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker">
+      <div class="home-header">
+        <img class="city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker">
+        <button class="avatar-choice home-avatar" id="openAppSettings" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="appSettings"></button>
+      </div>
       <div id="homeModes">
-        <div class="home-preferences"><button class="home-back" id="openAppSettings" type="button" aria-haspopup="dialog">Settings</button></div>
+        <div class="background-art home-backdrop" data-background="sapphire" aria-hidden="true"></div>
         <h1 id="cityPickerTitle">Choose your game</h1>
         <div class="home-games" role="group" aria-label="Game type">
           <button class="home-back" type="button" data-game="pool" aria-pressed="true">Billiard</button>

@@ -168,8 +168,10 @@ header:has(#shotClock:not([hidden])) #status { grid-column: 2; }
 .ui-dialog[open] { display: flex; flex-direction: column; }
 .ui-dialog > form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; max-height: inherit; gap: 0; margin: 0; overflow: hidden; }
 .dialog-body { display: grid; align-content: start; gap: 12px; flex: 1 1 auto; min-height: 0; padding: 16px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scroll-padding-block: 12px; }
-.ui-dialog.modal-parent { opacity: .68; transform: translateY(12px) scale(.965); filter: brightness(.88); }
-.ui-dialog.modal-child::backdrop { background: #00000012; }
+.ui-dialog.modal-parent { transform: translateY(12px) scale(.965); }
+.ui-dialog.modal-child { --child-dialog-scrim: #00000059; }
+.ui-dialog.modal-child::backdrop { background: var(--child-dialog-scrim); }
+.ui-dialog.modal-child.dialog-fallback[open] { box-shadow: 0 0 0 100vmax var(--child-dialog-scrim); }
 @keyframes dialog-reveal {
   from { opacity: 0; transform: translateY(8px) scale(.99); }
   to { opacity: 1; transform: none; }

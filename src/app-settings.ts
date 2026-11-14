@@ -2,11 +2,12 @@ import { installLanguagePicker, t } from './i18n';
 import { isTvBrowser } from './tv-detection';
 import { remoteKey } from './tv-controls';
 import { navigateTvDialog } from './tv-dialogs';
-import { installAvatarPicker } from './player-avatars';
+import { avatarMarkup, installAvatarPicker, playerAvatar } from './player-avatars';
 
 const tvKey = 'billiard-tv';
 const soundKey = '3dbilliard-sound';
 const graphicsKey = 'billiard-graphics';
+const backgroundKey = 'billiard-home-background';
 let tvChoice: 'on' | 'off' | null = null;
 export const soundPreference = { enabled: true, volume: 0.45 };
 
@@ -29,6 +30,8 @@ export function installAppSettings() {
   const volume = document.querySelector<HTMLInputElement>('#volume')!;
   const volumeLabel = document.querySelector<HTMLOutputElement>('#volumeLabel')!;
   const graphics = document.querySelector<HTMLSelectElement>('#quality')!;
+
+  const renderBackgroundName = installHomeBackground(dialog);
 
   try {
     const saved = localStorage.getItem(tvKey);
@@ -66,9 +69,12 @@ export function installAppSettings() {
   let translateAvatars: (() => void) | undefined;
   installLanguagePicker(() => {
     render();
+    renderBackgroundName();
     translateAvatars?.();
   });
-  translateAvatars = installAvatarPicker();
+  translateAvatars = installAvatarPicker(() => {
+    open.innerHTML = avatarMarkup(playerAvatar(0));
+  });
   translateAvatars();
   open.onclick = () => dialog.showModal();
   tvToggle.onclick = () => {
@@ -83,6 +89,57 @@ export function installAppSettings() {
   graphics.onchange = () => {
     try { localStorage.setItem(graphicsKey, graphics.value); } catch {}
   };
+  installSettingsRemote(dialog);
+}
+
+function installHomeBackground(settings: HTMLDialogElement) {
+  const dialog = document.querySelector<HTMLDialogElement>('#homeBackgroundSettings')!;
+  const open = document.querySelector<HTMLButtonElement>('#openHomeBackground')!;
+  const currentName = document.querySelector<HTMLElement>('#currentHomeBackground')!;
+  const backdrop = document.querySelector<HTMLElement>('.home-backdrop')!;
+  const choices = [...dialog.querySelectorAll<HTMLButtonElement>('[data-background-choice]')];
+  let selected = choices[0];
+
+  function renderName() {
+    currentName.textContent = selected.querySelector('.background-name')!.textContent;
+  }
+
+  function apply(choice: HTMLButtonElement) {
+    selected = choice;
+    backdrop.dataset.background = choice.dataset.backgroundChoice!;
+    for (const button of choices) button.setAttribute('aria-pressed', String(button === choice));
+    renderName();
+  }
+
+  try {
+    const saved = localStorage.getItem(backgroundKey);
+    const choice = choices.find(button => button.dataset.backgroundChoice === saved);
+    if (choice) apply(choice);
+  } catch {}
+
+  for (const choice of choices) {
+    choice.onclick = () => {
+      apply(choice);
+      try { localStorage.setItem(backgroundKey, backdrop.dataset.background!); } catch {}
+    };
+  }
+  open.onclick = () => {
+    dialog.showModal();
+    settings.classList.add('modal-parent');
+    settings.setAttribute('inert', '');
+    selected.focus();
+  };
+  dialog.addEventListener('close', () => {
+    if (dialog.open) return;
+    settings.classList.remove('modal-parent');
+    settings.removeAttribute('inert');
+    if (settings.open) open.focus();
+  });
+  installSettingsRemote(dialog);
+  return renderName;
+}
+
+function installSettingsRemote(dialog: HTMLDialogElement) {
   dialog.addEventListener('keydown', event => {
     if (tvPreference() !== 'on' && !isTvBrowser(navigator.userAgent)) return;
     const key = remoteKey(event.key, event.keyCode);

@@ -128,6 +128,7 @@ export function labelGame(mode: Mode) {
 export async function chooseGame() {
   const picker = document.querySelector<HTMLElement>('#cityPicker')!;
   const modes = document.querySelector<HTMLElement>('#homeModes')!;
+  const settingsAvatar = document.querySelector<HTMLButtonElement>('#openAppSettings')!;
   const setup = document.querySelector<HTMLElement>('#modeSetup')!;
   const title = document.querySelector<HTMLElement>('#setupTitle')!;
   const status = document.querySelector<HTMLElement>('#setupStatus')!;
@@ -378,7 +379,8 @@ export async function chooseGame() {
         if (view) { event.preventDefault(); back.click(); }
         return;
       }
-      const controls = [...(view ? setup : modes).querySelectorAll('button')].filter(control => control.getClientRects().length);
+      const controls = [settingsAvatar, ...(view ? setup : modes).querySelectorAll('button')]
+        .filter(control => control.getClientRects().length);
       event.preventDefault();
       if (key === 'ok') {
         if (!event.repeat && active instanceof HTMLButtonElement) active.click();

@@ -10,6 +10,7 @@
   --skyline-light: #f5d9a2;
   position: fixed;
   inset: 0;
+  isolation: isolate;
   overflow: auto;
   padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
     max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
@@ -39,8 +40,17 @@
   margin: auto;
   padding-block: clamp(8px, 6vh, 72px);
 }
-.city-picker-brand { display: block; width: clamp(220px, 36vw, 300px); max-width: 100%; height: auto; margin: 0 auto 24px; }
-.home-preferences { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.home-header {
+  --home-logo-height: clamp(44px, 8.64vw, 72px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.city-picker-brand { display: block; width: calc(var(--home-logo-height) * 300 / 72); max-width: 100%; height: var(--home-logo-height); object-fit: contain; object-position: left center; }
+.home-avatar.avatar-choice { width: var(--home-logo-height); height: var(--home-logo-height); }
+.home-avatar:hover { border-color: var(--accent); }
 .settings-languages { display: flex; flex-wrap: wrap; gap: 8px; }
 .settings-languages [aria-pressed="true"] { background: var(--accent); color: var(--surface); }
 [data-theme="ivory"] .city-picker-brand { background: #2b2319; border-radius: 8px; padding: 6px 10px; }
@@ -49,6 +59,90 @@
   font: 500 clamp(2.3rem, 5vw, 4rem)/1.08 Georgia, serif;
 }
 .city-picker h1 { text-align: center; }
+.home-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.background-art {
+  background: var(--background-base, #101e34);
+  background-image: var(--background-overlay, linear-gradient(transparent, transparent)), var(--background-image, none);
+  background-position: center, 37% center;
+  background-size: cover;
+}
+.background-art[data-background="sapphire"] { --background-image: url('/home-backgrounds/sapphire-lounge.jpg'); }
+.background-art[data-background="golden"] { --background-image: url('/home-backgrounds/golden-lounge.jpg'); }
+.home-backdrop[data-background="sapphire"],
+.home-backdrop[data-background="golden"] {
+  --background-overlay: linear-gradient(180deg, #080f20a8, #080f204d 53%, #080f20b3);
+}
+.home-backdrop[data-background="classic"] { display: none; }
+.home-backdrop:not([data-background="classic"]) ~ h1 {
+  color: #f3f7ff;
+  text-shadow: 0 2px 12px #080f20;
+}
+.background-art[data-background="emerald"] {
+  --background-base: #091a19;
+  --background-image: radial-gradient(ellipse at 30% 20%, #245744, transparent 68%);
+  --moving-glow: radial-gradient(ellipse at 71% 61%, #398469, transparent 58%);
+}
+.background-art[data-background="twilight"] {
+  --background-base: #12152d;
+  --background-image: radial-gradient(ellipse at 24% 16%, #303d6f, transparent 68%);
+  --moving-glow: radial-gradient(ellipse at 74% 42%, #625088, transparent 58%);
+}
+.background-art[data-background="emerald"]::after,
+.background-art[data-background="twilight"]::after {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  background: var(--moving-glow);
+  opacity: .34;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .background-art[data-background="emerald"]::after,
+  .background-art[data-background="twilight"]::after {
+    animation: background-drift 24s ease-in-out infinite alternate;
+  }
+}
+@keyframes background-drift {
+  from { transform: translate3d(-3%, 1%, 0); opacity: .25; }
+  to { transform: translate3d(4%, -3%, 0); opacity: .44; }
+}
+.background-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.display-settings .ui-field { grid-template-columns: 5.5rem minmax(0, 1fr); }
+.background-trigger {
+  width: 100%;
+  padding-inline-end: 34px;
+  color: var(--text);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.background-option {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 4px;
+  padding: 6px 6px 8px;
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.background-option .background-art {
+  position: relative;
+  overflow: hidden;
+  height: clamp(42px, 13vw, 84px);
+  border-radius: 5px;
+}
+.background-option [data-background="classic"] {
+  --background-image: radial-gradient(ellipse at 50% 0%, #16334d, var(--surface) 80%);
+}
+.background-option small { color: var(--muted); }
+.background-option[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .home-games { display: flex; justify-content: center; gap: 8px; margin-bottom: 24px; }
 .home-games [aria-pressed="true"] { background: var(--accent); color: var(--surface); }
 .mode-grid {

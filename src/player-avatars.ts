@@ -13,7 +13,7 @@ export function playerAvatar(seat: number) {
   return selections[seat];
 }
 
-export function installAvatarPicker() {
+export function installAvatarPicker(onPrimaryAvatarChange: () => void) {
   const seat = document.querySelector<HTMLSelectElement>('#avatarSeat')!;
   const choices = document.querySelector<HTMLElement>('#avatarChoices')!;
   const options = illustratedAvatars;
@@ -34,6 +34,7 @@ export function installAvatarPicker() {
       selections[player] = id;
       try { localStorage.setItem(storageKey(player), id); } catch {}
       renderSelection();
+      if (player === 0) onPrimaryAvatarChange();
     };
     return button;
   });
@@ -45,6 +46,7 @@ export function installAvatarPicker() {
   seat.onchange = renderSelection;
   choices.append(...buttons);
   renderSelection();
+  onPrimaryAvatarChange();
 
   return () => {
     buttons.forEach((button, index) => {
