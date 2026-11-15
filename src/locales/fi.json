@@ -507,5 +507,10 @@
   "Match drawn. Try again.": "Tasapeli. Yritä uudelleen.",
   "Return to challenges": "Palaa haasteisiin",
   "Save and return home": "Tallenna ja palaa aloitussivulle",
-  "Save your current game for later or end it.": "Tallenna nykyinen peli myöhempää jatkamista varten tai lopeta se."
+  "Save your current game for later or end it.": "Tallenna nykyinen peli myöhempää jatkamista varten tai lopeta se.",
+  "Announce winner?": "Julistetaanko voittaja?",
+  "Announce winner": "Julista voittaja",
+  "Continue playing": "Jatka peliä",
+  "SNOOKER FRAME": "SNOOKER-ERÄ",
+  "{leader} leads {leadScore} to {trailScore} with only {remaining} points left on the table. {trailer} needs snookers to win. Do you want to continue playing or announce the winner?": "{leader} johtaa {leadScore}–{trailScore}, ja pöydällä on enää {remaining} pistettä. {trailer} tarvitsee virhepisteitä voittaakseen. Haluatko jatkaa peliä vai julistaa voittajan?"
 }

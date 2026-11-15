@@ -18,7 +18,7 @@ import { cityFinishes, tableFinish } from './table-finishes';
 import { challengeLayout, completeChallenge, getChallenge } from './challenges';
 import { clearSession, labelGame, launch, saveSession } from './home';
 import type { Difficulty } from './difficulty';
-import { groupOf, poolTargets, resolvePoolShot, type Groups } from './pool-rules';
+import { groupOf, poolTargets, resolvePoolShot, snookerRemainingPoints, type Groups } from './pool-rules';
 import { validGame, type SavedGame } from './saved-game';
 import { constrainOrbit } from './camera-bounds';
 import {
@@ -880,6 +880,24 @@ function finishShot() {
   cpuWait = 0.85;
   showScore();
   showReadyStatus();
+  if (snooker && !finished && !snookerConcessionPrompted) {
+    const remaining = snookerRemainingPoints(balls.map(b => b.pocketed), colourAfterRed);
+    const lead = Math.abs(scores[0] - scores[1]);
+    if (remaining > 0 && lead > remaining) {
+      snookerConcessionPrompted = true;
+      const leaderSeat = scores[0] > scores[1] ? 0 : 1;
+      const trailerSeat = 1 - leaderSeat;
+      snookerConcessionTitle.textContent = t('Announce winner?');
+      snookerConcessionDesc.textContent = t('{leader} leads {leadScore} to {trailScore} with only {remaining} points left on the table. {trailer} needs snookers to win. Do you want to continue playing or announce the winner?', {
+        leader: playerName(leaderSeat),
+        trailer: playerName(trailerSeat),
+        leadScore: scores[leaderSeat],
+        trailScore: scores[trailerSeat],
+        remaining,
+      });
+      snookerConcessionDialog.showModal();
+    }
+  }
 
 }
 balls.forEach((ball, index) => ballMeshes[index].position.set(ball.x, radius, ball.z));
@@ -1481,6 +1499,8 @@ function resetMatch(continueCareer = false) {
   lastCueTap = 0;
   tableStroke = undefined;
   finished = colourAfterRed = false;
+  snookerConcessionPrompted = false;
+  if (snookerConcessionDialog?.open) snookerConcessionDialog.close();
   cpuWait = 0;
   setTip(0, 0);
   showScore();
@@ -1557,6 +1577,32 @@ document.querySelector<HTMLButtonElement>('#noticeRematch')!.onclick = () => {
 const endGameDialog = document.querySelector<HTMLDialogElement>('#endGameConfirm')!;
 const endGameStatus = document.querySelector<HTMLElement>('#endGameStatus')!;
 const confirmEndGame = document.querySelector<HTMLButtonElement>('#confirmEndGame')!;
+const snookerConcessionDialog = document.querySelector<HTMLDialogElement>('#snookerConcessionDialog')!;
+const snookerConcessionTitle = document.querySelector<HTMLElement>('#snookerConcessionTitle')!;
+const snookerConcessionDesc = document.querySelector<HTMLElement>('#snookerConcessionDescription')!;
+const snookerAnnounceWinnerBtn = document.querySelector<HTMLButtonElement>('#snookerAnnounceWinner')!;
+const snookerContinueBtn = document.querySelector<HTMLButtonElement>('#snookerContinueGame')!;
+let snookerConcessionPrompted = false;
+
+function finishSnookerWithWinner() {
+  finished = true;
+  winner = scores[0] === scores[1] ? undefined : scores[0] > scores[1] ? 0 : 1;
+  if (continueCareerSeries(winner)) return;
+  if (mode.kind === 'computer') {
+    recordComputerResult();
+    saveGame();
+  }
+  showScore();
+  showReadyStatus();
+}
+
+snookerAnnounceWinnerBtn.onclick = () => {
+  snookerConcessionDialog.close();
+  finishSnookerWithWinner();
+};
+snookerContinueBtn.onclick = () => {
+  snookerConcessionDialog.close();
+};
 const saveAndExit = document.querySelector<HTMLButtonElement>('#saveAndExit')!;
 const keepPlaying = document.querySelector<HTMLButtonElement>('#keepPlaying')!;
 function openEndGame() {
@@ -2176,7 +2222,7 @@ engine.runRenderLoop(() => {
   const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
   const authoritative = !onlineMode || online.active && online.seat === 0;
   const cueBall = balls[0];
-  if (versusComputer && !onlineMode && turn === 1 && !finished && !rolling && !strike && !settings.open && !endGameDialog.open) {
+  if (versusComputer && !onlineMode && turn === 1 && !finished && !rolling && !strike && !settings.open && !endGameDialog.open && !snookerConcessionDialog.open) {
     cpuWait -= dt;
     if (cpuWait <= 0) {
       const shot = chooseShot(balls, legalTargets(), difficulty);

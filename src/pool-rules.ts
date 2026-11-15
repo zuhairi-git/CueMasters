@@ -28,3 +28,18 @@ export function resolvePoolShot(input: {
   const keptTurn = !foul && potted.some(index => groupOf(index) && (!groups[turn] || groupOf(index) === groups[turn]));
   return { groups, foul, winner, turn: keptTurn ? turn : 1 - turn, respotEight: breaking && potted.includes(8) };
 }
+
+export function snookerRemainingPoints(pocketed: boolean[], colourAfterRed: boolean): number {
+  let reds = 0;
+  for (let i = 1; i <= 15; i++) {
+    if (!pocketed[i]) reds++;
+  }
+  if (reds > 0) {
+    return (colourAfterRed ? 7 : 0) + reds * 8 + 27;
+  }
+  let remainingColours = 0;
+  for (let i = 16; i <= 21; i++) {
+    if (!pocketed[i]) remainingColours += i - 14;
+  }
+  return (colourAfterRed ? 7 : 0) + remainingColours;
+}

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadSource } from './load-source.mjs';
-const { poolTargets, resolvePoolShot } = await loadSource('pool-rules');
+const { poolTargets, resolvePoolShot, snookerRemainingPoints } = await loadSource('pool-rules');
 const { cuePose, cueLength } = await loadSource('cue-geometry');
 const { rack, radius, width, isMoving, shotSpeed, step, strikeBall } = await loadSource('physics');
 const { validGame } = await loadSource('saved-game');
@@ -134,4 +134,62 @@ test('the beginner computer can win by calling and potting a makeable eight', as
   for (let tick = 0; tick < 1800 && balls.some(isMoving); tick++) step(balls, 1 / 300);
   assert.equal(balls[8].pocketed, true);
   assert.equal(balls[0].pocketed, false);
+});
+
+test('snooker remaining points computes max available break across frame states', () => {
+  const pocketed = Array(22).fill(false);
+  // Initial frame: 15 reds + colours = 15*8 + 27 = 147
+  assert.equal(snookerRemainingPoints(pocketed, false), 147);
+  // One red potted, colour after red: 14 reds left, plus colour now (7) = 7 + 14*8 + 27 = 146
+  pocketed[1] = true;
+  assert.equal(snookerRemainingPoints(pocketed, true), 146);
+  // All 15 reds potted, colour after red: 7 + 27 = 34
+  for (let i = 1; i <= 15; i++) pocketed[i] = true;
+  assert.equal(snookerRemainingPoints(pocketed, true), 34);
+  // All 15 reds potted, colours in sequence: 27
+  assert.equal(snookerRemainingPoints(pocketed, false), 27);
+  // Yellow potted: 25
+  pocketed[16] = true;
+  assert.equal(snookerRemainingPoints(pocketed, false), 25);
+  // Only pink and black left: 6 + 7 = 13
+  pocketed[17] = pocketed[18] = pocketed[19] = true;
+  assert.equal(snookerRemainingPoints(pocketed, false), 13);
+  // Only black left: 7
+  pocketed[20] = true;
+  assert.equal(snookerRemainingPoints(pocketed, false), 7);
+  // All colours potted: 0
+  pocketed[21] = true;
+  assert.equal(snookerRemainingPoints(pocketed, false), 0);
+});
+
+test('medium, hard, and expert computers successfully pot makeable shots', async () => {
+  const { chooseShot } = await loadSource('opponent');
+  for (const diff of ['Medium', 'Hard', 'Expert']) {
+    const balls = rack();
+    balls.forEach((ball, index) => { ball.pocketed = index !== 0 && index !== 1; });
+    Object.assign(balls[0], { x: 0.15, z: 0.02 });
+    Object.assign(balls[1], { x: 0.43, z: 0 });
+    const shot = chooseShot(balls, [1], diff, () => 0.5);
+    assert.ok(shot);
+    assert.equal(shot.pocket, 4);
+    strikeBall(balls[0], Math.sin(shot.angle), Math.cos(shot.angle), shotSpeed(shot.power));
+    for (let tick = 0; tick < 1800 && balls.some(isMoving); tick++) step(balls, 1 / 300);
+    assert.equal(balls[1].pocketed, true, diff + ' should pot object ball');
+    assert.equal(balls[0].pocketed, false, diff + ' should not scratch');
+  }
+});
+
+test('expert computer selects high value colour when colour after red is active in snooker', async () => {
+  const { chooseShot } = await loadSource('opponent');
+  const balls = rack(true);
+  for (let i = 1; i <= 15; i++) balls[i].pocketed = true;
+  Object.assign(balls[0], { x: -0.15, z: 0.95 });
+  Object.assign(balls[21], { x: 0.15, z: 1.05 });
+  const legal = [16, 17, 18, 19, 20, 21];
+  const shot = chooseShot(balls, legal, 'Expert', () => 0.5);
+  assert.ok(shot);
+  strikeBall(balls[0], Math.sin(shot.angle), Math.cos(shot.angle), shotSpeed(shot.power));
+  for (let tick = 0; tick < 1800 && balls.some(isMoving); tick++) step(balls, 1 / 300);
+  assert.equal(balls[21].pocketed, true, 'Expert should pot the black ball');
+  assert.equal(balls[0].pocketed, false, 'Expert should not scratch');
 });
