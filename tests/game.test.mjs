@@ -106,6 +106,11 @@ test('saved games round-trip with a moving shot, groups, turn and aim lock', () 
   assert.deepEqual(restored.balls[0].orientation, saved.balls[0].orientation);
   assert.deepEqual(restored.groups, ['Solids','Stripes']);
   assert.equal(restored.turn, 1);
+  const finished = { ...restored, onlineMode: true, finished: true, winner: 1, rolling: false,
+    forfeit: { peerName: 'Opponent', result: 'City completed' } };
+  assert.equal(validGame(JSON.parse(JSON.stringify(finished))), true);
+  assert.equal(validGame({ ...finished, finished: false }), false);
+  assert.equal(validGame({ ...finished, forfeit: null }), false);
   restored.balls[0].orientation = [0, 0, 0, 0];
   assert.equal(validGame(restored), false);
   delete restored.balls[0].orientation;

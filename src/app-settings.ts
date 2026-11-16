@@ -3,6 +3,7 @@ import { isTvBrowser } from './tv-detection';
 import { remoteKey } from './tv-controls';
 import { navigateTvDialog } from './tv-dialogs';
 import { avatarMarkup, installAvatarPicker, playerAvatar } from './player-avatars';
+import { savePagePanel } from './page-state';
 
 const tvKey = 'billiard-tv';
 const soundKey = '3dbilliard-sound';
@@ -76,7 +77,13 @@ export function installAppSettings() {
     open.innerHTML = avatarMarkup(playerAvatar(0));
   });
   translateAvatars();
-  open.onclick = () => dialog.showModal();
+  open.onclick = () => {
+    dialog.showModal();
+    savePagePanel('app-settings');
+  };
+  dialog.addEventListener('close', () => {
+    if (!dialog.open) savePagePanel(undefined);
+  });
   tvToggle.onclick = () => {
     setTvPreference(tvPreference() !== 'on');
     render();
@@ -141,12 +148,14 @@ function installHomeBackground(settings: HTMLDialogElement) {
   }
   open.onclick = () => {
     dialog.showModal();
+    savePagePanel('background-settings');
     settings.classList.add('modal-parent');
     settings.setAttribute('inert', '');
     selected.focus();
   };
   dialog.addEventListener('close', () => {
     if (dialog.open) return;
+    if (settings.open) savePagePanel('app-settings');
     settings.classList.remove('modal-parent');
     settings.removeAttribute('inert');
     if (settings.open) open.focus();

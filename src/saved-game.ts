@@ -13,6 +13,7 @@ export interface SavedGame {
   careerBanked?: boolean;
   careerClean?: boolean;
   careerRacks?: [number, number];
+  forfeit?: { peerName: string; result: string };
 }
 export function validGame(value: unknown): value is SavedGame {
   if (!value || typeof value !== 'object') return false;
@@ -27,6 +28,8 @@ export function validGame(value: unknown): value is SavedGame {
     && (s.careerClean === undefined || typeof s.careerClean === 'boolean')
     && (s.careerRacks === undefined || Array.isArray(s.careerRacks) && s.careerRacks.length === 2
       && s.careerRacks.every(wins => Number.isInteger(wins) && wins >= 0 && wins <= 2) && s.careerRacks[0] + s.careerRacks[1] <= 3)
+    && (s.forfeit === undefined || s.forfeit !== null && s.onlineMode && s.finished && s.winner !== undefined
+      && typeof s.forfeit.peerName === 'string' && typeof s.forfeit.result === 'string')
     && (s.calledPocket === undefined || Number.isInteger(s.calledPocket) && s.calledPocket >= 0 && s.calledPocket < 6)
     && (s.turn === 0 || s.turn === 1) && (s.winner === undefined || s.winner === 0 || s.winner === 1)
     && Array.isArray(s.balls) && s.balls.length === (s.snooker ? 22 : 16) && s.balls.every(b => b && typeof b.pocketed === 'boolean' && finite(b.x, 0.8) && finite(b.z, 1.5) && [b.vx, b.vz, b.spinX, b.spinZ].every(v => finite(v, 12)) && finite(b.sideSpin, 200) && validOrientation(b.orientation))

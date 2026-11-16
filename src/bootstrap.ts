@@ -18,7 +18,7 @@ async function start() {
   if (url.searchParams.get('table') === '3d') {
     setTvPreference(false, false);
     url.searchParams.delete('table');
-    try { history.replaceState(null, '', url.href); } catch {}
+    try { history.replaceState(history.state, '', url.href); } catch {}
   }
   if (shouldAskAboutTv(navigator.userAgent, tvPreference())) {
     const dialog = document.querySelector<HTMLDialogElement>('#tvDetection')!;

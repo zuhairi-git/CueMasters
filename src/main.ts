@@ -17,6 +17,7 @@ import { careerCityStatus, careerCue, careerCues, careerDifficulty, careerGoal, 
 import { cityFinishes, tableFinish } from './table-finishes';
 import { challengeLayout, completeChallenge, getChallenge } from './challenges';
 import { clearSession, labelGame, launch, saveSession } from './home';
+import { savedPage, savePage, savePagePanel } from './page-state';
 import type { Difficulty } from './difficulty';
 import { groupOf, poolTargets, resolvePoolShot, snookerRemainingPoints, type Groups } from './pool-rules';
 import { validGame, type SavedGame } from './saved-game';
@@ -804,9 +805,10 @@ function finishShot() {
     const clear = challenge.kind === 'clear';
     const legal = !scratch && (clear
       ? firstContact !== undefined && shotTargets.includes(firstContact) && potted.every(index => shotTargets.includes(index))
-      : firstContact === 1 && potted.every(index => index === 1));
+      : firstContact === (challenge.kind === 'combo' ? 2 : 1) && potted.every(index => index === 1));
+    const needsCushion = challenge.kind === 'bank' || challenge.kind === 'kick';
     const won = legal && (clear ? legalTargets().length === 0 : challenge.kind === 'contact' ||
-      potted.includes(1) && (challenge.kind !== 'bank' || careerBanked));
+      potted.includes(1) && (!needsCushion || careerBanked));
     if (clear && legal && potted.length && !won) {
       showScore();
       showReadyStatus();
@@ -1553,6 +1555,8 @@ async function startSettingsMatch() {
   mode = { kind: 'training', game: currentGame(), opponent: versusComputer ? 'computer' : 'solo', difficulty };
   labelGame(mode);
   resetMatch();
+  saveGame();
+  savePage({ game: currentGame(), view: 'match' });
 }
 document.querySelector<HTMLButtonElement>('#reset')!.onclick = () => {
   if (isTournament() || onlineMode && (online.seat !== 0 || !online.active)) return;
@@ -1564,7 +1568,10 @@ rerackDialog.addEventListener('close', () => {
   const fromSettings = pendingSettingsMatch;
   pendingSettingsMatch = false;
   if (rerackDialog.returnValue !== 'rerack') {
-    if (fromSettings) settings.showModal();
+    if (fromSettings) {
+      settings.showModal();
+      savePagePanel('game-settings');
+    }
     return;
   }
   rerackDialog.returnValue = '';
@@ -1605,7 +1612,9 @@ snookerContinueBtn.onclick = () => {
 };
 const saveAndExit = document.querySelector<HTMLButtonElement>('#saveAndExit')!;
 const keepPlaying = document.querySelector<HTMLButtonElement>('#keepPlaying')!;
-function openEndGame() {
+let endGameToMain = false;
+function openEndGame(mainScreen = false) {
+  endGameToMain = mainScreen;
   endGameStatus.hidden = true;
   saveAndExit.hidden = onlineMode || mode.kind === 'casual' || finished;
   document.querySelector<HTMLElement>('#endGameDescription')!.textContent =
@@ -1614,10 +1623,20 @@ function openEndGame() {
       : t(saveAndExit.hidden ? 'You’ll return to game modes. Your current game will be cleared.' : 'Save your current game for later or end it.');
   endGameDialog.showModal();
 }
-document.querySelector<HTMLButtonElement>('#endGame')!.onclick = openEndGame;
-document.querySelector<HTMLButtonElement>('#leaveOnline')!.onclick = openEndGame;
+document.querySelector<HTMLButtonElement>('#endGame')!.onclick = () => openEndGame();
+document.querySelector<HTMLButtonElement>('#leaveOnline')!.onclick = () => openEndGame();
+for (const logo of document.querySelectorAll<HTMLButtonElement>('[data-game-home]')) {
+  logo.onclick = () => {
+    if (onlineMode && !awaitingOnline && !finished) {
+      setMobileMenu(false);
+      openEndGame(true);
+    } else {
+      void leaveGame({ mainScreen: true, keepMatch: !onlineMode && mode.kind !== 'casual' && !finished });
+    }
+  };
+}
 endGameDialog.addEventListener('cancel', event => { if (confirmEndGame.disabled) event.preventDefault(); });
-async function leaveGame(openShop = false, keepMatch = false) {
+async function leaveGame({ openShop = false, keepMatch = false, mainScreen = false } = {}) {
   if (leavingMatch) return;
   leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = saveAndExit.disabled = true;
   try {
@@ -1629,23 +1648,25 @@ async function leaveGame(openShop = false, keepMatch = false) {
     home.searchParams.delete('join');
     home.searchParams.delete('table');
     home.searchParams.set('game', currentGame());
-    if (!keepMatch && 'city' in mode) home.searchParams.set('circuit', mode.kind);
-    if (!keepMatch && mode.kind === 'challenge') home.searchParams.set('circuit', 'challenges');
-    if (!keepMatch && mode.kind === 'computer' && careerCityStatus(mode.city, careerProgress(mode.game), mode.game) !== 'Completed') home.searchParams.set('careerCity', mode.city.id);
+    if (!keepMatch && !mainScreen) {
+      if ('city' in mode) home.searchParams.set('circuit', mode.kind);
+      if (mode.kind === 'challenge') home.searchParams.set('circuit', 'challenges');
+      if (mode.kind === 'computer' && careerCityStatus(mode.city, careerProgress(mode.game), mode.game) !== 'Completed') home.searchParams.set('careerCity', mode.city.id);
+    }
     if (openShop) home.searchParams.set('careerShop', '1');
     location.replace(home.href);
   } catch {
-    if (!endGameDialog.open) endGameDialog.showModal();
+    if (!endGameDialog.open) openEndGame(mainScreen);
     endGameStatus.textContent = t('Could not reach the online game. Try again to end it.');
     endGameStatus.hidden = false;
     leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = saveAndExit.disabled = false;
     confirmEndGame.focus();
   }
 }
-saveAndExit.onclick = () => { void leaveGame(false, true); };
-confirmEndGame.onclick = () => { void leaveGame(); };
-document.querySelector<HTMLButtonElement>('#noticeCircuit')!.onclick = () => confirmEndGame.click();
-document.querySelector<HTMLButtonElement>('#noticeShop')!.onclick = () => { void leaveGame(true); };
+saveAndExit.onclick = () => { void leaveGame({ keepMatch: true }); };
+confirmEndGame.onclick = () => { void leaveGame({ mainScreen: endGameToMain }); };
+document.querySelector<HTMLButtonElement>('#noticeCircuit')!.onclick = () => { void leaveGame(); };
+document.querySelector<HTMLButtonElement>('#noticeShop')!.onclick = () => { void leaveGame({ openShop: true }); };
 function nextCareerStage() {
   if (mode.kind !== 'computer' || winner !== 0) return -1;
   const city = mode.city;
@@ -1679,8 +1700,10 @@ document.querySelector<HTMLButtonElement>('#openSettings')!.onclick = () => {
   offlinePlayerTwoNameInput.value = offlinePlayerTwoName;
   syncOfflinePlayerNameVisibility();
   settings.showModal();
+  savePagePanel('game-settings');
 };
 settings.addEventListener('close', () => {
+  if (!settings.open) savePagePanel(undefined);
   if (settings.returnValue !== 'start' || isTournament()) return;
   settings.returnValue = '';
   if (needsRerackConfirmation()) confirmNewGame(true);
@@ -1805,8 +1828,10 @@ function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = fals
   else status.textContent = t('Balls in motion');
 }
 function saveGame() {
-  if (returningHome || wonByForfeit) return;
-  saveSession(mode, gameState(), awaitingOnline);
+  if (returningHome) return;
+  const state = gameState();
+  if (wonByForfeit) state.forfeit = { peerName: online.peerName, result: circuitMessage };
+  saveSession(mode, state, awaitingOnline);
 }
 function recordComputerResult() {
   if (mode.kind === 'computer') {
@@ -1815,8 +1840,10 @@ function recordComputerResult() {
     showCareerProfile();
   }
 }
-function trackCareerRail(ball: typeof balls[number]) {
-  if (activeChallenge()?.kind === 'bank' && ball === balls[1]) careerBanked = true;
+function trackCareerRail(ball: typeof balls[number], cueContactMade: boolean) {
+  const kind = activeChallenge()?.kind;
+  if (kind === 'bank' && ball === balls[1] ||
+      kind === 'kick' && ball === balls[0] && firstContact === undefined && !cueContactMade) careerBanked = true;
 }
 online.onPaired = (resume, cityId) => {
   const city = cities.find(entry => entry.id === cityId);
@@ -1833,6 +1860,9 @@ online.onPaired = (resume, cityId) => {
   if (validGame(resume)) applyGame(resume);
   else resetMatch();
   saveGame();
+  const url = new URL(location.href);
+  url.searchParams.delete('join');
+  savePage({ game: currentGame(), view: 'match', panel: savedPage()?.panel }, url);
 };
 online.onCircuitResult = result => {
   if (mode.kind === 'online' && result) {
@@ -1902,7 +1932,7 @@ online.onEnded = winningSeat => {
     winner = winningSeat;
     rolling = false;
     strike = 0;
-    clearSession(currentGame());
+    saveGame();
     showScore();
     showReadyStatus();
   } else if (online.seat === undefined) { onlineMode = false; resetMatch(); }
@@ -1910,6 +1940,12 @@ online.onEnded = winningSeat => {
 };
 if (launch.state) {
   onlineMode = launch.state.onlineMode || mode.kind === 'online';
+  if (launch.state.forfeit) {
+    wonByForfeit = true;
+    online.seat = launch.state.winner;
+    online.peerName = launch.state.forfeit.peerName;
+    circuitMessage = launch.state.forfeit.result;
+  }
   applyTableFinish();
   applyGame(launch.state);
   if (mode.kind === 'computer' && finished) recordComputerResult();
@@ -1922,9 +1958,12 @@ function showCareerProfile() {
   profile.textContent = t('{rank} · {points} career points', { rank: t(careerRank(points)), points });
 }
 showCareerProfile();
-if (onlineMode || mode.kind === 'casual') online.open();
+if (!wonByForfeit && (onlineMode || mode.kind === 'casual')) online.open();
 if (awaitingOnline) void online.findMatch();
+const restoreSettings = launch.state && savedPage()?.panel === 'game-settings';
 saveGame();
+savePage({ game: currentGame(), view: 'match' });
+if (restoreSettings) document.getElementById('openSettings')?.click();
 window.addEventListener('pagehide', saveGame);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
 showScore();

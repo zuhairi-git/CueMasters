@@ -243,7 +243,9 @@ function dropIntoPocket(ball: Ball, sound?: Sound) {
   return false;
 }
 
-function substep(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball) => void) {
+type RailContact = (ball: Ball, cueContactMade: boolean) => void;
+
+function substep(balls: Ball[], dt: number, firstContact?: number, sound?: Sound, onRail?: RailContact) {
   for (const ball of balls) {
     if (ball.pocketed) continue;
     if (dropIntoPocket(ball, sound)) continue;
@@ -256,7 +258,6 @@ function substep(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball)
     ball.z += ball.vz * dt;
     dropIntoPocket(ball, sound);
   }
-  let firstContact: number | undefined;
   // Revisit contacts so a packed rack transmits impulses during the same step.
   for (let iteration = 0; iteration < 6; iteration++) {
     for (let i = 0; i < balls.length; i++) {
@@ -289,7 +290,7 @@ function substep(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball)
     for (const ball of balls) {
       if (ball.pocketed || dropIntoPocket(ball, sound)) continue;
       for (const cushion of cushions) {
-        if (cushionContact(ball, cushion, sound) && !cushion.jaw) onRail?.(ball);
+        if (cushionContact(ball, cushion, sound) && !cushion.jaw) onRail?.(ball, firstContact !== undefined);
       }
       if (dropIntoPocket(ball, sound)) continue;
       guardBall(ball);
@@ -298,7 +299,7 @@ function substep(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball)
   return firstContact;
 }
 
-export function step(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: Ball) => void) {
+export function step(balls: Ball[], dt: number, sound?: Sound, onRail?: RailContact) {
   if (!Number.isFinite(dt) || dt <= 0) return;
   dt = Math.min(dt, 0.1);
   for (const ball of balls) guardBall(ball);
@@ -309,8 +310,7 @@ export function step(balls: Ball[], dt: number, sound?: Sound, onRail?: (ball: B
   const count = Math.max(1, Math.ceil(dt / Math.min(1 / 300, radius * 0.2 / Math.max(fastest, 0.01))));
   let firstContact: number | undefined;
   for (let i = 0; i < count; i++) {
-    const contact = substep(balls, dt / count, sound, onRail);
-    firstContact ??= contact;
+    firstContact = substep(balls, dt / count, firstContact, sound, onRail);
   }
   return firstContact;
 }

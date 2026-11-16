@@ -104,6 +104,9 @@ test('Billiard and Snooker track progress and challenge completions separately',
 });
 
 test('challenge balls do not overlap and the starter cue can complete the bank shot', () => {
+  const objectives = game => challenges.filter(challenge => challenge.game === game)
+    .map(({ kind, attempts }) => [kind, attempts]);
+  assert.deepEqual(objectives('pool'), objectives('snooker'));
   for (const challenge of challenges) {
     const active = challengeLayout(challenge).filter(ball => !ball.pocketed);
     for (const [i, ball] of active.entries()) {
@@ -123,4 +126,24 @@ test('challenge balls do not overlap and the starter cue can complete the bank s
   assert.equal(banked, true);
   assert.equal(balls[1].pocketed, true);
   assert.equal(balls[0].pocketed, false);
+});
+
+test('both kick pots are reachable with a cue-ball cushion contact before the red or solid', () => {
+  for (const [game, angle] of [['pool', 1.32], ['snooker', Math.PI - 1.32]]) {
+    const balls = challengeLayout(getChallenge(game, 'kick-pot'));
+    let first;
+    let kick = false;
+    strikeBall(balls[0], Math.cos(angle), Math.sin(angle), shotSpeed(1));
+    for (let tick = 0; tick < 3000 && balls.some(isMoving); tick++) {
+      const contact = step(balls, 1 / 300, undefined, (ball, cueContactMade) => {
+        if (ball === balls[0] && first === undefined && !cueContactMade) kick = true;
+      });
+      first ??= contact;
+    }
+    assert.equal(first, 1, game);
+    assert.equal(kick, true, game);
+    assert.equal(balls[1].pocketed, true, game);
+    assert.equal(balls[0].pocketed, false, game);
+    assert.equal(balls[game === 'pool' ? 9 : 16].pocketed, false, game);
+  }
 });

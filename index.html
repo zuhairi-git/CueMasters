@@ -89,7 +89,7 @@
     <div class="background-art home-backdrop" data-background="sapphire" aria-hidden="true"></div>
     <div class="city-picker-content">
       <div class="home-header">
-        <img class="brand-logo city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker">
+        <button class="brand-home" id="mainScreenLogo" type="button" aria-label="Cue Master home" title="Return to game modes"><img class="brand-logo city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt=""></button>
         <button class="avatar-choice home-avatar" id="openAppSettings" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="appSettings"></button>
       </div>
       <div id="homeModes">
@@ -150,7 +150,7 @@
   </section>
   <header class="game-hud">
     <div class="game-heading">
-      <strong class="game-brand"><img class="brand-logo" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker"><span id="gameCity" class="game-city"></span></strong>
+      <strong class="game-brand"><button class="brand-home" type="button" data-game-home aria-label="Cue Master home" title="Return to game modes"><img class="brand-logo" src="/billiard-logo.svg" width="300" height="72" alt=""></button><span id="gameCity" class="game-city"></span></strong>
       <span id="shotClock" role="timer" aria-label="Online time remaining" hidden>30s</span>
       <small id="status" role="status">Tap or drag either side of the cue ball to aim.</small>
       <small id="careerObjective" hidden></small>
@@ -171,7 +171,7 @@
   <dialog id="mobileGameMenu" class="ui-dialog game-menu" aria-labelledby="gameMenuTitle">
     <div class="dialog-body">
     <div class="game-menu-heading">
-      <div class="settings-heading"><img class="brand-logo menu-brand" src="/billiard-logo.svg" width="300" height="72" alt="Cue Master · Pool and Snooker"><h2 id="gameMenuTitle">Game menu</h2></div>
+      <div class="settings-heading"><button class="brand-home" type="button" data-game-home aria-label="Cue Master home" title="Return to game modes"><img class="brand-logo menu-brand" src="/billiard-logo.svg" width="300" height="72" alt=""></button><h2 id="gameMenuTitle">Game menu</h2></div>
       <button class="ui-button game-menu-close" id="closeGameMenu" type="button" aria-label="Close game menu" autofocus><span aria-hidden="true">×</span></button>
     </div>
     <div id="gameMenuActions"></div>
