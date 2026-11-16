@@ -125,7 +125,7 @@ const zoomFit = document.querySelector<HTMLButtonElement>('#zoomFit')!;
 const panButton = document.querySelector<HTMLButtonElement>('#panTable')!;
 let cameraZoom = 1;
 let panToggled = false;
-let spaceHeld = false;
+let panKeyHeld = false;
 let panDrag: { canvas: HTMLCanvasElement; id: number; x: number; y: number } | undefined;
 // Start fitted; zoom remains adjustable during this visit.
 function zoomFov() { return 2 * Math.atan(Math.tan(1.1 / 2) / cameraZoom); }
@@ -951,6 +951,8 @@ let placement: "break" | "foul" | undefined = "break";
 let shotPower = 0;
 let tipX = 0, tipY = 0;
 let pull = 0;
+const minimumShotPower = 0.08;
+let spaceCharge: number | 'locked' | undefined;
 let strokePointer: number | undefined;
 let strokeStart = 0;
 const tip = document.querySelector<HTMLButtonElement>("#tip")!;
@@ -973,7 +975,8 @@ const powerValue = document.querySelector<HTMLOutputElement>("#powerValue")!;
 function updateStrokeDirection() {
   const vertical = document.body.classList.contains('vertical-controls') && !mobileLayout.matches;
   stroke.setAttribute('aria-label', t(vertical ? 'Pull the cue down and release to shoot' : 'Pull the cue left and release to shoot'));
-  stroke.setAttribute('title', t(vertical ? 'Pull down and release to shoot' : 'Pull left and release to shoot'));
+  const pointerHint = t(vertical ? 'Pull down and release to shoot' : 'Pull left and release to shoot');
+  stroke.title = pointerHint + ' · ' + t('Hold Space to charge, release to lock, then press Space to shoot');
 }
 function showPull() {
   const percent = Math.round(pull * 100);
@@ -1037,6 +1040,7 @@ function fire(strength: number) {
     if (!tvEnabled) setPocketPickerOpen(true);
     return;
   }
+  if (spaceCharge !== undefined) clearStroke();
   aimLocked = false;
   tableStroke = undefined;
   if (onlineMode && online.seat === 1) {
@@ -1055,6 +1059,7 @@ function fire(strength: number) {
 stroke.onpointerdown = event => {
   if (!event.isPrimary || event.button !== 0 || rolling || strike || !canControl() || finished) return;
   if (strokePointer !== undefined || aimPointer !== undefined) return;
+  if (spaceCharge !== undefined) clearStroke();
   strokePointer = event.pointerId;
   strokeStart = document.body.classList.contains('vertical-controls') && !mobileLayout.matches ? event.clientY : event.clientX;
   stroke.setPointerCapture(event.pointerId);
@@ -1068,6 +1073,7 @@ stroke.onpointermove = event => {
   if (strokePointer === event.pointerId) updatePull(event);
 };
 function clearStroke() {
+  spaceCharge = undefined;
   strokePointer = undefined;
   pull = 0;
   showPull();
@@ -1077,7 +1083,7 @@ stroke.onpointerup = event => {
   updatePull(event);
   const strength = pull;
   clearStroke();
-  if (strength >= 0.08) fire(strength);
+  if (strength >= minimumShotPower) fire(strength);
 };
 stroke.onlostpointercapture = event => {
   if (strokePointer === event.pointerId) clearStroke();
@@ -1227,8 +1233,8 @@ function endPanDrag() {
 }
 function syncPanControls() {
   const available = canPanTable();
-  if (!available) panToggled = spaceHeld = false;
-  const active = panToggled || spaceHeld;
+  if (!available) panToggled = panKeyHeld = false;
+  const active = panToggled || panKeyHeld;
   if (!active) endPanDrag();
   panButton.disabled = !available;
   panButton.setAttribute('aria-pressed', String(active));
@@ -1255,21 +1261,51 @@ panButton.onclick = () => {
   panToggled = !panToggled;
   syncPanControls();
 };
+function canUseSpaceShot() {
+  return !tvEnabled && !viewMode && !awaitingOnline && !finished && !rolling && !strike && canControl()
+    && !document.querySelector('dialog[open]');
+}
+function updateSpaceCharge(startedAt: number) {
+  const strength = Math.min(1, Math.max(minimumShotPower, (performance.now() - startedAt) / 1200));
+  if (strength === pull) return;
+  pull = strength;
+  showPull();
+}
 document.addEventListener('keydown', event => {
-  if (event.code !== 'Space' || event.defaultPrevented || !canPanTable() || event.ctrlKey || event.altKey || event.metaKey || document.querySelector('dialog[open]')) return;
-  if ((event.target as Element)?.closest('input:not([type="range"]), select, textarea, [contenteditable], button:focus-visible, a:focus-visible')) return;
+  if (event.code !== 'Space' || event.defaultPrevented || event.ctrlKey || event.altKey || event.metaKey || document.querySelector('dialog[open]')) return;
+  if (event.target instanceof Element && event.target.closest('input:not([type="range"]), select, textarea, [contenteditable], button:focus-visible:not(#stroke), a:focus-visible')) return;
+  if (event.shiftKey) {
+    if (!canPanTable() || typeof spaceCharge === 'number') return;
+    event.preventDefault();
+    if (event.repeat) return;
+    panKeyHeld = true;
+    syncPanControls();
+    return;
+  }
+  if (!canUseSpaceShot() || strokePointer !== undefined || aimPointer !== undefined || panDrag || panKeyHeld) return;
   event.preventDefault();
-  if (spaceHeld) return;
-  spaceHeld = true;
-  syncPanControls();
+  if (event.repeat) return;
+  if (spaceCharge === 'locked') fire(pull);
+  else if (spaceCharge === undefined) {
+    spaceCharge = performance.now();
+    updateSpaceCharge(spaceCharge);
+  }
 });
 document.addEventListener('keyup', event => {
-  if (event.code !== 'Space' || !spaceHeld) return;
-  spaceHeld = false;
-  syncPanControls();
+  if (event.code !== 'Space') return;
+  if (panKeyHeld) {
+    panKeyHeld = false;
+    syncPanControls();
+  }
+  if (typeof spaceCharge !== 'number') return;
+  event.preventDefault();
+  if (!canUseSpaceShot()) { clearStroke(); return; }
+  updateSpaceCharge(spaceCharge);
+  spaceCharge = 'locked';
 });
 window.addEventListener('blur', () => {
-  spaceHeld = false;
+  if (spaceCharge !== undefined) clearStroke();
+  panKeyHeld = false;
   endPanDrag();
   syncPanControls();
 });
@@ -1348,7 +1384,7 @@ for (const controlCanvas of [canvas, tvCanvas]) {
   controlCanvas.addEventListener('contextmenu', event => event.preventDefault());
   controlCanvas.addEventListener('pointerdown', event => {
     if (panDrag || strokePointer !== undefined || aimPointer !== undefined || !event.isPrimary || event.button !== 0) return;
-    if (canPanTable() && (panToggled || spaceHeld)) {
+    if (canPanTable() && (panToggled || panKeyHeld)) {
       event.preventDefault();
       lastCueTap = 0;
       panDrag = { canvas: controlCanvas, id: event.pointerId, x: event.clientX, y: event.clientY };
@@ -1383,6 +1419,7 @@ for (const controlCanvas of [canvas, tvCanvas]) {
     controlCanvas.setPointerCapture(event.pointerId);
     movingCueBall = false;
     if (aimLocked) {
+      if (spaceCharge !== undefined) clearStroke();
       const viewport = camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight());
       const origin = new Vector3(balls[0].x, radius, balls[0].z);
       const from = uses2dTable() ? tvTable!.project(origin.x, origin.z) : Vector3.Project(origin, Matrix.Identity(), scene.getTransformMatrix(), viewport);
@@ -1439,7 +1476,7 @@ for (const controlCanvas of [canvas, tvCanvas]) {
       const strength = pull;
       tableStroke = undefined;
       clearStroke();
-      if (strength >= 0.08) fire(strength);
+      if (strength >= minimumShotPower) fire(strength);
       return;
     }
     if (aimTargetPointer === undefined) aimAtPointer(event);
@@ -1452,8 +1489,10 @@ for (const controlCanvas of [canvas, tvCanvas]) {
     aimPointer = undefined;
     aimTargetPointer = undefined;
     movingCueBall = false;
-    tableStroke = undefined;
-    clearStroke();
+    if (tableStroke) {
+      tableStroke = undefined;
+      clearStroke();
+    }
   });
 }
 
@@ -1776,6 +1815,7 @@ function gameState(): SavedGame {
       : mode.kind === 'challenge' ? { careerAttempts, careerBanked } : {}) };
 }
 function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = false) {
+  if (!preserveLocalAim && spaceCharge !== undefined) clearStroke();
   if (animatePockets && (rolling || s.rolling || strike || s.strike)) {
     s.balls.forEach((ball, index) => {
       if (ball.pocketed && balls[index] && !balls[index].pocketed) {
@@ -1914,7 +1954,7 @@ online.onInput = value => {
       !balls.slice(1).some(b => !b.pocketed && Math.hypot(b.x - x, b.z - z) < 2 * radius + 0.001);
     if (legal) Object.assign(balls[0], { x, z });
   }
-  if (input.action === 'shoot' && typeof input.strength === 'number' && Number.isFinite(input.strength) && input.strength >= 0.08 && input.strength <= 1) fire(input.strength);
+  if (input.action === 'shoot' && typeof input.strength === 'number' && Number.isFinite(input.strength) && input.strength >= minimumShotPower && input.strength <= 1) fire(input.strength);
 };
 online.onDeparture = () => {
   rolling = false;
@@ -2226,6 +2266,10 @@ function updateGameNotice() {
   document.querySelector<HTMLElement>('#noticeDetail')!.textContent = isTournament() ? circuitMessage || t('Saving tournament result…') : wonByForfeit ? t('Your opponent left and their timer expired.') : onlineMode && online.seat !== 0 ? t('What a game! Waiting for the host to start the next round.') : winningPlayer === undefined ? t('A close match. Time for a rematch?') : t('What a finish. Ready for another round?');
 }
 engine.runRenderLoop(() => {
+  if (spaceCharge !== undefined) {
+    if (!canUseSpaceShot()) clearStroke();
+    else if (typeof spaceCharge === 'number') updateSpaceCharge(spaceCharge);
+  }
   updateTvControls();
   updateGameNotice();
   const clock = document.querySelector<HTMLElement>('#shotClock')!;

@@ -66,6 +66,8 @@ lightweight Canvas 2D renderer. All views use the same physics and match state.
 - Aim by tapping or dragging on the felt. Double-tap/click the cue ball, or use **Lock aim**,
   then drag opposite the cue direction on the table and release to shoot. Power is shared
   with the bottom cue control. Every shot unlocks aim automatically.
+- On a keyboard, hold **Space** to build shot power, release to lock it, then press **Space**
+  again to shoot.
 - The dashed guide predicts the object ball's initial path and highlights an aligned pocket.
   It stops at another ball or a cushion; it does not predict subsequent banks or full-shot outcomes.
   **Shot guides** in Settings turns all guides on/off, defaults to on, and remembers the choice.
@@ -73,7 +75,7 @@ lightweight Canvas 2D renderer. All views use the same physics and match state.
   unfinished shot as well as the ball positions, players, turn, groups and scores.
 - The camera ruler on the right zooms from 0.65× to 2.5×. Drag its marker, use +/−,
   or tap the magnification to return to the fitted table view. When zoomed in, tap
-  the hand and drag the table, or hold Space and drag with the mouse.
+  the hand and drag the table, or hold **Shift + Space** and drag with the mouse.
 - The centred player panels show the assigned groups and a stack of numbered balls.
   Pocketed balls are bright; balls still on the table appear faint. Ball in hand and
   the winning player also have explicit banners.
