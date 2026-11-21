@@ -14,8 +14,10 @@ const launchStarted = performance.now();
 // A broken initialization must never leave an opaque loading screen forever.
 window.setTimeout(() => hideCueLoader(), 8000);
 let loadingDepth = 0;
+let loaderTimer: number | undefined;
 export function showCueLoader(message = 'Loading…') {
   loadingDepth++;
+  if (loaderTimer !== undefined) window.clearTimeout(loaderTimer);
   if (!loader) return;
   loader.classList.remove('cue-loader--leaving');
   loader.hidden = false;
@@ -33,6 +35,9 @@ async function start() {
   installDialogDismissal();
   installAppSettings();
   setupPwa();
+  // The home screen waits for a player choice. Never keep its loader up
+  // while awaiting that interaction.
+  window.setTimeout(() => hideCueLoader(), Math.max(0, 3000 - (performance.now() - launchStarted)));
   await chooseGame();
   const url = new URL(location.href);
   if (url.searchParams.get('table') === '3d') {
@@ -70,8 +75,6 @@ async function start() {
     });
   }
   await import('./main');
-  // Always display the initial branded loader for at least three seconds.
-  await new Promise<void>(resolve => window.setTimeout(resolve, Math.max(0, 3000 - (performance.now() - launchStarted))));
   hideCueLoader();
 }
 
