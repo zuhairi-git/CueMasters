@@ -8,6 +8,24 @@ import { t } from './i18n';
 import { installAppSettings, setTvPreference, tvPreference } from './app-settings';
 import { setupPwa } from './pwa';
 
+// Reusable for future async screens: showCueLoader('Loading match…'); hideCueLoader().
+const loader = document.querySelector<HTMLElement>('#cueLoader');
+const launchStarted = performance.now();
+let loadingDepth = 0;
+export function showCueLoader(message = 'Loading…') {
+  loadingDepth++;
+  if (!loader) return;
+  loader.classList.remove('cue-loader--leaving');
+  loader.hidden = false;
+  const label = loader.querySelector<HTMLElement>('.cue-loader__label');
+  if (label) label.textContent = message;
+}
+export function hideCueLoader() {
+  loadingDepth = Math.max(0, loadingDepth - 1);
+  if (loadingDepth || !loader) return;
+  loader.classList.add('cue-loader--leaving');
+  window.setTimeout(() => { if (!loadingDepth) loader.hidden = true; }, 400);
+}
 async function start() {
   installDialogFallback();
   installDialogDismissal();
@@ -49,8 +67,12 @@ async function start() {
     });
   }
   await import('./main');
+  // Always display the initial branded loader for at least three seconds.
+  await new Promise<void>(resolve => window.setTimeout(resolve, Math.max(0, 3000 - (performance.now() - launchStarted))));
+  hideCueLoader();
 }
 
 void start().catch(() => {
+  hideCueLoader();
   document.querySelector<HTMLElement>('#status')!.textContent = t('The game could not start. Please reload this page.');
 });
