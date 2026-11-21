@@ -1,3 +1,4 @@
+import { showCueLoader, hideCueLoader } from './bootstrap';
 import { t } from './i18n';
 import { avatarMarkup, playerAvatar } from './player-avatars';
 import { cueArtwork } from './svg-cue';
@@ -1583,9 +1584,10 @@ async function startSettingsMatch() {
   if (leavingMatch || isTournament()) return;
   if (onlineMode) {
     leavingMatch = true;
+    showCueLoader('Preparing your match…');
     try { await online.leave(!wonByForfeit); }
     catch { status.textContent = t('Could not end the online game. Try again.'); return; }
-    finally { leavingMatch = false; }
+    finally { leavingMatch = false; hideCueLoader(); }
     onlineMode = false;
   }
   snooker = select('game').value === 'snooker';
@@ -1678,6 +1680,7 @@ endGameDialog.addEventListener('cancel', event => { if (confirmEndGame.disabled)
 async function leaveGame({ openShop = false, keepMatch = false, mainScreen = false } = {}) {
   if (leavingMatch) return;
   leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = saveAndExit.disabled = true;
+  showCueLoader('Returning to the main screen…');
   try {
     await online.leave(onlineMode && !awaitingOnline && !wonByForfeit);
     if (keepMatch) saveGame();
@@ -1695,6 +1698,7 @@ async function leaveGame({ openShop = false, keepMatch = false, mainScreen = fal
     if (openShop) home.searchParams.set('careerShop', '1');
     location.replace(home.href);
   } catch {
+    hideCueLoader();
     if (!endGameDialog.open) openEndGame(mainScreen);
     endGameStatus.textContent = t('Could not reach the online game. Try again to end it.');
     endGameStatus.hidden = false;
