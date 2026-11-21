@@ -15,21 +15,27 @@
   <link rel="stylesheet" href="/src/hud.css">
   <link rel="stylesheet" href="/src/city-picker.css">
 <style>
-/* Accessible launch overlay; the same component supports later in-app loading. */
+/* Shared startup and in-app spinner. */
 #cueLoader { position:fixed; inset:0; z-index:2147483647; display:grid; place-items:center; background:#080f20; color:#f3f7ff; transition:opacity .38s ease,visibility .38s ease; }
 #cueLoader[hidden] { display:none; }
 #cueLoader.cue-loader--leaving { opacity:0; visibility:hidden; pointer-events:none; }
-.cue-loader__card { width:min(76vw,290px); min-height:142px; border:1px solid #ffffff2c; border-radius:24px; background:linear-gradient(150deg,#182c44,#0e182b); box-shadow:0 24px 65px #0008; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; }
-.cue-loader__orbit { position:relative; width:72px; height:72px; border:3px solid #ffffff20; border-top-color:#63ddf1; border-left-color:#63ddf1; border-radius:22px; animation:cue-loader-ccw 1.5s linear infinite; }
-.cue-loader__cue { position:absolute; width:76px; height:5px; border-radius:8px; background:linear-gradient(90deg,#e7f3fa 0 8%,#8b5d3b 8% 80%,#dfae69); transform:rotate(-35deg); animation:cue-loader-settle 1.8s ease-in-out infinite; box-shadow:0 2px 8px #0007; }
+.cue-loader__card { width:min(76vw,290px); min-height:160px; border:1px solid #ffffff2c; border-radius:24px; background:linear-gradient(150deg,#182c44,#0e182b); box-shadow:0 24px 65px #0008; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+.cue-loader__spinner { position:relative; width:78px; height:78px; display:grid; place-items:center; }
+.cue-loader__spinner::before { content:""; position:absolute; inset:0; border:4px solid #ffffff1e; border-top-color:#63ddf1; border-right-color:#63ddf180; border-radius:50%; animation:cue-loader-spin 1s linear infinite reverse; }
+.cue-loader__balls { position:relative; width:36px; height:36px; }
+.cue-loader__ball { position:absolute; inset:0; display:grid; place-items:center; border-radius:50%; font:700 15px/1 system-ui,sans-serif; color:white; box-shadow:inset -5px -6px 9px #0005, inset 3px 3px 6px #fff4, 0 3px 9px #0007; opacity:0; transform:scale(.55) translateY(9px); animation:cue-loader-ball 3s ease-in-out infinite; }
+.cue-loader__ball--one { background:radial-gradient(circle at 32% 25%,#ffe59a,#f4b51d 62%,#a46b05); color:#30230b; animation-delay:0s; }
+.cue-loader__ball--two { background:radial-gradient(circle at 32% 25%,#9ad2ff,#226fd5 62%,#153b87); animation-delay:1s; }
+.cue-loader__ball--three { background:radial-gradient(circle at 32% 25%,#ffadb4,#d82940 62%,#801628); animation-delay:2s; }
+.cue-loader__ball span { width:17px; height:17px; display:grid; place-items:center; border-radius:50%; background:#f9f9f5; color:#182235; font-size:10px; }
 .cue-loader__label { font:600 12px/1.4 system-ui,sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#b9cde2; }
-@keyframes cue-loader-ccw { to { transform:rotate(-360deg); } }
-@keyframes cue-loader-settle { 0%,100% { transform:translateX(-6px) rotate(-35deg); } 50% { transform:translateX(6px) rotate(-35deg); } }
-@media (prefers-reduced-motion:reduce) { .cue-loader__orbit,.cue-loader__cue { animation:none; } #cueLoader { transition:none; } }
+@keyframes cue-loader-spin { to { transform:rotate(-360deg); } }
+@keyframes cue-loader-ball { 0%,3% { opacity:0; transform:scale(.55) translateY(9px); } 10%,25% { opacity:1; transform:scale(1) translateY(0); } 32%,100% { opacity:0; transform:scale(.65) translateY(-8px); } }
+@media (prefers-reduced-motion:reduce) { .cue-loader__spinner::before,.cue-loader__ball { animation:none; } .cue-loader__ball--one { opacity:1; transform:none; } #cueLoader { transition:none; } }
 </style>
 </head>
 <body>
-<div id="cueLoader" role="status" aria-live="polite" aria-label="Loading Cue Master"><div class="cue-loader__card"><div class="cue-loader__orbit" aria-hidden="true"></div><div class="cue-loader__cue" aria-hidden="true"></div><span class="cue-loader__label">Setting the table</span></div></div>
+<div id="cueLoader" role="status" aria-live="polite" aria-label="Loading Cue Master"><div class="cue-loader__card"><div class="cue-loader__spinner" aria-hidden="true"><div class="cue-loader__balls"><div class="cue-loader__ball cue-loader__ball--one"><span>1</span></div><div class="cue-loader__ball cue-loader__ball--two"><span>2</span></div><div class="cue-loader__ball cue-loader__ball--three"><span>3</span></div></div></div><span class="cue-loader__label">Setting the table</span></div></div>
   <dialog class="ui-dialog" id="appSettings" aria-labelledby="appSettingsTitle">
     <form method="dialog">
       <div class="dialog-body">
