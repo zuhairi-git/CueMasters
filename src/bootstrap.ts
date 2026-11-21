@@ -11,6 +11,8 @@ import { setupPwa } from './pwa';
 // Reusable for future async screens: showCueLoader('Loading match…'); hideCueLoader().
 const loader = document.querySelector<HTMLElement>('#cueLoader');
 const launchStarted = performance.now();
+// A broken initialization must never leave an opaque loading screen forever.
+window.setTimeout(() => hideCueLoader(), 8000);
 let loadingDepth = 0;
 export function showCueLoader(message = 'Loading…') {
   loadingDepth++;
@@ -39,6 +41,7 @@ async function start() {
     try { history.replaceState(history.state, '', url.href); } catch {}
   }
   if (shouldAskAboutTv(navigator.userAgent, tvPreference())) {
+    hideCueLoader(); // Never cover the TV choice dialog with a blocking overlay.
     const dialog = document.querySelector<HTMLDialogElement>('#tvDetection')!;
     const choices = [...dialog.querySelectorAll<HTMLButtonElement>('button')];
     await new Promise<void>(resolve => {
