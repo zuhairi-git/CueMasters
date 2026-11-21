@@ -20,6 +20,12 @@ export class GameAudio {
   async unlock() {
     if (!this.enabled) return;
     try {
+      // On supported iOS versions, request playback audio so the Ring/Silent
+      // switch does not mute game effects. Older WebKit versions may ignore it.
+      const audioSession = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+      if (audioSession) {
+        try { audioSession.type = 'playback'; } catch { /* Unsupported audio session type. */ }
+      }
       this.context ??= new AudioContext();
       if (!this.output) {
         this.output = this.context.createGain();
