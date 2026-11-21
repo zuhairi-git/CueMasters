@@ -28,8 +28,9 @@ export class GameAudio {
         limiter.connect(this.context.destination);
         this.startClothBed(this.context);
       }
-      if (this.context.state === 'suspended') await this.context.resume();
-      await this.loadRecordings(this.context);
+      // Resume within the user gesture; recorded assets must not delay audio.
+      if (this.context.state !== 'running') await this.context.resume();
+      void this.loadRecordings(this.context);
     } catch {
       // Gameplay remains available if the browser cannot start audio.
     }
