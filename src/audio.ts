@@ -29,7 +29,15 @@ export class GameAudio {
         this.startClothBed(this.context);
       }
       // Resume within the user gesture; recorded assets must not delay audio.
-      if (this.context.state !== 'running') await this.context.resume();
+      // iOS WebKit needs an actual source started from a user activation.
+      // Resume and start a silent buffer before yielding to any promise.
+      if (this.context.state !== 'running') void this.context.resume();
+      const silence = this.context.createBuffer(1, 1, this.context.sampleRate);
+      const primer = this.context.createBufferSource();
+      primer.buffer = silence;
+      primer.connect(this.context.destination);
+      primer.onended = () => primer.disconnect();
+      primer.start(0);
       void this.loadRecordings(this.context);
     } catch {
       // Gameplay remains available if the browser cannot start audio.
@@ -69,10 +77,11 @@ export class GameAudio {
 
   flush() {
     const context = this.context;
-    if (!context || !this.output || context.state !== 'running' || document.hidden || !this.enabled) {
+    if (!this.enabled || document.hidden) {
       this.pending.length = 0;
       return;
     }
+    if (!context || !this.output || context.state !== 'running') return;
     this.output.gain.setTargetAtTime(this.volume, context.currentTime, 0.02);
     const events = this.pending.sort((a, b) => b.strength - a.strength).slice(0, maxSoundsPerFlush);
     this.pending.length = 0;
