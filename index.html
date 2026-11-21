@@ -16,7 +16,9 @@
   <link rel="stylesheet" href="/src/city-picker.css">
 <style>
 /* Shared startup and in-app spinner. */
-#cueLoader { position:fixed; inset:0; z-index:2147483647; display:grid; place-items:center; background:#080f20; color:#f3f7ff; transition:opacity .38s ease,visibility .38s ease; }
+#cueLoader { position:fixed; inset:0; z-index:2147483647; display:grid; place-items:center; isolation:isolate; background:#080f20; color:#f3f7ff; transition:opacity .38s ease,visibility .38s ease; }
+#cueLoader::before { content:""; position:absolute; inset:-18px; z-index:-2; background:url('/home-backgrounds/sapphire-lounge.jpg') center/cover no-repeat; filter:blur(13px) brightness(.55); }
+#cueLoader::after { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(160deg,#080f2077,#080f20aa); }
 #cueLoader[hidden] { display:none; }
 #cueLoader.cue-loader--leaving { opacity:0; visibility:hidden; pointer-events:none; }
 .cue-loader__card { width:min(76vw,290px); min-height:160px; border:1px solid #ffffff2c; border-radius:24px; background:linear-gradient(150deg,#182c44,#0e182b); box-shadow:0 24px 65px #0008; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
