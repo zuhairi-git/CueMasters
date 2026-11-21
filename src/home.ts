@@ -1,3 +1,4 @@
+import { showCueLoader, hideCueLoader } from './bootstrap';
 import { cities, cityDifficulty, cityStatus, fetchOnlineProgress, getPlayerSecret, onlineMedalName, type Circuit, type Game, type Mode, type Progress } from './circuit';
 import { difficulties } from './difficulty';
 import { validGame, type SavedGame } from './saved-game';
@@ -353,7 +354,12 @@ export async function chooseGame() {
         const pending = request = new AbortController();
         status.textContent = t('Loading online progress…');
         try {
-          progress = await fetchOnlineProgress(getPlayerSecret(), pending.signal);
+          showCueLoader('Loading online progress…');
+          try {
+            progress = await fetchOnlineProgress(getPlayerSecret(), pending.signal);
+          } finally {
+            hideCueLoader();
+          }
           if (pending.signal.aborted) return;
         } catch {
           if (pending.signal.aborted) return;
