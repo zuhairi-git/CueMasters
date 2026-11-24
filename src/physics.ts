@@ -244,8 +244,9 @@ function dropIntoPocket(ball: Ball, sound?: Sound) {
 }
 
 type RailContact = (ball: Ball, cueContactMade: boolean) => void;
+type BallContact = (first: number, second: number) => void;
 
-function substep(balls: Ball[], dt: number, firstContact?: number, sound?: Sound, onRail?: RailContact) {
+function substep(balls: Ball[], dt: number, firstContact?: number, sound?: Sound, onRail?: RailContact, onContact?: BallContact) {
   for (const ball of balls) {
     if (ball.pocketed) continue;
     if (dropIntoPocket(ball, sound)) continue;
@@ -280,6 +281,7 @@ function substep(balls: Ball[], dt: number, firstContact?: number, sound?: Sound
         if (closing <= 1e-8) continue;
         if (i === 0) firstContact ??= j;
         sound?.('ball', closing);
+        onContact?.(i, j);
         const impulse = closing * (1 + ballRestitution) / 2;
         a.vx -= impulse * nx;
         a.vz -= impulse * nz;
@@ -299,7 +301,7 @@ function substep(balls: Ball[], dt: number, firstContact?: number, sound?: Sound
   return firstContact;
 }
 
-export function step(balls: Ball[], dt: number, sound?: Sound, onRail?: RailContact) {
+export function step(balls: Ball[], dt: number, sound?: Sound, onRail?: RailContact, onContact?: BallContact) {
   if (!Number.isFinite(dt) || dt <= 0) return;
   dt = Math.min(dt, 0.1);
   for (const ball of balls) guardBall(ball);
@@ -310,7 +312,7 @@ export function step(balls: Ball[], dt: number, sound?: Sound, onRail?: RailCont
   const count = Math.max(1, Math.ceil(dt / Math.min(1 / 300, radius * 0.2 / Math.max(fastest, 0.01))));
   let firstContact: number | undefined;
   for (let i = 0; i < count; i++) {
-    firstContact = substep(balls, dt / count, firstContact, sound, onRail);
+    firstContact = substep(balls, dt / count, firstContact, sound, onRail, onContact);
   }
   return firstContact;
 }

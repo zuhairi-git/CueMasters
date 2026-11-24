@@ -31,6 +31,7 @@ import { furnishRoom, tableReflections } from './room';
 import { buildPocket, buildStraightRail, railBase, railDepth, railGrain, railTop, sideOpening } from './table-trim';
 import { pocketDropDuration, pocketDropImpact, pocketDropPose, startPocketDrop } from './pocket-drop';
 import { chooseShot } from './opponent';
+import { ShotHighlights, ShotRecording, type ShotHighlight } from './shot-highlights';
 import { cushions, cornerOpening, isMoving, length, pocketMouthRadius, pockets, rack, radius, shotSpeed, step, strikeBall, width } from './physics';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#table')!;
@@ -42,6 +43,10 @@ let viewMode = false;
 let svgRenderer: SvgTable | undefined;
 let canvasRenderer: TvTable | undefined;
 const status = document.querySelector<HTMLElement>('#status')!;
+const shotHighlightBanner = document.querySelector<HTMLElement>('#shotHighlight')!;
+const shotHighlightTitle = document.querySelector<HTMLElement>('#shotHighlightTitle')!;
+const shotHighlightDetail = document.querySelector<HTMLElement>('#shotHighlightDetail')!;
+const skipShotReplay = document.querySelector<HTMLButtonElement>('#skipShotReplay')!;
 const quality = document.querySelector<HTMLSelectElement>('#quality')!;
 const mobileMenu = document.querySelector<HTMLButtonElement>('#mobileMenu')!;
 const tableActions = document.querySelector<HTMLElement>('#tableActions')!;
@@ -166,6 +171,23 @@ guidesToggle.onclick = () => {
   updateGuides();
 };
 updateGuides();
+const shotReplayToggle = document.querySelector<HTMLButtonElement>('#shotReplayToggle')!;
+let shotReplaysEnabled = true;
+try { shotReplaysEnabled = localStorage.getItem('billiard-shot-replay') !== 'off'; } catch {}
+function updateReplaySetting() {
+  shotReplayToggle.textContent = t(shotReplaysEnabled ? 'Replays on' : 'Replays off');
+  shotReplayToggle.setAttribute('aria-pressed', String(shotReplaysEnabled));
+}
+shotReplayToggle.onclick = () => {
+  shotReplaysEnabled = !shotReplaysEnabled;
+  try { localStorage.setItem('billiard-shot-replay', shotReplaysEnabled ? 'on' : 'off'); } catch {}
+  updateReplaySetting();
+  if (!shotReplaysEnabled) {
+    shotRecording = undefined;
+    stopShotReplay();
+  }
+};
+updateReplaySetting();
 const sound = new GameAudio();
 sound.configure(soundPreference.enabled, soundPreference.volume);
 document.addEventListener('pointerdown', () => { void sound.unlock(); });
@@ -604,10 +626,74 @@ let previouslyPocketed: boolean[] = [];
 let cpuWait = 0;
 let balls = rack(false, Math.random);
 const pocketDrops = new Map<number, ReturnType<typeof startPocketDrop>>();
+const replayMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const highlightLabels: Record<ShotHighlight, string> = {
+  bank: 'Bank shot',
+  kick: 'Kick shot',
+  combo: 'Combination pot',
+  long: 'Long pot',
+  double: 'Two balls potted',
+  triple: 'Three or more balls potted',
+  break: 'Three or more balls on the break',
+};
+let shotHighlights: ShotHighlights | undefined;
+let shotRecording: ShotRecording | undefined;
+let shotReplay: ReturnType<ShotRecording['replay']>;
+let highlightTimer: number | undefined;
+let onlineHighlight: SavedGame['highlight'];
+let seenOnlineHighlight: number | undefined;
+
+function clearShotHighlight() {
+  window.clearTimeout(highlightTimer);
+  shotHighlightBanner.hidden = true;
+  skipShotReplay.hidden = true;
+  shotReplay = undefined;
+}
+
+function stopShotReplay() {
+  if (!shotReplay) return;
+  clearShotHighlight();
+  showReadyStatus();
+}
+skipShotReplay.onclick = stopShotReplay;
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || !shotReplay || document.querySelector('dialog[open]')) return;
+  event.preventDefault();
+  stopShotReplay();
+});
+
+function showShotHighlight(kind: ShotHighlight, player: number, replay?: typeof shotReplay) {
+  clearShotHighlight();
+  shotReplay = replay;
+  shotHighlightBanner.hidden = false;
+  shotHighlightTitle.textContent = t('Incredible shot!');
+  shotHighlightDetail.textContent = t(replay ? '{player} · {shot} · Replay' : '{player} · {shot}', {
+    player: playerName(player), shot: t(highlightLabels[kind]),
+  });
+  skipShotReplay.hidden = !replay;
+  if (!replay) highlightTimer = window.setTimeout(clearShotHighlight, 3200);
+}
+
+function recognizeShot(potted: readonly number[], legal: boolean) {
+  const kind = shotHighlights?.classify(potted, legal, shotWasBreak && !snooker);
+  const replay = kind && !onlineMode && shotReplaysEnabled && !replayMotion.matches && !document.querySelector('dialog[open]')
+    ? shotRecording?.replay() : undefined;
+  shotHighlights = shotRecording = undefined;
+  if (!kind) return;
+  if (onlineMode) onlineHighlight = [Math.floor(performance.timeOrigin + performance.now()), kind, turn];
+  showShotHighlight(kind, turn, replay);
+}
 
 function shotSound(kind: Parameters<typeof sound.queue>[0], strength: number, ball?: typeof balls[number]) {
-  if (kind === 'pocket' && ball) pocketDrops.set(balls.indexOf(ball), startPocketDrop(ball, strength));
-  else sound.queue(kind, strength);
+  if (kind === 'pocket' && ball) {
+    const index = balls.indexOf(ball);
+    pocketDrops.set(index, startPocketDrop(ball, strength));
+    if (index > 0) shotRecording?.markPot();
+  } else sound.queue(kind, strength);
+}
+
+function pocketPoses() {
+  return new Map(Array.from(pocketDrops, ([index, drop]) => [index, pocketDropPose(drop)] as const));
 }
 
 function updatePocketDrops(dt: number) {
@@ -619,6 +705,7 @@ function updatePocketDrops(dt: number) {
   }
 }
 function canControl() {
+  if (shotReplay) return false;
   return onlineMode ? online.active && turn === online.seat && online.remainingMs() > 0 : !versusComputer || turn === 0;
 }
 function playerName(seat: number) {
@@ -810,6 +897,7 @@ function finishShot() {
     const needsCushion = challenge.kind === 'bank' || challenge.kind === 'kick';
     const won = legal && (clear ? legalTargets().length === 0 : challenge.kind === 'contact' ||
       potted.includes(1) && (!needsCushion || careerBanked));
+    recognizeShot(potted, legal && (clear || won));
     if (clear && legal && potted.length && !won) {
       showScore();
       showReadyStatus();
@@ -833,6 +921,9 @@ function finishShot() {
     const eightPocket = balls[8].pocketed ? pockets.reduce((closest, pocket, index) =>
       Math.hypot(pocket.x - balls[8].x, pocket.z - balls[8].z) < Math.hypot(pockets[closest].x - balls[8].x, pockets[closest].z - balls[8].z) ? index : closest, 0) : undefined;
     const result = resolvePoolShot({ turn, groups, targets: shotTargets, firstContact, potted, scratch, breaking: shotWasBreak, calledPocket, eightPocket });
+    const scoringPots = potted.filter(index => index === 8 ? result.winner === turn
+      : shotWasBreak || groupOf(index) === result.groups[turn]);
+    recognizeShot(scoringPots, !result.foul && (result.winner === undefined || result.winner === turn));
     if (result.winner !== undefined && continueCareerSeries(result.winner)) return;
     groups = result.groups;
     winner = result.winner;
@@ -856,6 +947,7 @@ function finishShot() {
   }
   const foul = scratch || firstContact === undefined || !shotTargets.includes(firstContact) ||
     potted.some(index => !shotTargets.includes(index)) || (colourAfterRed && potted.length > 1);
+  recognizeShot(potted, !foul);
   const value = (index: number) => index <= 15 ? 1 : index - 14;
   if (foul) scores[1 - turn] += Math.max(4, value(shotTargets[0] ?? 0), value(firstContact ?? 0), ...potted.map(value));
   if (colourAfterRed || shotTargets[0] <= 15 || foul) {
@@ -898,7 +990,8 @@ function finishShot() {
         trailScore: scores[trailerSeat],
         remaining,
       });
-      snookerConcessionDialog.showModal();
+      if (shotReplay) pendingSnookerConcession = true;
+      else snookerConcessionDialog.showModal();
     }
   }
 
@@ -1035,7 +1128,7 @@ spinBall.onkeydown = event => {
   event.stopPropagation();
 };
 function fire(strength: number) {
-  if (rolling || strike) return;
+  if (rolling || strike || shotReplay) return;
   if (onlineMode && (!online.active || online.remainingMs() <= 0)) return;
   if (!snooker && legalTargets().includes(8) && calledPocket === undefined) {
     if (!tvEnabled) setPocketPickerOpen(true);
@@ -1048,6 +1141,10 @@ function fire(strength: number) {
     online.send({ type: 'input', input: { action: 'shoot', strength, aim: [aim.x, aim.z], tip: [tipX, tipY], position: [balls[0].x, balls[0].z], calledPocket } });
     return;
   }
+  clearShotHighlight();
+  onlineHighlight = undefined;
+  shotHighlights = new ShotHighlights(balls);
+  shotRecording = !onlineMode && shotReplaysEnabled && !replayMotion.matches ? new ShotRecording() : undefined;
   shotWasBreak = breaking;
   placement = undefined;
   firstContact = undefined;
@@ -1191,6 +1288,10 @@ function showReadyStatus() {
     objective.textContent = [t(stage.objective), counter, careerClean ? t(careerGoal) : ''].filter(Boolean).join(' · ');
   }
   if (tvEnabled) { updateTvControls(); return; }
+  if (shotReplay) {
+    status.textContent = t('Replay');
+    return;
+  }
   if (online.departureDeadline !== undefined) {
     status.textContent = t('Opponent left. Waiting for their timer to expire…');
     return;
@@ -1513,6 +1614,8 @@ document.querySelector<HTMLButtonElement>('#camera')!.onclick = event => {
   button.setAttribute('aria-label', t(overhead ? 'Switch to perspective view' : 'Switch to top-down view'));
 };
 function resetMatch(continueCareer = false) {
+  if (!continueCareer) clearShotHighlight();
+  shotHighlights = shotRecording = onlineHighlight = undefined;
   pocketDrops.clear();
   wonByForfeit = false;
   applyTableFinish();
@@ -1541,7 +1644,7 @@ function resetMatch(continueCareer = false) {
   lastCueTap = 0;
   tableStroke = undefined;
   finished = colourAfterRed = false;
-  snookerConcessionPrompted = false;
+  snookerConcessionPrompted = pendingSnookerConcession = false;
   if (snookerConcessionDialog?.open) snookerConcessionDialog.close();
   cpuWait = 0;
   setTip(0, 0);
@@ -1631,6 +1734,7 @@ const snookerConcessionDesc = document.querySelector<HTMLElement>('#snookerConce
 const snookerAnnounceWinnerBtn = document.querySelector<HTMLButtonElement>('#snookerAnnounceWinner')!;
 const snookerContinueBtn = document.querySelector<HTMLButtonElement>('#snookerContinueGame')!;
 let snookerConcessionPrompted = false;
+let pendingSnookerConcession = false;
 
 function finishSnookerWithWinner() {
   finished = true;
@@ -1679,6 +1783,7 @@ for (const logo of document.querySelectorAll<HTMLButtonElement>('[data-game-home
 endGameDialog.addEventListener('cancel', event => { if (confirmEndGame.disabled) event.preventDefault(); });
 async function leaveGame({ openShop = false, keepMatch = false, mainScreen = false } = {}) {
   if (leavingMatch) return;
+  clearShotHighlight();
   leavingMatch = confirmEndGame.disabled = keepPlaying.disabled = saveAndExit.disabled = true;
   showCueLoader('Returning to the main screen…');
   try {
@@ -1815,10 +1920,16 @@ function gameState(): SavedGame {
   return { version: 1, balls, snooker, versusComputer, onlineMode, turn, scores, groups, winner, breaking, shotWasBreak,
     colourAfterRed, finished, firstContact, shotTargets, previouslyPocketed, rolling, placement, aim: [aim.x, aim.z],
     strike, shotPower, tip: [tipX, tipY], aimLocked, calledPocket,
+    ...(onlineMode && onlineHighlight ? { highlight: onlineHighlight } : {}),
     ...(mode.kind === 'computer' ? { careerClean, careerRacks }
       : mode.kind === 'challenge' ? { careerAttempts, careerBanked } : {}) };
 }
 function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = false) {
+  if (!animatePockets) {
+    clearShotHighlight();
+    shotHighlights = shotRecording = onlineHighlight = undefined;
+    seenOnlineHighlight = s.highlight?.[0];
+  }
   if (!preserveLocalAim && spaceCharge !== undefined) clearStroke();
   if (animatePockets && (rolling || s.rolling || strike || s.strike)) {
     s.balls.forEach((ball, index) => {
@@ -1884,7 +1995,12 @@ function recordComputerResult() {
     showCareerProfile();
   }
 }
-function trackCareerRail(ball: typeof balls[number], cueContactMade: boolean) {
+function trackShotContact(first: number, second: number) {
+  shotHighlights?.contact(first, second);
+}
+
+function trackShotRail(ball: typeof balls[number], cueContactMade: boolean) {
+  shotHighlights?.rail(ball, cueContactMade || firstContact !== undefined);
   const kind = activeChallenge()?.kind;
   if (kind === 'bank' && ball === balls[1] ||
       kind === 'kick' && ball === balls[0] && firstContact === undefined && !cueContactMade) careerBanked = true;
@@ -1937,6 +2053,11 @@ online.onState = value => {
   if (!onlineMode || online.seat !== 1 || !validGame(value)) return;
   const keepAim = canControl() && !value.rolling && !value.strike && turn === value.turn;
   applyGame(value, keepAim, true);
+  const highlight = value.highlight;
+  if (highlight && highlight[0] !== seenOnlineHighlight) {
+    seenOnlineHighlight = highlight[0];
+    showShotHighlight(highlight[1], highlight[2]);
+  }
 };
 online.onInput = value => {
   if (!onlineMode || online.seat !== 0 || turn !== 1 || rolling || strike || finished || !value || typeof value !== 'object') return;
@@ -1961,6 +2082,8 @@ online.onInput = value => {
   if (input.action === 'shoot' && typeof input.strength === 'number' && Number.isFinite(input.strength) && input.strength >= minimumShotPower && input.strength <= 1) fire(input.strength);
 };
 online.onDeparture = () => {
+  clearShotHighlight();
+  shotHighlights = shotRecording = onlineHighlight = undefined;
   rolling = false;
   strike = 0;
   showScore();
@@ -2113,8 +2236,8 @@ function updateTvControls() {
     power: [t('Set power, then shoot'), t('↑ ↓ Power · OK Shoot · Back Aim')],
   };
   const [title, help] = labels[remote.stage];
-  const stepText = online.departureDeadline !== undefined ? t('Opponent left. Waiting for their timer.') : finished ? t('Game finished') : busy ? rolling || strike ? t('Balls in motion') : t('Waiting for opponent') : title;
-  const helpText = finished || busy ? t('Back Menu') : remote.stage === 'pocket' ? help + ' · ' + pocketChoice.options[(calledPocket ?? 0) + 1].text : help;
+  const stepText = shotReplay ? t('Replay') : online.departureDeadline !== undefined ? t('Opponent left. Waiting for their timer.') : finished ? t('Game finished') : busy ? rolling || strike ? t('Balls in motion') : t('Waiting for opponent') : title;
+  const helpText = shotReplay ? t('Skip replay') : finished || busy ? t('Back Menu') : remote.stage === 'pocket' ? help + ' · ' + pocketChoice.options[(calledPocket ?? 0) + 1].text : help;
   const powerText = Math.round(remote.power * 100) + '%';
   const presentation = [stepText, helpText, powerText].join('|');
   if (tvPresentation === presentation) return;
@@ -2156,6 +2279,10 @@ document.addEventListener('keydown', event => {
   event.stopImmediatePropagation();
   if ((key === 'ok' || key === 'back') && event.repeat) return;
   if (dialog) { navigateTvDialog(dialog, key); return; }
+  if (shotReplay) {
+    if (key === 'ok' || key === 'back') stopShotReplay();
+    return;
+  }
   if (finished && key !== 'back') { navigateTvControls(notice, key); return; }
   updateTvControls();
   if (key === 'back' && (rolling || strike || !canControl() || finished)) { setMobileMenu(true); return; }
@@ -2209,6 +2336,7 @@ function celebrateWin() {
   confettiCleanup = window.setTimeout(() => confetti.replaceChildren(), 4600);
 }
 function updateGameNotice() {
+  if (shotReplay) return;
   const kind = finished ? 'win' : '';
   const winningPlayer = winner ?? (scores[0] === scores[1] ? undefined : scores[0] > scores[1] ? 0 : 1);
   const names = [playerName(0), playerName(1)];
@@ -2274,6 +2402,14 @@ engine.runRenderLoop(() => {
     if (!canUseSpaceShot()) clearStroke();
     else if (typeof spaceCharge === 'number') updateSpaceCharge(spaceCharge);
   }
+  const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
+  if (shotReplay && replayMotion.matches) stopShotReplay();
+  const replayFrame = shotReplay?.advance(dt);
+  if (shotReplay && !replayFrame) stopShotReplay();
+  if (pendingSnookerConcession && !shotReplay && !document.querySelector('dialog[open]')) {
+    pendingSnookerConcession = false;
+    snookerConcessionDialog.showModal();
+  }
   updateTvControls();
   updateGameNotice();
   const clock = document.querySelector<HTMLElement>('#shotClock')!;
@@ -2281,7 +2417,7 @@ engine.runRenderLoop(() => {
   const departureTime = online.departureDeadline === undefined ? undefined : Math.max(0, online.departureDeadline - performance.now());
   clock.textContent = departureTime !== undefined ? Math.ceil(departureTime / 1000) + 's' : finished ? t('Finished') : !online.active ? t('Paused') : rolling || strike ? t('In motion') : Math.ceil(online.remainingMs() / 1000) + 's';
   clock.classList.toggle('urgent', departureTime !== undefined ? departureTime <= 10000 : online.active && !rolling && !strike && online.remainingMs() <= 10000);
-  const callEligible = !snooker && !finished && !rolling && !strike && legalTargets().includes(8);
+  const callEligible = !snooker && !finished && !rolling && !strike && !shotReplay && legalTargets().includes(8);
   const showPocketPicker = callEligible && canControl() && !tvEnabled && calledPocket === undefined;
   if (showPocketPicker && callPocket.hidden) setPocketPickerOpen(true);
   callPocket.hidden = !showPocketPicker;
@@ -2306,10 +2442,9 @@ engine.runRenderLoop(() => {
   lockButton.setAttribute('aria-label', aimLocked ? t('Unlock aim') : t('Lock aim'));
   lockButton.setAttribute('aria-pressed', String(aimLocked));
   document.querySelector<HTMLButtonElement>('#reset')!.disabled = isTournament() || onlineMode && (online.seat !== 0 || !online.active);
-  const dt = Math.min(engine.getDeltaTime() / 1000, 0.05);
   const authoritative = !onlineMode || online.active && online.seat === 0;
   const cueBall = balls[0];
-  if (versusComputer && !onlineMode && turn === 1 && !finished && !rolling && !strike && !settings.open && !endGameDialog.open && !snookerConcessionDialog.open) {
+  if (versusComputer && !onlineMode && turn === 1 && !finished && !rolling && !strike && !shotReplay && !settings.open && !endGameDialog.open && !snookerConcessionDialog.open) {
     cpuWait -= dt;
     if (cpuWait <= 0) {
       const shot = chooseShot(balls, legalTargets(), difficulty);
@@ -2332,6 +2467,7 @@ engine.runRenderLoop(() => {
       const speed = shotSpeed(shotPower ** (cue?.power ?? 1));
       strikeBall(cueBall, aim.x, aim.z, speed, tipX * (cue?.spin ?? 1), tipY * (cue?.spin ?? 1));
       sound.queue('cue', speed);
+      shotRecording?.capture(0, balls, new Map());
       if (resetSpinAfterShot) setTip(0, 0);
       rolling = true;
       status.textContent = t('Balls in motion');
@@ -2341,19 +2477,23 @@ engine.runRenderLoop(() => {
   if (rolling && authoritative) {
     accumulator += dt;
     while (accumulator >= fixedStep) {
-      const contact = step(balls, fixedStep, shotSound, trackCareerRail);
+      const contact = step(balls, fixedStep, shotSound, trackShotRail, trackShotContact);
       firstContact ??= contact;
       accumulator -= fixedStep;
     }
+    if (shotRecording) shotRecording.capture(dt, balls, pocketPoses());
     if (!balls.some(isMoving) && !pocketDrops.size) {
       rolling = false;
       accumulator = 0;
       finishShot();
     }
   }
-  const dropPoses = new Map(Array.from(pocketDrops, ([index, drop]) => [index, pocketDropPose(drop)] as const));
+  const displayFrame = replayFrame ?? shotReplay?.advance(0);
+  const displayBalls = displayFrame?.balls ?? balls;
+  const displayRolling = rolling || Boolean(displayFrame);
+  const dropPoses = displayFrame?.drops ?? pocketPoses();
   if (!uses2dTable()) {
-    balls.forEach((ball, index) => {
+    displayBalls.forEach((ball, index) => {
       const mesh = ballMeshes[index];
       if (ball.orientation) {
         ballRotation.copyFromFloats(...ball.orientation);
@@ -2366,10 +2506,10 @@ engine.runRenderLoop(() => {
       contacts[index].position.set(ball.x, 0.0008, ball.z);
       contacts[index].isVisible = !ball.pocketed;
     });
-    aimLine.isVisible = guidesEnabled && !rolling && !strike && !movingCueBall && !finished;
-    cue.setEnabled(!rolling && !movingCueBall && !finished);
+    aimLine.isVisible = guidesEnabled && !displayRolling && !strike && !movingCueBall && !finished;
+    cue.setEnabled(!displayRolling && !movingCueBall && !finished);
     objectGuide.isVisible = ghostBall.isVisible = pocketGuide.isVisible = false;
-    if (!rolling) {
+    if (!displayRolling) {
       const origin = new Vector3(cueBall.x, radius, cueBall.z);
       const pose = cuePose(balls, aim.x, aim.z, tipX, tipY, strike * shotPower * 0.9 + pull * 0.16);
       cue.position.set(pose.center.x, pose.center.y, pose.center.z);
@@ -2397,13 +2537,14 @@ engine.runRenderLoop(() => {
   sound.flush();
   updateSession(dt);
   if (uses2dTable()) tvTable?.draw({
-    balls, pocketDrops: dropPoses, aim, rolling, finished, placement: Boolean(placement), guides: guidesEnabled,
+    balls: displayBalls, pocketDrops: dropPoses, aim, rolling: displayRolling, finished,
+    placement: Boolean(placement) && !displayFrame, guides: guidesEnabled,
     callEligible: callEligible && canControl(), calledPocket, snooker,
     tableStyle: select('tableStyle').value, cueStyle: select('cueStyle').value,
     pull: strike ? strike * shotPower * 5 : tvEnabled ? remote.stage === 'power' ? remote.power : 0 : pull,
   });
   else scene.render();
-  ballHand.hidden = !placement || finished || rolling || strike > 0;
+  ballHand.hidden = !placement || finished || displayRolling || strike > 0;
   if (!ballHand.hidden) {
     const bounds = activeTableCanvas().getBoundingClientRect();
     const point = uses2dTable() ? tvTable!.project(balls[0].x, balls[0].z) : Vector3.Project(

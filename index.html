@@ -190,6 +190,13 @@
     </nav>
   </header>
   <p id="fullscreenNotice" class="fullscreen-notice" role="status" hidden></p>
+  <aside id="shotHighlight" class="shot-highlight" hidden>
+    <div class="shot-highlight-copy" role="status" aria-atomic="true">
+      <strong id="shotHighlightTitle"></strong>
+      <small id="shotHighlightDetail"></small>
+    </div>
+    <button class="ui-button" id="skipShotReplay" type="button" hidden>Skip replay</button>
+  </aside>
   <dialog id="mobileGameMenu" class="ui-dialog game-menu" aria-labelledby="gameMenuTitle">
     <div class="dialog-body">
     <div class="game-menu-heading">
@@ -284,6 +291,7 @@
     <label class="ui-field" id="offlinePlayerTwoNameRow"><span>Player 2 name</span><input class="ui-select" id="offlinePlayerTwoName" maxlength="24" autocomplete="off"></label>
     <label class="ui-field"><span>Difficulty</span><span class="ui-select-wrap"><select class="ui-select" id="difficulty"><option value="Beginner">Beginner</option><option value="Easy">Easy</option><option value="Medium" selected>Medium</option><option value="Hard">Hard</option><option value="Expert">Expert</option></select></span></label>
     <div class="sound-row"><div><strong>Shot guides</strong><small>Aim line, object-ball path and pocket highlight</small></div><button class="ui-button" id="guidesToggle" type="button" aria-pressed="true">Guides on</button></div>
+    <div class="sound-row"><div><strong id="shotReplayLabel">Incredible shot replays</strong><small id="shotReplayDescription">Automatically replay standout shots in offline games.</small></div><button class="ui-button" id="shotReplayToggle" type="button" aria-labelledby="shotReplayLabel" aria-describedby="shotReplayDescription" aria-pressed="true">Replays on</button></div>
     </fieldset><fieldset><legend>Room &amp; equipment</legend>
     <label class="ui-field"><span>Cue</span><span class="ui-select-wrap"><select class="ui-select" id="cueStyle"><option value="Classic Maple">Classic Maple</option><option value="Rosewood">Rosewood</option><option value="Carbon Black" selected>Carbon Black</option></select></span></label>
     <p class="settings-note" id="trainingCueNote" hidden></p>

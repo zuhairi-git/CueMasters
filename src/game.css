@@ -405,3 +405,27 @@ header:has(#shotClock:not([hidden])) #status { grid-column: 2; }
 
 #stroke .cue-stick { top: 3px; height: 16px; background: none; clip-path: none; }
 #stroke .cue-stick svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.shot-highlight:not([hidden]) {
+  position: fixed; z-index: 5; top: var(--notice-top, 76px); left: 50%;
+  display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100% - 24px);
+  transform: translateX(-50%); padding: 9px 12px 9px 16px;
+  border: 1px solid #eac16a; border-radius: 14px; background: #17241f; color: #fff4d7;
+  box-shadow: 0 6px 25px #0008, 0 0 16px #eac16a35;
+  pointer-events: none;
+}
+.shot-highlight::before {
+  content: ''; flex: 0 0 18px; height: 18px; background: #f6d383;
+  clip-path: polygon(50% 0, 63% 37%, 100% 50%, 63% 63%, 50% 100%, 37% 63%, 0 50%, 37% 37%);
+}
+.shot-highlight-copy { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.shot-highlight-copy strong { color: #f6d383; font: 700 1.18rem Georgia, serif; }
+.shot-highlight-copy small { font-size: .78rem; }
+.shot-highlight .ui-button { flex: none; min-height: 44px; pointer-events: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .shot-highlight:not([hidden]) { animation: shot-highlight-arrive .32s ease-out both; }
+}
+@keyframes shot-highlight-arrive {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
