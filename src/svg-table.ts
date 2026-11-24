@@ -1,5 +1,5 @@
 import { cueArtwork } from './svg-cue';
-import { tableFinish } from './table-finishes';
+import { championshipInlays, tableFinish } from './table-finishes';
 import { ballArtwork } from './svg-ball';
 import { ballMarkings } from './ball-markings';
 import { traceShot } from './aim-guide';
@@ -93,18 +93,22 @@ export class SvgTable {
     return {x, z};
   }
   private artwork(state: TableState) {
-    const felt = state.snooker ? '#90213e' : state.tableStyle === 'Club Green' ? '#138875'
+    const { venue } = state;
+    const [, cushionColor, wood] = tableFinish(state.tableStyle, state.snooker, venue);
+    const accent = venue?.accent ?? '#c4aa77';
+    const felt = venue ? venue.colors[0] : state.snooker ? '#90213e' : state.tableStyle === 'Club Green' ? '#138875'
       : state.tableStyle === 'Burgundy Lounge' ? '#922e59' : state.tableStyle === 'Tournament Blue' ? '#197eb4'
       : tableFinish(state.tableStyle, false)[0];
     let s = `<rect x="-784" y="-1419" width="1568" height="2838" rx="112" fill="#000" opacity=".4" transform="translate(0 12)"/>
-      <rect x="-775" y="-1410" width="1550" height="2820" rx="105" fill="url(#sv-rail)" stroke="#c4aa77" stroke-width="4"/>
+      <rect x="-775" y="-1410" width="1550" height="2820" rx="105" fill="${venue ? wood : 'url(#sv-rail)'}" stroke="${accent}" stroke-width="${venue?.championship ? 7 : 4}"/>
+      ${venue ? '<rect x="-772" y="-1407" width="1544" height="2814" rx="102" fill="url(#sv-rail)" opacity=".34"/>' : ''}
       <rect x="-760" y="-1395" width="1520" height="2790" rx="94" fill="none" stroke="#ffffff" stroke-opacity=".13" stroke-width="2"/>
       <rect x="-659" y="-1294" width="1318" height="2588" fill="${felt}"/>
       <rect x="-635" y="-1270" width="1270" height="2540" fill="url(#sv-felt)"/>
       <rect x="-635" y="-1270" width="1270" height="2540" fill="url(#sv-nap)"/>
       <rect x="-635" y="-1270" width="1270" height="2540" fill="url(#sv-fibre)"/>
       <rect x="-629" y="-1264" width="1258" height="2528" fill="none" stroke="#00131c" stroke-width="12" opacity=".035"/>`;
-    const cushion = (d: string) => { s += '<path d="' + d + '" fill="' + felt + '"/><path d="' + d + '" fill="url(#sv-cushion)" stroke="#ffffff" stroke-opacity=".12" stroke-width="1.5"/>'; };
+    const cushion = (d: string) => { s += '<path d="' + d + '" fill="' + (venue ? cushionColor : felt) + '"/><path d="' + d + '" fill="url(#sv-cushion)" stroke="#ffffff" stroke-opacity=".12" stroke-width="1.5"/>'; };
     // Each jaw follows the collision approach, then curves along the pocket lip.
     for (const c of cushions.filter(c => !c.jaw)) {
       const a = {x:c.ax*1000,y:-c.az*1000}, b = {x:c.bx*1000,y:-c.bz*1000};
@@ -135,9 +139,17 @@ export class SvgTable {
         ' A'+finish.r+' '+finish.r+' 0 0 '+sweep+' '+finish.outer.x+' '+finish.outer.y+
         ' L'+start.outer.x+' '+start.outer.y+' A'+start.r+' '+start.r+' 0 0 '+sweep+' '+start.tip.x+' '+start.tip.y+' Z');
     }
+    if (venue?.championship) {
+      for (const { x, z, width, depth, diamond } of championshipInlays) {
+        const centerX = x * 1000, centerY = -z * 1000;
+        const transform = diamond ? ` transform="rotate(45 ${centerX} ${centerY})"` : '';
+        s += `<rect x="${centerX - width * 500}" y="${centerY - depth * 500}" width="${width * 1000}" height="${depth * 1000}" fill="${accent}"${transform}/>`;
+      }
+    }
+    const sight = venue?.accent ?? '#d9c797';
     for (const side of [-1, 1]) {
-      for (const z of [-920,-630,-340,340,630,920]) s += '<path d="M'+side*731+' '+(z-6)+' l5 6 -5 6 -5 -6Z" fill="#d9c797"/>';
-      for (const x of [-310,0,310]) s += '<path d="M'+x+' '+(side*1362-6)+' l5 6 -5 6 -5 -6Z" fill="#d9c797"/>';
+      for (const z of [-920,-630,-340,340,630,920]) s += '<path d="M'+side*731+' '+(z-6)+' l5 6 -5 6 -5 -6Z" fill="'+sight+'"/>';
+      for (const x of [-310,0,310]) s += '<path d="M'+x+' '+(side*1362-6)+' l5 6 -5 6 -5 -6Z" fill="'+sight+'"/>';
     }
     if (state.snooker) s += '<path d="M-635 740H635 M-220 740 A220 220 0 0 0 220 740" fill="none" stroke="#f6dfcd" stroke-opacity=".45" stroke-width="2"/>';
     else s += '<path d="M-635 635H635" stroke="#fff" stroke-opacity=".12" stroke-width="2"/>';
@@ -146,7 +158,7 @@ export class SvgTable {
     for (const p of pockets) {
       const r = pocketMouthRadius(p) * 1000;
       const center = `<circle cx="${p.x * 1000}" cy="${-p.z * 1000}"`;
-      s += `${center} r="${r + 5}" fill="#342b2b" stroke="#b7a27e" stroke-width="2"/>`;
+      s += `${center} r="${r + 5}" fill="#342b2b" stroke="${venue?.championship ? accent : '#b7a27e'}" stroke-width="${venue?.championship ? 5 : 2}"/>`;
       s += `${center} r="${r}" fill="url(#sv-pocket)"/>`;
     }
     this.table.innerHTML = s + '</g>';
@@ -156,7 +168,7 @@ export class SvgTable {
     this.orientations = [];
   }
   draw(state: TableState) {
-    const key = state.snooker + state.tableStyle + state.balls.length;
+    const key = state.snooker + (state.venue?.id ?? state.tableStyle) + state.balls.length;
     if (key !== this.finish) { this.artwork(state); this.finish = key; }
     state.balls.forEach((b, i) => {
       const g = this.balls[i];

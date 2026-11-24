@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadSource } from './load-source.mjs';
+const { careerTable, championshipInlays } = await loadSource('table-finishes');
 const { SvgTable, svgViewport } = await loadSource('svg-table');
 const { width, length, pockets } = await loadSource('physics');
 
@@ -13,6 +14,20 @@ test('all six pocket rims and openings render above the overhead table materials
   assert.equal([...layer.matchAll(/stroke="#b7a27e"/g)].length, pockets.length);
   assert.equal([...layer.matchAll(/fill="url\(#sv-pocket\)"/g)].length, pockets.length);
   assert.ok(table.innerHTML.lastIndexOf('<path') < table.innerHTML.indexOf('<g class="sv-pockets">'));
+});
+
+test('the London championship renders the gold inlay in both games', () => {
+  const table = { innerHTML: '' };
+  const renderer = Object.assign(Object.create(SvgTable.prototype), { table });
+  for (const snooker of [false, true]) {
+    const state = { snooker, tableStyle: 'Club Green', balls: [] };
+    renderer.artwork({ ...state, venue: careerTable('london', 9, snooker) });
+    assert.equal([...table.innerHTML.matchAll(/transform="rotate\(45 /g)].length,
+      championshipInlays.filter(piece => piece.diamond).length);
+    assert.equal([...table.innerHTML.matchAll(/stroke="#f3ca75" stroke-width="5"/g)].length, pockets.length);
+    renderer.artwork({ ...state, venue: careerTable('london', 8, snooker) });
+    assert.doesNotMatch(table.innerHTML, /#f3ca75/);
+  }
 });
 
 test('SVG table framing fits the complete rails between the controls', () => {

@@ -6,7 +6,7 @@ import { remoteKey } from './tv-controls';
 import { t } from './i18n';
 import { careerBonus, careerCityStatus, careerClears, careerCues, careerDifficulty, careerGoal, careerProgress, careerRank, careerReward, careerStage, careerStages, careerStageStatus, equipCareerCue } from './career';
 import { challengeCompleted, challenges, getChallenge } from './challenges';
-import { cityFinishes } from './table-finishes';
+import { careerTable, cityFinishes, type CareerTable } from './table-finishes';
 import { linkedPage, pageInHistory, savedPage, savePage } from './page-state';
 import helsinki from './helsinki-harbor.svg?raw';
 import stockholm from './stockholm-skyline.svg?raw';
@@ -17,15 +17,19 @@ import london from './london-skyline.svg?raw';
 const cityArt: Record<string, string> = { helsinki, stockholm, copenhagen, berlin, london };
 const trainingNotes = ['Face a computer that attempts simple pots', 'Practice straightforward pots', 'Play a balanced opponent', 'Face planned shots', 'Face precise shots with position play'];
 
-function tableArt(level: number) {
+function tableArt(level: number, venue?: CareerTable) {
   const colors = ['#d7ac58', '#57a9d2', '#cc6e67', '#9f83ce', '#f1b368'];
   const positions = [[178, 69], [204, 54], [204, 84], [230, 40], [230, 98]];
   const balls = positions.slice(0, level).map(([x, y], index) =>
     `<circle cx="${x}" cy="${y + 2}" r="8" fill="#082022" opacity=".55"/><circle cx="${x}" cy="${y}" r="7" fill="${colors[index]}"/><circle cx="${x - 2}" cy="${y - 2}" r="2" fill="#fff" opacity=".48"/>`).join('');
+  const cabinet = venue?.colors[2] ?? '#805643';
+  const felt = venue?.colors[0] ?? '#265e58';
+  const accent = venue?.accent ?? '#b38662';
   return `<svg class="selection-art" viewBox="0 0 320 140" aria-hidden="true" focusable="false">
     <path fill="#142b32" d="M0 0h320v140H0z"/>
-    <rect x="27" y="13" width="266" height="114" rx="19" fill="#805643" stroke="#b38662" stroke-width="2"/>
-    <rect x="36" y="22" width="248" height="96" rx="11" fill="#265e58" stroke="#102e30" stroke-width="4"/>
+    <rect x="27" y="13" width="266" height="114" rx="19" fill="${cabinet}" stroke="${accent}" stroke-width="${venue?.championship ? 3 : 2}"/>
+    ${venue?.championship ? '<rect x="31" y="17" width="258" height="106" rx="16" fill="none" stroke="#f3ca75" stroke-width="1"/><path d="M11 70l7-7 7 7-7 7z M295 70l7-7 7 7-7 7z" fill="#f3ca75"/>' : ''}
+    <rect x="36" y="22" width="248" height="96" rx="11" fill="${felt}" stroke="#102e30" stroke-width="4"/>
     <path d="M80 25v90m80-90v90" stroke="#99cbad" stroke-width="1" opacity=".16"/>
     <path d="M43 28h234m-234 84h234" stroke="#9ddab4" stroke-width="2" opacity=".22"/>
     <g fill="#0b2026"><circle cx="43" cy="29" r="7"/><circle cx="160" cy="25" r="7"/><circle cx="277" cy="29" r="7"/><circle cx="43" cy="111" r="7"/><circle cx="160" cy="115" r="7"/><circle cx="277" cy="111" r="7"/></g>
@@ -226,8 +230,8 @@ export async function chooseGame() {
           : t('{goal} for +{coins} coins and +{points} points', { goal: t(careerGoal), ...careerBonus });
         return selectionCard({
           title: t(stage.title), subtitle: t('Game {number}', { number: index + 1 }) + ' · ' + t(careerDifficulty(city, index)),
-          detail: [t(stage.objective), availability !== 'Completed' ? t('{coins} coins · {points} career points', careerReward(index)) : '', bonus].filter(Boolean).join(' · '),
-          status: availability, artwork: tableArt(index % 5 + 1),
+          detail: [t(stage.objective), stage.opener ? t('Computer opens') : '', availability !== 'Completed' ? t('{coins} coins · {points} career points', careerReward(index)) : '', bonus].filter(Boolean).join(' · '),
+          status: availability, artwork: tableArt(index % 5 + 1, careerTable(city.id, index, game === 'snooker')),
           action: locked ? undefined : t(availability === 'Completed' ? 'Replay' : 'Play'),
           play: locked ? undefined : () => start({ kind: 'computer', game, city, stage: index, matchId: crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-') }),
         });

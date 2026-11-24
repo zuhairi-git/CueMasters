@@ -14,8 +14,8 @@ import { cueLength, cuePose } from './cue-geometry';
 import { directionToBall, traceShot } from './aim-guide';
 import { OnlineGame } from './online';
 import { cities, onlineMedalName, resultMessage } from './circuit';
-import { careerCityStatus, careerCue, careerCues, careerDifficulty, careerGoal, careerProgress, careerRank, careerStage, careerStages, careerStageStatus, finishCareerStage } from './career';
-import { cityFinishes, tableFinish } from './table-finishes';
+import { careerCityStatus, careerCue, careerCues, careerDifficulty, careerGoal, careerOpening, careerProgress, careerRank, careerStage, careerStages, careerStageStatus, finishCareerStage } from './career';
+import { careerTable, championshipInlays, cityFinishes, tableFinish, type CareerTable } from './table-finishes';
 import { challengeLayout, completeChallenge, getChallenge } from './challenges';
 import { clearSession, labelGame, launch, saveSession } from './home';
 import { savedPage, savePage, savePagePanel } from './page-state';
@@ -267,6 +267,9 @@ const leather = material('pocket leather', '#353037', 0.14);
 leather.specularPower = 36;
 const dark = material('pocket liner', '#0c1016', 0.015);
 const brass = material('champagne metal', '#dfc48d', 0.65);
+const railAccent = material('venue rail inlay', '#dfc48d', 0.55);
+const championshipGold = material('championship gold', '#f3ca75', 0.65);
+championshipGold.emissiveColor = Color3.FromHexString('#42331a');
 const pocketCallMaterial = material('called pocket marker', '#e8bd72');
 pocketCallMaterial.disableLighting = true;
 pocketCallMaterial.emissiveColor = Color3.FromHexString('#e8bd72');
@@ -360,10 +363,10 @@ for (const side of [-1, 1]) {
     const railCenter = end * (sideOpening + length / 2 - cornerOpening) / 2;
     const railLength = length / 2 - cornerOpening - sideOpening;
     buildStraightRail(scene, wood, side, end, true);
-    box('rail edge inlay', side * (width / 2 + railDepth - 0.011), railTop, railCenter, 0.0025, 0.001, railLength - 0.025, brass);
+    box('rail edge inlay', side * (width / 2 + railDepth - 0.011), railTop, railCenter, 0.0025, 0.001, railLength - 0.025, railAccent);
   }
   buildStraightRail(scene, wood, side, side, false);
-  box('end edge inlay', 0, railTop, side * (length / 2 + railDepth - 0.011), width - 2 * cornerOpening - 0.025, 0.001, 0.0025, brass);
+  box('end edge inlay', 0, railTop, side * (length / 2 + railDepth - 0.011), width - 2 * cornerOpening - 0.025, 0.001, 0.0025, railAccent);
   for (const x of [-0.31, 0, 0.31]) {
     const sight = box('end rail sight', x, 0.064, side * (length / 2 + 0.078), 0.012, 0.002, 0.012, pearl);
     sight.rotation.y = Math.PI / 4;
@@ -373,6 +376,12 @@ for (const side of [-1, 1]) {
     sight.rotation.y = Math.PI / 4;
   }
 }
+const championshipTrim = championshipInlays.map(({ x, z, width, depth, diamond }) => {
+  const mesh = box('championship gold inlay', x, railTop + 0.001, z, width, 0.002, depth, championshipGold);
+  if (diamond) mesh.rotation.y = Math.PI / 4;
+  mesh.setEnabled(false);
+  return mesh;
+});
 const pocketSelectors = pockets.map((pocket, index) => {
   const disc = MeshBuilder.CreateDisc('call pocket ' + index, {radius: 0.09, tessellation: 32, sideOrientation: 2}, scene);
   disc.rotation.x = Math.PI / 2;
@@ -593,6 +602,7 @@ snookerLines.alpha = 0.55;
 snookerLines.isPickable = false;
 snookerLines.setEnabled(false);
 let mode = launch.mode;
+let venue: CareerTable | undefined;
 const isTournament = () => 'city' in mode || mode.kind === 'challenge';
 const activeChallenge = () => mode.kind === 'challenge' ? getChallenge(mode.game, mode.challenge) : undefined;
 const currentGame = () => snooker ? 'snooker' : 'pool';
@@ -1627,9 +1637,10 @@ function resetMatch(continueCareer = false) {
   }
   const challenge = activeChallenge();
   const preset = challenge ? challengeLayout(challenge) : undefined;
-  balls = preset ?? rack(snooker, Math.random);
+  const opening = mode.kind === 'computer' ? careerOpening(mode.city, mode.stage, mode.game, careerRacks[0] + careerRacks[1]) : undefined;
+  balls = preset ?? opening?.balls ?? rack(snooker, Math.random);
   careerBanked = false;
-  turn = 0;
+  turn = opening?.opener ?? 0;
   scores = [0, 0];
   groups = preset ? ['Solids', 'Stripes'] : [null, null];
   winner = undefined;
@@ -1646,7 +1657,7 @@ function resetMatch(continueCareer = false) {
   finished = colourAfterRed = false;
   snookerConcessionPrompted = pendingSnookerConcession = false;
   if (snookerConcessionDialog?.open) snookerConcessionDialog.close();
-  cpuWait = 0;
+  cpuWait = turn === 1 ? 0.85 : 0;
   setTip(0, 0);
   showScore();
   placement = preset ? undefined : 'break';
@@ -1842,6 +1853,7 @@ document.querySelector<HTMLButtonElement>('#openSettings')!.onclick = () => {
   select('difficulty').value = difficulty;
   for (const field of ['game', 'opponent', 'difficulty']) select(field).disabled = isTournament();
   select('cueStyle').disabled = mode.kind === 'computer';
+  document.querySelector<HTMLElement>('#tableStyleRow')!.hidden = mode.kind === 'computer';
   refreshCityFinishes();
   describeCue();
   document.querySelector<HTMLButtonElement>('#newMatch')!.disabled = isTournament();
@@ -1890,7 +1902,11 @@ select('cueStyle').onchange = updateCueStyle;
 if (equippedCareerCue) select('cueStyle').value = equippedCareerCue.id;
 updateCueStyle();
 function applyTableFinish() {
-  const [felt, cushion, rail] = tableFinish(select('tableStyle').value, snooker);
+  venue = mode.kind === 'computer' ? careerTable(mode.city.id, mode.stage, snooker) : undefined;
+  const [felt, cushion, rail] = tableFinish(select('tableStyle').value, snooker, venue);
+  railAccent.diffuseColor = Color3.FromHexString(venue?.accent ?? '#dfc48d');
+  pearl.diffuseColor = Color3.FromHexString(venue?.accent ?? '#e8dfc9');
+  championshipTrim.forEach(mesh => mesh.setEnabled(Boolean(venue?.championship)));
   document.body.classList.toggle('snooker-game', snooker);
   snookerLines.setEnabled(snooker);
   cloth.diffuseColor = Color3.FromHexString(felt);
@@ -2540,7 +2556,7 @@ engine.runRenderLoop(() => {
     balls: displayBalls, pocketDrops: dropPoses, aim, rolling: displayRolling, finished,
     placement: Boolean(placement) && !displayFrame, guides: guidesEnabled,
     callEligible: callEligible && canControl(), calledPocket, snooker,
-    tableStyle: select('tableStyle').value, cueStyle: select('cueStyle').value,
+    tableStyle: select('tableStyle').value, venue, cueStyle: select('cueStyle').value,
     pull: strike ? strike * shotPower * 5 : tvEnabled ? remote.stage === 'power' ? remote.power : 0 : pull,
   });
   else scene.render();

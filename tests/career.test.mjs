@@ -3,11 +3,12 @@ import test from 'node:test';
 import { loadSource } from './load-source.mjs';
 
 const {
-  careerCityStatus, careerClears, careerGoal, careerStages, careerProgress, careerRank, careerStage, careerStageStatus,
+  careerCityStatus, careerClears, careerGoal, careerOpening, careerStages, careerProgress, careerRank, careerStage, careerStageStatus,
   equipCareerCue, finishCareerStage,
 } = await loadSource('career');
+const { careerTable } = await loadSource('table-finishes');
 const { cities } = await loadSource('circuit');
-const { isMoving, radius, shotSpeed, step, strikeBall } = await loadSource('physics');
+const { isMoving, length, radius, rack, shotSpeed, step, strikeBall } = await loadSource('physics');
 const { challenges, challengeLayout, challengeCompleted, completeChallenge, getChallenge } = await loadSource('challenges');
 const [helsinki, stockholm, copenhagen] = cities;
 
@@ -85,6 +86,40 @@ test('every city level starts a full match in both games', () => {
       }
     }
   }
+});
+
+test('career stages vary the opening position and venue while keeping legal full racks', () => {
+  for (const game of ['pool', 'snooker']) {
+    const snooker = game === 'snooker';
+    const venues = new Set();
+    for (const city of cities) {
+      const positions = new Set();
+      for (const stage of careerStages.keys()) {
+        const opening = careerOpening(city, stage, game, 0, () => .5);
+        const [cue] = opening.balls;
+        positions.add(cue.x + ',' + cue.z);
+        const venue = careerTable(city.id, stage, snooker);
+        venues.add(JSON.stringify([venue.colors, venue.accent]));
+        assert.equal(venue.championship, city.id === 'london' && stage === careerStages.length - 1);
+        assert.equal(opening.balls.length, snooker ? 22 : 16);
+        assert.ok(opening.balls.every(ball => !ball.pocketed));
+        if (snooker) {
+          assert.ok(cue.z <= -.74 && Math.hypot(cue.x, cue.z + .74) < .22);
+        } else {
+          assert.ok(cue.z <= -length / 4);
+          for (const i of [7, 8, 15]) {
+            const expected = rack(false, () => .5)[i];
+            assert.deepEqual(opening.balls[i], expected);
+          }
+        }
+      }
+      assert.equal(positions.size, careerStages.length);
+    }
+    assert.equal(venues.size, careerStages.length * cities.length);
+  }
+  const london = cities.at(-1);
+  const final = careerStages.length - 1;
+  assert.deepEqual([0, 1, 2].map(round => careerOpening(london, final, 'pool', round).opener), [0, 1, 0]);
 });
 
 test('Billiard and Snooker track progress and challenge completions separately', () => {

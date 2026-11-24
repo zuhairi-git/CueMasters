@@ -2,12 +2,36 @@ import { cities, computerProgress, type City, type Game } from './circuit';
 import { difficulties } from './difficulty';
 import { t } from './i18n';
 import { cityFinishes } from './table-finishes';
+import { rack } from './physics';
 
-const stageRatings = [0, 0, 1, 1, 1, 2, 1, 2, 2, 2];
-export const careerStages = stageRatings.map((rating, index) => ({
-  title: index === 0 ? 'Opening Match' : index === 8 ? 'Semifinal' : index === 9 ? 'City Final' : 'City Match',
-  rating,
-}));
+export const careerStages = [
+  { title: 'Opening Match', rating: 0, opening: [0, -.65], opener: 0 },
+  { title: 'Left-Side Break', rating: 0, opening: [-.19, -.68], opener: 0 },
+  { title: 'Right-Side Break', rating: 1, opening: [.19, -.68], opener: 0 },
+  { title: 'Away Match', rating: 1, opening: [-.10, -.78], opener: 1 },
+  { title: 'Deep Break', rating: 1, opening: [0, -.93], opener: 0 },
+  { title: 'Right-Rail Match', rating: 2, opening: [.34, -.72], opener: 0 },
+  { title: 'Return Match', rating: 1, opening: [.10, -.78], opener: 1 },
+  { title: 'Quarterfinal', rating: 2, opening: [-.34, -.72], opener: 0 },
+  { title: 'Semifinal', rating: 2, opening: [-.23, -.87], opener: 1 },
+  { title: 'City Final', rating: 2, opening: [.23, -.87], opener: 0 },
+] as const;
+
+export function careerOpening(city: City, stage: number, game: Game, round: number, random = Math.random) {
+  const snooker = game === 'snooker';
+  const balls = rack(snooker, random);
+  const { opening: [x, z], opener } = careerStages[stage];
+  const openingX = round % 2 ? -x : x;
+  Object.assign(balls[0], snooker ? { x: openingX * .48, z: -.755 + (z + .65) * .45 } : { x: openingX, z });
+  if (!snooker) {
+    // Leave the eight and the opposite-group rear corners in their legal rack positions.
+    const indices = [1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14];
+    const positions = indices.map(index => ({ x: balls[index].x, z: balls[index].z }));
+    const rotation = (stage + (city.level - 1) * 3 + round * 5) % positions.length;
+    indices.forEach((index, slot) => Object.assign(balls[index], positions[(slot + rotation) % positions.length]));
+  }
+  return { balls, opener: round % 2 ? 1 - opener : opener };
+}
 
 export function careerStage(city: City, index: number, game: Game = 'pool') {
   const bestOfThree = city.id === 'london' && index === careerStages.length - 1;
