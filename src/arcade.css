@@ -692,3 +692,54 @@ header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: #ff8a75; ba
   header.game-hud > nav .hud-action, header.game-hud > nav #openSettings { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
   header.game-hud > .game-heading { height: 50px; }
 }
+
+/* ---------- Phones: one scoreboard row and a one-line hint ---------- */
+/* The collapsed header keeps only what a shot needs: who is playing, the score
+   and the ball on. The career goal and full hints live behind Details. */
+@media (max-width: 600px) {
+  .compact-hud header.game-hud { gap: 4px 8px; }
+  .compact-hud header.game-hud #careerObjective { display: none; }
+  .compact-hud header.game-hud #status { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .compact-hud .game-hud .player-turn { display: none; }
+  .compact-hud .game-hud .player-score,
+  .compact-hud .game-hud .player-score.active { grid-template-columns: 14px minmax(0, 1fr); gap: 1px 7px; min-height: 42px; padding: 4px 8px; }
+  .compact-hud .game-hud .player-score.active { box-shadow: inset 0 -2px #d6b779; }
+  .compact-hud .game-hud .player-score.active .player-name { grid-column: 2; }
+
+  /* Snooker: name over score on each side, ball on between them. */
+  .snooker-game.compact-hud header.game-hud #score:has(> .ball-on:not([hidden])) { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; }
+  .snooker-game.compact-hud .game-hud .player-score,
+  .snooker-game.compact-hud .game-hud .player-score.active { grid-template-columns: minmax(0, 1fr); }
+  .snooker-game.compact-hud .game-hud .group-marker { display: none; }
+  .snooker-game.compact-hud .game-hud .player-score .player-name,
+  .snooker-game.compact-hud .game-hud .player-score.active .player-name,
+  .snooker-game.compact-hud .game-hud .player-score .player-group { grid-column: 1; }
+  .snooker-game.compact-hud .game-hud .player-name { font-size: .68rem; }
+  .snooker-game.compact-hud .game-hud .player-avatar { flex-basis: 15px; width: 15px; height: 15px; }
+  .snooker-game.compact-hud .game-hud .player-group { font-size: 0; line-height: 1; }
+  .snooker-game.compact-hud .game-hud .player-group::after {
+    content: attr(data-score);
+    color: #f4f7ff;
+    font: 800 1.05rem/1 var(--display);
+    font-variant-numeric: tabular-nums;
+  }
+  .snooker-game.compact-hud .game-hud .player-score:last-child,
+  .snooker-game.compact-hud .game-hud .player-score:last-child :is(.player-name, .player-group) { text-align: right; }
+  .snooker-game.compact-hud .game-hud .player-score:last-child .player-name { flex-direction: row-reverse; }
+
+  .snooker-game.compact-hud header.game-hud #score > .ball-on:not([hidden]) {
+    position: relative;
+    grid-column: auto;
+    grid-row: auto;
+    gap: 3px;
+    min-width: 56px;
+    min-height: 0;
+    padding: 13px 6px 0;
+  }
+  .compact-hud .ball-on-title { position: absolute; inset: 5px 0 auto; font-size: .44rem; letter-spacing: .12em; text-align: center; }
+  .compact-hud .ball-on-next { display: none; }
+  .compact-hud .ball-on strong { font-size: .76rem; }
+  /* Any colour: the six balls say it without the label. */
+  .compact-hud .ball-on:has(.ball-on-icon ~ .ball-on-icon) strong { display: none; }
+  .compact-hud .ball-on:has(.ball-on-icon ~ .ball-on-icon) .ball-on-icon { width: 11px; height: 11px; }
+}
