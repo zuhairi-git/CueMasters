@@ -15,7 +15,7 @@ import { directionToBall, traceShot } from './aim-guide';
 import { OnlineGame } from './online';
 import { cities, onlineMedalName, resultMessage } from './circuit';
 import { awardCoins, careerCityStatus, careerCue, careerCues, careerDifficulty, careerGoal, careerOpening, careerProgress, careerRank, careerStage, careerStages, careerStageStatus, finishCareerStage } from './career';
-import { careerTable, championshipInlays, cityFinishes, tableFinish, type CareerTable } from './table-finishes';
+import { careerTable, challengeTable, championshipInlays, cityFinishes, railSights, tableFinish, type CareerTable, type Motif } from './table-finishes';
 import { challengeLayout, challengeStars, completeChallenge, getChallenge, ratingFor, starReward } from './challenges';
 import { clearSession, labelGame, launch, saveSession } from './home';
 import { savedPage, savePage, savePagePanel } from './page-state';
@@ -373,15 +373,30 @@ function buildRails() {
   }
   buildStraightRail(scene, wood, side, side, false);
   box('end edge inlay', 0, railTop, side * (length / 2 + railDepth - 0.011), width - 2 * cornerOpening - 0.025, 0.001, 0.0025, railAccent);
-  for (const x of [-0.31, 0, 0.31]) {
-    const sight = box('end rail sight', x, 0.064, side * (length / 2 + 0.078), 0.012, 0.002, 0.012, pearl);
-    sight.rotation.y = Math.PI / 4;
-  }
-  for (const z of [-0.92, -0.63, -0.34, 0.34, 0.63, 0.92]) {
-    const sight = box('rail sight', side * (width / 2 + 0.078), 0.064, z, 0.012, 0.002, 0.012, pearl);
-    sight.rotation.y = Math.PI / 4;
-  }
  }
+}
+// Rail sights follow the venue's motif and are rebuilt when it changes.
+let sightMeshes: Mesh[] = [];
+let sightMotif: Motif | undefined;
+function buildSights(motif: Motif = 'diamond') {
+  if (motif === sightMotif) return;
+  sightMotif = motif;
+  for (const mesh of sightMeshes) {
+    shadows.removeShadowCaster(mesh);
+    mesh.dispose();
+  }
+  sightMeshes = railSights(motif, width / 2 + 0.078, length / 2 + 0.078).map(({ x, z, width: w, depth, diamond, round }) => {
+    if (round) {
+      const disc = MeshBuilder.CreateCylinder('rail sight', { height: 0.002, diameter: w, tessellation: 24 }, scene);
+      disc.position.set(x, 0.064, z);
+      disc.material = pearl;
+      disc.isPickable = false;
+      return disc;
+    }
+    const sight = box('rail sight', x, 0.064, z, w, 0.002, depth, pearl);
+    if (diamond) sight.rotation.y = Math.PI / 4;
+    return sight;
+  });
 }
 const championshipTrim = championshipInlays.map(({ x, z, width, depth, diamond }) => {
   const mesh = box('championship gold inlay', x, railTop + 0.001, z, width, 0.002, depth, championshipGold);
@@ -2098,7 +2113,11 @@ function applyTableFinish() {
     configureTable(currentGame());
     buildTableGeometry();
   }
-  venue = mode.kind === 'computer' ? careerTable(mode.city.id, mode.stage, snooker) : undefined;
+  const challenge = activeChallenge();
+  venue = mode.kind === 'computer' ? careerTable(mode.city.id, mode.stage, snooker)
+    : challenge ? challengeTable(challenge.tier, Boolean(challenge.timeLimit), snooker) : undefined;
+  buildSights(venue?.motif);
+  brass.diffuseColor = Color3.FromHexString(venue?.trim ?? '#dfc48d');
   const [felt, cushion, rail] = tableFinish(select('tableStyle').value, snooker, venue);
   railAccent.diffuseColor = Color3.FromHexString(venue?.accent ?? '#dfc48d');
   pearl.diffuseColor = Color3.FromHexString(venue?.accent ?? '#e8dfc9');

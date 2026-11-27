@@ -6,7 +6,7 @@ import { remoteKey } from './tv-controls';
 import { t } from './i18n';
 import { cityFinals, cityTrophy, careerBonus, careerCityStatus, careerClears, careerCues, careerDifficulty, careerGoal, careerProgress, careerRank, careerReward, careerStage, careerStages, careerStageStatus, equipCareerCue } from './career';
 import { challengeStars, challengeTiers, challenges, gameStars, getChallenge, maxStars, starReward, tierStars, tierUnlocked } from './challenges';
-import { careerTable, cityFinishes, type CareerTable } from './table-finishes';
+import { careerTable, challengeTable, cityFinishes, type CareerTable } from './table-finishes';
 import { linkedPage, pageInHistory, savedPage, savePage } from './page-state';
 import helsinki from './helsinki-harbor.svg?raw';
 import stockholm from './stockholm-skyline.svg?raw';
@@ -25,14 +25,28 @@ function tableArt(level: number, venue?: CareerTable) {
   const cabinet = venue?.colors[2] ?? '#805643';
   const felt = venue?.colors[0] ?? '#265e58';
   const accent = venue?.accent ?? '#b38662';
+  // The card's rail carries the venue's motif in miniature.
+  const mark = (x: number, y: number) => {
+    const at = `transform="translate(${x} ${y})" fill="${accent}"`;
+    switch (venue?.motif) {
+      case 'portholes': return `<circle r="2" ${at}/>`;
+      case 'bars': return `<rect x="-.8" y="-3" width="1.6" height="6" ${at}/>`;
+      case 'bricks': return `<rect x="-3" y="-1.6" width="6" height="3.2" ${at}/>`;
+      case 'dashes': return `<path d="M-5-1.6h10v1.1h-10zM-5 .5h10v1.1h-10z" ${at}/>`;
+      case 'crown': return `<path d="M0-2.6l2.6 2.6-2.6 2.6-2.6-2.6zM-6-1.4l1.4 1.4-1.4 1.4-1.4-1.4zM6-1.4l1.4 1.4-1.4 1.4-1.4-1.4z" ${at}/>`;
+      default: return `<path d="M0-2.4l2.4 2.4-2.4 2.4-2.4-2.4z" ${at}/>`;
+    }
+  };
+  const sights = venue ? [80, 120, 200, 240].map(x => mark(x, 17.5) + mark(x, 122.5)).join('') : '';
   return `<svg class="selection-art" viewBox="0 0 320 140" aria-hidden="true" focusable="false">
     <path fill="#142b32" d="M0 0h320v140H0z"/>
     <rect x="27" y="13" width="266" height="114" rx="19" fill="${cabinet}" stroke="${accent}" stroke-width="${venue?.championship ? 3 : 2}"/>
     ${venue?.championship ? '<rect x="31" y="17" width="258" height="106" rx="16" fill="none" stroke="#f3ca75" stroke-width="1"/><path d="M11 70l7-7 7 7-7 7z M295 70l7-7 7 7-7 7z" fill="#f3ca75"/>' : ''}
-    <rect x="36" y="22" width="248" height="96" rx="11" fill="${felt}" stroke="#102e30" stroke-width="4"/>
+    ${sights}
+    <rect x="36" y="22" width="248" height="96" rx="11" fill="${felt}" stroke="${venue?.colors[1] ?? '#102e30'}" stroke-width="4"/>
     <path d="M80 25v90m80-90v90" stroke="#99cbad" stroke-width="1" opacity=".16"/>
     <path d="M43 28h234m-234 84h234" stroke="#9ddab4" stroke-width="2" opacity=".22"/>
-    <g fill="#0b2026"><circle cx="43" cy="29" r="7"/><circle cx="160" cy="25" r="7"/><circle cx="277" cy="29" r="7"/><circle cx="43" cy="111" r="7"/><circle cx="160" cy="115" r="7"/><circle cx="277" cy="111" r="7"/></g>
+    <g fill="#0b2026"${venue ? ` stroke="${venue.trim}" stroke-width="1"` : ''}><circle cx="43" cy="29" r="7"/><circle cx="160" cy="25" r="7"/><circle cx="277" cy="29" r="7"/><circle cx="43" cy="111" r="7"/><circle cx="160" cy="115" r="7"/><circle cx="277" cy="111" r="7"/></g>
     <path d="M35 107l61-28" stroke="#d9aa76" stroke-width="4" stroke-linecap="round"/>
     <path d="M112 72l55-23" stroke="#dbf1d2" stroke-dasharray="3 5" opacity=".7"/>
     <circle cx="107" cy="75" r="7" fill="#f5edda"/>
@@ -365,7 +379,7 @@ export async function chooseGame() {
               return selectionCard({
                 title: t(challenge.title),
                 subtitle: challenge.timeLimit ? t('Against the clock · {seconds}s', { seconds: challenge.timeLimit }) : t('Skill shot · {count} attempts', { count: challenge.attempts }),
-                detail: t(challenge.objective), artwork: tableArt(index % 5 + 1), stars,
+                detail: t(challenge.objective), artwork: tableArt(index % 5 + 1, challengeTable(challenge.tier, Boolean(challenge.timeLimit), game === 'snooker')), stars,
                 status: !open ? 'Locked' : stars === maxStars ? 'Completed' : undefined,
                 action: open ? t(stars ? stars === maxStars ? 'Replay' : 'Go for more stars' : 'Play') : undefined,
                 play: open ? () => start({ kind: 'challenge', game, challenge: challenge.id }) : undefined,

@@ -1,5 +1,5 @@
 import { traceShot } from './aim-guide';
-import { championshipInlays, tableFinish, type CareerTable } from './table-finishes';
+import { championshipInlays, railSights, tableFinish, type CareerTable } from './table-finishes';
 import { ballMarkings } from './ball-markings';
 import { cushions, length, pocketMouthRadius, pockets, radius, width, type Ball } from './physics';
 
@@ -102,23 +102,20 @@ export class TvTable {
     rectangle(width + 0.04, length + 0.04, cushion);
     rectangle(width, length, felt);
     for (const c of cushions) line(c.ax, c.az, c.bx, c.bz, cushion, 0.025);
-    if (venue?.championship) {
-      ctx.fillStyle = venue.accent;
-      for (const { x, z, width, depth, diamond } of championshipInlays) {
-        const center = point(x, z);
-        ctx.save();
-        ctx.translate(center.x, center.y);
-        if (diamond) ctx.rotate(Math.PI / 4);
-        const w = (this.view.landscape ? depth : width) * scale;
-        const h = (this.view.landscape ? width : depth) * scale;
-        ctx.fillRect(-w / 2, -h / 2, w, h);
-        ctx.restore();
-      }
-    }
+    // The plain table keeps round sights; venues draw their own rail motif.
+    const sights = venue ? railSights(venue.motif, width / 2 + 0.078, length / 2 + 0.078) : railSights('diamond', width / 2 + 0.078, length / 2 + 0.078).map(piece => ({ ...piece, diamond: false, round: true }));
     const sight = venue?.accent ?? '#e8dfc9';
-    for (const side of [-1, 1]) {
-      for (const z of [-0.92, -0.63, -0.34, 0.34, 0.63, 0.92]) circle(side * (width / 2 + 0.078), z, 0.006, sight);
-      for (const x of [-0.31, 0, 0.31]) circle(x, side * (length / 2 + 0.078), 0.006, sight);
+    for (const { x, z, width, depth, diamond, round } of [...(venue?.championship ? championshipInlays : []), ...sights]) {
+      if (round) { circle(x, z, width / 2, sight); continue; }
+      const center = point(x, z);
+      ctx.fillStyle = sight;
+      ctx.save();
+      ctx.translate(center.x, center.y);
+      if (diamond) ctx.rotate(Math.PI / 4);
+      const w = (this.view.landscape ? depth : width) * scale;
+      const h = (this.view.landscape ? width : depth) * scale;
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.restore();
     }
     ctx.globalAlpha = 0.3;
     const baulk = state.snooker ? -0.74 : -length / 4;
@@ -132,7 +129,7 @@ export class TvTable {
       const p = pockets[i];
       const mouth = pocketMouthRadius(p);
       const called = state.callEligible && state.calledPocket === i;
-      circle(p.x, p.z, mouth + 0.012, venue?.championship ? venue.accent : '#c5ab79');
+      circle(p.x, p.z, mouth + 0.012, venue?.trim ?? '#c5ab79');
       circle(p.x, p.z, mouth + 0.009, '#21191c');
       const outline = called ? calledPocketColor : state.callEligible ? '#63ddf1' : undefined;
       circle(p.x, p.z, mouth, '#030305', outline, called ? calledPocketBorderWidth : undefined);

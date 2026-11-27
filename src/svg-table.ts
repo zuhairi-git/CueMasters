@@ -1,5 +1,5 @@
 import { cueArtwork } from './svg-cue';
-import { championshipInlays, tableFinish } from './table-finishes';
+import { championshipInlays, railSights, tableFinish } from './table-finishes';
 import { ballArtwork } from './svg-ball';
 import { ballMarkings } from './ball-markings';
 import { traceShot } from './aim-guide';
@@ -147,9 +147,11 @@ export class SvgTable {
       }
     }
     const sight = venue?.accent ?? '#d9c797';
-    for (const side of [-1, 1]) {
-      for (const z of [-920,-630,-340,340,630,920]) s += '<path d="M'+side*731+' '+(z-6)+' l5 6 -5 6 -5 -6Z" fill="'+sight+'"/>';
-      for (const x of [-310,0,310]) s += '<path d="M'+x+' '+(side*1362-6)+' l5 6 -5 6 -5 -6Z" fill="'+sight+'"/>';
+    for (const { x, z, width, depth, diamond, round } of railSights(venue?.motif, .731, 1.362)) {
+      const cx = x * 1000, cy = -z * 1000, w = width * 500, h = depth * 500;
+      s += round ? `<circle cx="${cx}" cy="${cy}" r="${w}" fill="${sight}"/>`
+        : diamond ? `<path d="M${cx} ${cy - h} l${w} ${h} ${-w} ${h} ${-w} ${-h}Z" fill="${sight}"/>`
+        : `<rect x="${cx - w}" y="${cy - h}" width="${w * 2}" height="${h * 2}" rx="1.5" fill="${sight}"/>`;
     }
     if (state.snooker) s += '<path d="M-635 740H635 M-220 740 A220 220 0 0 0 220 740" fill="none" stroke="#f6dfcd" stroke-opacity=".45" stroke-width="2"/>';
     else s += '<path d="M-635 635H635" stroke="#fff" stroke-opacity=".12" stroke-width="2"/>';
@@ -158,7 +160,7 @@ export class SvgTable {
     for (const p of pockets) {
       const r = pocketMouthRadius(p) * 1000;
       const center = `<circle cx="${p.x * 1000}" cy="${-p.z * 1000}"`;
-      s += `${center} r="${r + 5}" fill="#342b2b" stroke="${venue?.championship ? accent : '#b7a27e'}" stroke-width="${venue?.championship ? 5 : 2}"/>`;
+      s += `${center} r="${r + 5}" fill="#342b2b" stroke="${venue?.trim ?? '#b7a27e'}" stroke-width="${venue?.championship ? 5 : 2}"/>`;
       s += `${center} r="${r}" fill="url(#sv-pocket)"/>`;
     }
     this.table.innerHTML = s + '</g>';

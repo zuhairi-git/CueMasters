@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadSource } from './load-source.mjs';
-const { careerTable, championshipInlays } = await loadSource('table-finishes');
+const { careerTable, challengeTable, championshipInlays, railSights } = await loadSource('table-finishes');
 const { SvgTable, svgViewport } = await loadSource('svg-table');
 const { width, length, pockets } = await loadSource('physics');
 
@@ -27,6 +27,42 @@ test('the London championship renders the gold inlay in both games', () => {
     assert.equal([...table.innerHTML.matchAll(/stroke="#f3ca75" stroke-width="5"/g)].length, pockets.length);
     renderer.artwork({ ...state, venue: careerTable('london', 8, snooker) });
     assert.doesNotMatch(table.innerHTML, /#f3ca75/);
+  }
+});
+
+test('every city and challenge tier has its own table design', () => {
+  const cities = ['helsinki', 'stockholm', 'copenhagen', 'berlin', 'london'];
+  assert.equal(new Set(cities.map(city => careerTable(city, 0, false).motif)).size, cities.length);
+  assert.equal(new Set(cities.map(city => careerTable(city, 0, false).trim)).size, cities.length);
+  for (const city of cities) {
+    const { motif } = careerTable(city, 0, false);
+    for (let stage = 1; stage < 10; stage++) assert.equal(careerTable(city, stage, false).motif, motif);
+  }
+  for (const snooker of [false, true]) {
+    const tables = ['Rookie', 'Pro', 'Master'].flatMap(tier => [false, true].map(timed => challengeTable(tier, timed, snooker)));
+    assert.equal(new Set(tables.map(table => table.id)).size, tables.length);
+    assert.equal(new Set(tables.map(table => table.colors[0])).size, tables.length);
+    assert.ok(tables.every(table => /^#[0-9a-f]{6}$/.test(table.colors.join('').slice(0, 7)) && !table.championship));
+  }
+});
+
+test('rail sights stay on the rails and render for every motif', () => {
+  const table = { innerHTML: '' };
+  const renderer = Object.assign(Object.create(SvgTable.prototype), { table });
+  const state = { snooker: false, tableStyle: 'Club Green', balls: [] };
+  renderer.artwork(state);
+  const plain = table.innerHTML;
+  for (const city of ['helsinki', 'stockholm', 'copenhagen', 'berlin', 'london']) {
+    const venue = careerTable(city, 0, false);
+    for (const piece of railSights(venue.motif, width / 2 + .078, length / 2 + .078)) {
+      const onSide = Math.abs(piece.x) - piece.width > width / 2 + .03 && Math.abs(piece.x) + piece.width < width / 2 + .122;
+      const onEnd = Math.abs(piece.z) - piece.depth > length / 2 + .03 && Math.abs(piece.z) + piece.depth < length / 2 + .122;
+      assert.ok(onSide || onEnd, city);
+    }
+    renderer.artwork({ ...state, venue });
+    assert.notEqual(table.innerHTML, plain);
+    assert.equal([...table.innerHTML.matchAll(new RegExp('stroke="' + venue.trim + '" stroke-width="2"', 'g'))].length, pockets.length);
+    assert.doesNotMatch(table.innerHTML, /NaN|undefined/);
   }
 });
 
