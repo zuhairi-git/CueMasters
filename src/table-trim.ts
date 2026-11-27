@@ -1,5 +1,5 @@
 import { DynamicTexture, Mesh, MeshBuilder, Scene, StandardMaterial, Vector3 } from '@babylonjs/core';
-import { cornerOpening, length, pocketMouthRadius, width } from './physics';
+import { cornerOpening, length, pocketMouthRadius, sideOpening, width } from './physics';
 
 type Point = [number, number];
 type Pocket = { x: number; z: number };
@@ -8,7 +8,6 @@ export const railDepth = 0.122;
 export const railTop = 0.063;
 export const railBase = -0.143;
 export const railBevel = 0.006;
-export const sideOpening = 0.085;
 
 export function railGrain(scene: Scene) {
   const texture = new DynamicTexture('satin rail grain', { width: 1024, height: 256 }, scene, true);
@@ -86,7 +85,7 @@ export function buildPocket(scene: Scene, pocket: Pocket, wood: StandardMaterial
   const hull: Point[] = middle
     ? [[innerX, -sideOpening], [outerX, -sideOpening], [outerX, sideOpening], [innerX, sideOpening]]
     : [
-        [innerX - cornerOpening, innerZ], [-0.058, -0.039], [-0.039, -0.058],
+        [innerX - cornerOpening, innerZ], [innerX - cornerOpening * .323, innerZ - cornerOpening * .177], [innerX - cornerOpening * .177, innerZ - cornerOpening * .323],
         [innerX, innerZ - cornerOpening], [outerX, innerZ - cornerOpening],
         [outerX, outerZ], [innerX - cornerOpening, outerZ],
       ];

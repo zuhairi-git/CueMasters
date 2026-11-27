@@ -42,6 +42,14 @@ const cityAccents: Record<string, string> = {
   london: '#c4e5be',
 };
 
+// Snooker finals keep a red cloth, tinted for the host city.
+const finalReds: Record<string, string> = {
+  helsinki: '#7a2f4b',
+  stockholm: '#8c3a2e',
+  copenhagen: '#7d2233',
+  berlin: '#5e2440',
+};
+
 export interface CareerTable {
   id: string;
   colors: Colors;
@@ -51,7 +59,17 @@ export interface CareerTable {
 
 export function careerTable(city: string, stage: number, snooker: boolean): CareerTable {
   const [pool, red, cushion, rail] = careerFinishes[stage];
-  const championship = city === 'london' && stage === careerFinishes.length - 1;
+  // Every city final is a championship table on the city's own cloth; London keeps the gold-trimmed green.
+  const championship = stage === careerFinishes.length - 1;
+  const cityCloth = cityFinishes[city]?.colors;
+  if (championship && city !== 'london') {
+    return {
+      id: city + '-' + stage,
+      colors: snooker || !cityCloth ? [finalReds[city] ?? red, '#4b2438', '#15131c'] : [cityCloth[0], cityCloth[1], '#15131c'],
+      accent: '#f3ca75',
+      championship,
+    };
+  }
   return {
     id: city + '-' + stage,
     colors: championship ? championshipColors : [snooker ? red : pool, snooker ? '#4b2438' : cushion, rail],

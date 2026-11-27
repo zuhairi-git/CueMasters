@@ -4,8 +4,8 @@ import { difficulties } from './difficulty';
 import { validGame, type SavedGame } from './saved-game';
 import { remoteKey } from './tv-controls';
 import { t } from './i18n';
-import { careerBonus, careerCityStatus, careerClears, careerCues, careerDifficulty, careerGoal, careerProgress, careerRank, careerReward, careerStage, careerStages, careerStageStatus, equipCareerCue } from './career';
-import { challengeCompleted, challenges, getChallenge } from './challenges';
+import { cityFinals, cityTrophy, careerBonus, careerCityStatus, careerClears, careerCues, careerDifficulty, careerGoal, careerProgress, careerRank, careerReward, careerStage, careerStages, careerStageStatus, equipCareerCue } from './career';
+import { challengeStars, challengeTiers, challenges, gameStars, getChallenge, maxStars, starReward, tierStars, tierUnlocked } from './challenges';
 import { careerTable, cityFinishes, type CareerTable } from './table-finishes';
 import { linkedPage, pageInHistory, savedPage, savePage } from './page-state';
 import helsinki from './helsinki-harbor.svg?raw';
@@ -40,9 +40,25 @@ function tableArt(level: number, venue?: CareerTable) {
   </svg>`;
 }
 
-function selectionCard(options: { title: string; subtitle: string; detail: string; artwork: string; status?: string; action?: string; play?: () => void }) {
+const starRow = (earned: number) => `<span class="star-row" role="img" aria-label="${t('{count} of 3 stars', { count: earned })}">${
+  [1, 2, 3].map(star => `<span class="star${star <= earned ? ' earned' : ''}">★</span>`).join('')}</span>`;
+
+function sectionHeading(title: string, note: string, locked = false) {
+  const heading = document.createElement('div');
+  heading.className = 'tier-heading';
+  if (locked) heading.dataset.locked = 'true';
+  const name = document.createElement('h3');
+  name.textContent = title;
+  const detail = document.createElement('span');
+  detail.textContent = note;
+  heading.append(name, detail);
+  return heading;
+}
+
+function selectionCard(options: { title: string; subtitle: string; detail: string; artwork: string; status?: string; action?: string; play?: () => void; stars?: number; final?: boolean; ribbon?: string; number?: number }) {
   const card = options.play ? document.createElement('button') : document.createElement('article');
   card.className = 'selection-card';
+  if (options.final) card.dataset.final = 'true';
   if (options.status) card.dataset.status = options.status.toLowerCase();
   if (card instanceof HTMLButtonElement) {
     card.type = 'button';
@@ -50,9 +66,12 @@ function selectionCard(options: { title: string; subtitle: string; detail: strin
   }
   card.innerHTML = `<span class="selection-scene" aria-hidden="true">${options.artwork}</span>
     ${options.status ? `<span class="city-status">${t(options.status)}</span>` : ''}
+    ${options.ribbon ? `<span class="selection-ribbon">${options.ribbon}</span>` : ''}
+    ${options.number ? `<span class="selection-number" aria-hidden="true">${options.number}</span>` : ''}
     <span class="selection-copy">
       <span class="selection-subtitle">${options.subtitle}</span>
       <strong class="selection-title">${options.title}</strong>
+      ${options.stars === undefined ? '' : starRow(options.stars)}
       <span class="selection-detail">${options.detail}</span>
       ${options.action ? `<span class="selection-action">${options.action} <span aria-hidden="true">→</span></span>` : ''}
     </span>`;
@@ -169,6 +188,11 @@ export async function chooseGame() {
       for (const button of gameButtons) button.setAttribute('aria-pressed', String(button.dataset.game === game));
       document.querySelector<HTMLElement>('#onlineModeCard')!.hidden = game === 'snooker';
       document.querySelector<HTMLElement>('#casualOnline')!.hidden = game === 'snooker';
+      picker.dataset.game = game;
+      const { coins, points } = careerProgress(game);
+      const chip = (name: string, value: string, label: string) => `<span class="wallet-chip wallet-${name}"><strong>${value}</strong><small>${label}</small></span>`;
+      document.querySelector<HTMLElement>('#homeWallet')!.innerHTML = chip('rank', t(careerRank(points)), t('Rank'))
+        + chip('coins', String(coins), t('Coins')) + chip('stars', gameStars(game) + '/' + challenges.filter(challenge => challenge.game === game).length * maxStars, t('Stars'));
       const session = savedSession(game);
       resume.hidden = !session;
       resume.onclick = session ? () => resolve(session) : null;
@@ -229,8 +253,10 @@ export async function chooseGame() {
         const bonus = progress.bonuses[city.id]?.[index] ? t('Skill goal completed')
           : t('{goal} for +{coins} coins and +{points} points', { goal: t(careerGoal), ...careerBonus });
         return selectionCard({
-          title: t(stage.title), subtitle: t('Game {number}', { number: index + 1 }) + ' · ' + t(careerDifficulty(city, index)),
-          detail: [t(stage.objective), stage.opener ? t('Computer opens') : '', availability !== 'Completed' ? t('{coins} coins · {points} career points', careerReward(index)) : '', bonus].filter(Boolean).join(' · '),
+          title: t(stage.title), subtitle: (stage.final ? t('The Final') : t('Game {number}', { number: index + 1 })) + ' · ' + t(careerDifficulty(city, index)),
+          detail: [stage.champion ? t('Defending champion: {champion}', { champion: stage.champion }) : '', t(stage.objective), stage.twist ? t(stage.twist) : stage.opener ? t('Computer opens') : '',
+            availability !== 'Completed' ? t('{coins} coins · {points} career points', careerReward(index)) : '', bonus].filter(Boolean).join(' · '),
+          final: stage.final, ribbon: stage.final ? t('City title match') : undefined, number: stage.final ? undefined : index + 1,
           status: availability, artwork: tableArt(index % 5 + 1, careerTable(city.id, index, game === 'snooker')),
           action: locked ? undefined : t(availability === 'Completed' ? 'Replay' : 'Play'),
           play: locked ? undefined : () => start({ kind: 'computer', game, city, stage: index, matchId: crypto.randomUUID?.() ?? Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-') }),
@@ -323,14 +349,29 @@ export async function chooseGame() {
         return;
       }
       if (mode === 'challenges') {
-        list.replaceChildren(...challenges.filter(challenge => challenge.game === game).map((challenge, index) => {
-          const completed = challengeCompleted(challenge);
-          return selectionCard({
-            title: t(challenge.title), subtitle: gameName(),
-            detail: t(challenge.objective), artwork: tableArt(index + 1),
-            status: completed ? 'Completed' : undefined, action: t(completed ? 'Replay' : 'Play'),
-            play: () => start({ kind: 'challenge', game, challenge: challenge.id }),
-          });
+        const mine = challenges.filter(challenge => challenge.game === game);
+        const total = gameStars(game);
+        list.dataset.layout = 'challenges';
+        status.textContent = t('{stars} of {total} stars · Each new star pays {coins} coins', { stars: total, total: mine.length * maxStars, coins: starReward });
+        list.replaceChildren(...challengeTiers.flatMap(tier => {
+          const open = tierUnlocked(game, tier);
+          const inTier = mine.filter(challenge => challenge.tier === tier);
+          const earned = inTier.reduce((sum, challenge) => sum + challengeStars(challenge), 0);
+          return [
+            sectionHeading(t(tier), open ? t('{stars} of {total} stars', { stars: earned, total: inTier.length * maxStars })
+              : t('Earn {count} more stars to unlock', { count: tierStars[tier] - total }), !open),
+            ...inTier.map((challenge, index) => {
+              const stars = challengeStars(challenge);
+              return selectionCard({
+                title: t(challenge.title),
+                subtitle: challenge.timeLimit ? t('Against the clock · {seconds}s', { seconds: challenge.timeLimit }) : t('Skill shot · {count} attempts', { count: challenge.attempts }),
+                detail: t(challenge.objective), artwork: tableArt(index % 5 + 1), stars,
+                status: !open ? 'Locked' : stars === maxStars ? 'Completed' : undefined,
+                action: open ? t(stars ? stars === maxStars ? 'Replay' : 'Go for more stars' : 'Play') : undefined,
+                play: open ? () => start({ kind: 'challenge', game, challenge: challenge.id }) : undefined,
+              });
+            }),
+          ];
         }));
         return;
       }
@@ -347,6 +388,7 @@ export async function chooseGame() {
               : t('{cleared}/{total} games cleared', { cleared: careerClears(city, progress), total: careerStages.length })
                 + (availability === 'Completed' ? ' · ' + t('Table finish unlocked: {finish}.', { finish: t(cityFinishes[city.id].name) }) : ''),
             status: availability, artwork: cityArt[city.id],
+            ribbon: cityTrophy(city, progress) ? '🏆 ' + t(cityFinals[city.id].title.replace(' Final', '')) : undefined,
             action: locked ? undefined : t('View games'),
             play: locked ? undefined : () => showStages(city),
           }));

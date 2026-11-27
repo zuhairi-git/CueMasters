@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Cue Master · Pool &amp; Snooker</title>
-  <meta name="theme-color" content="#101e2c">
+  <meta name="theme-color" content="#070b16">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="/cue-master.webmanifest">
@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/src/game.css">
   <link rel="stylesheet" href="/src/hud.css">
   <link rel="stylesheet" href="/src/city-picker.css">
+  <link rel="stylesheet" href="/src/arcade.css">
 <style>
 /* Shared startup and in-app spinner. */
 #cueLoader { position:fixed; inset:0; z-index:2147483647; display:grid; place-items:center; isolation:isolate; background:#080f20; color:#f3f7ff; transition:opacity .38s ease,visibility .38s ease; }
@@ -112,10 +113,13 @@
     <div class="city-picker-content">
       <div class="home-header">
         <button class="brand-home" id="mainScreenLogo" type="button" aria-label="Cue Master home" title="Return to game modes"><img class="brand-logo city-picker-brand" src="/billiard-logo.svg" width="300" height="72" alt=""></button>
+        <div id="homeWallet" class="home-wallet" aria-label="Your progress"></div>
         <button class="avatar-choice home-avatar" id="openAppSettings" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="appSettings"></button>
       </div>
       <div id="homeModes">
+        <p class="home-kicker">Pool &amp; Snooker</p>
         <h1 id="cityPickerTitle">Choose your game</h1>
+        <p class="home-tagline">Climb five cities, take each champion's title and master every trick shot.</p>
         <div class="home-games" role="group" aria-label="Game type">
           <button class="home-back" type="button" data-game="pool" aria-pressed="true">Billiard</button>
           <button class="home-back" type="button" data-game="snooker" aria-pressed="false">Snooker</button>
@@ -124,13 +128,13 @@
           <article class="mode-card mode-online" id="onlineModeCard">
             <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M10 5h12v8a6 6 0 0 1-12 0zm0 3H5v3a5 5 0 0 0 6 5m11-8h5v3a5 5 0 0 1-6 5m-5 3v7m-6 1h12"/></svg></span>
             <h2>Tournaments – Online Play</h2>
-            <p>Face real players in eight-ball and climb the city circuit.</p>
+            <p>Face real players in eight-ball and win a medal in every city.</p>
             <button class="home-action" type="button" data-mode="online">Play Online</button>
           </article>
           <article class="mode-card mode-computer">
             <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="7" y="7" width="18" height="18" rx="3"/><path d="M12 12h8v8h-8zm1-8v3m6-3v3m-6 18v3m6-3v3M4 13h3m-3 6h3m18-6h3m-3 6h3"/></svg></span>
             <h2>Computer Career</h2>
-            <p>Win ten full games per city and earn coins for cue upgrades.</p>
+            <p>Beat nine rivals in each city, then take the title from its champion.</p>
             <button class="home-action" type="button" data-mode="computer">Play Career</button>
           </article>
           <article class="mode-card mode-training">
@@ -142,8 +146,8 @@
           <article class="mode-card mode-challenges">
             <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="5"/><path d="M16 2v8m0 12v8M2 16h8m12 0h8"/></svg></span>
             <h2>Challenges</h2>
-            <p>Try preset shots and track the challenges you complete.</p>
-            <button class="home-action" type="button" data-mode="challenges">View Challenges</button>
+            <p>Earn up to three stars on skill shots and race the clock.</p>
+            <button class="home-action" type="button" data-mode="challenges">Play Challenges</button>
           </article>
         </div>
         <div class="home-links">
@@ -176,6 +180,7 @@
       <span id="shotClock" role="timer" aria-label="Online time remaining" hidden>30s</span>
       <small id="status" role="status">Tap or drag either side of the cue ball to aim.</small>
       <small id="careerObjective" hidden></small>
+      <span id="ballOn" class="ball-on" role="status" hidden></span>
     </div>
     <div id="score" aria-label="Players and pocketed balls"></div>
     <button class="ui-button hud-action" id="mobileMenu" type="button" aria-label="Open game menu" aria-expanded="false" aria-haspopup="dialog" aria-controls="mobileGameMenu"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="menu-open-icon" d="M4 6h16M4 12h16M4 18h16"/><path class="menu-close-icon" d="m6 6 12 12M6 18 18 6"/></svg></button>
@@ -197,6 +202,16 @@
     </div>
     <button class="ui-button" id="skipShotReplay" type="button" hidden>Skip replay</button>
   </aside>
+  <div id="shotCallout" class="shot-callout" role="status" hidden></div>
+  <button id="matchIntro" class="match-intro" type="button" aria-label="Start match" hidden>
+    <span class="intro-card">
+      <span class="intro-eyebrow"></span>
+      <strong class="intro-title"></strong>
+      <span class="intro-versus"></span>
+      <span class="intro-detail"></span>
+      <span class="intro-hint">Tap to start</span>
+    </span>
+  </button>
   <dialog id="mobileGameMenu" class="ui-dialog game-menu" aria-labelledby="gameMenuTitle">
     <div class="dialog-body">
     <div class="game-menu-heading">
@@ -222,6 +237,8 @@
   <section id="gameNotice" class="game-notice" aria-labelledby="noticeTitle" hidden>
     <div id="resultPlayers" class="result-players"></div>
     <div class="result-summary" role="status">
+      <span id="noticeTrophy" class="result-trophy" aria-hidden="true" hidden><svg viewBox="0 0 64 64"><path d="M20 8h24v14a12 12 0 0 1-24 0zm0 4H9v6a11 11 0 0 0 12 11m23-17h11v6a11 11 0 0 1-12 11M32 34v12m-11 10h22l-3-10H24z"/></svg></span>
+      <span id="noticeStars" class="result-stars" role="img" hidden></span>
       <span class="eyebrow" id="noticeLabel"></span><strong id="noticeTitle"></strong><small id="noticeDetail"></small>
     </div>
     <button class="ui-button ui-button--primary" id="noticeRematch" type="button" hidden>Play again</button><button class="ui-button ui-button--primary" id="noticeCircuit" type="button" hidden>Return to cities</button><button class="ui-button" id="noticeRetry" type="button" hidden>Try again</button>

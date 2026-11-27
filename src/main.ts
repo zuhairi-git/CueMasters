@@ -14,9 +14,9 @@ import { cueLength, cuePose } from './cue-geometry';
 import { directionToBall, traceShot } from './aim-guide';
 import { OnlineGame } from './online';
 import { cities, onlineMedalName, resultMessage } from './circuit';
-import { careerCityStatus, careerCue, careerCues, careerDifficulty, careerGoal, careerOpening, careerProgress, careerRank, careerStage, careerStages, careerStageStatus, finishCareerStage } from './career';
+import { awardCoins, careerCityStatus, careerCue, careerCues, careerDifficulty, careerGoal, careerOpening, careerProgress, careerRank, careerStage, careerStages, careerStageStatus, finishCareerStage } from './career';
 import { careerTable, championshipInlays, cityFinishes, tableFinish, type CareerTable } from './table-finishes';
-import { challengeLayout, completeChallenge, getChallenge } from './challenges';
+import { challengeLayout, challengeStars, completeChallenge, getChallenge, ratingFor, starReward } from './challenges';
 import { clearSession, labelGame, launch, saveSession } from './home';
 import { savedPage, savePage, savePagePanel } from './page-state';
 import type { Difficulty } from './difficulty';
@@ -28,11 +28,14 @@ import {
   HemisphericLight, ShadowGenerator, Matrix, Mesh, VertexData, MeshBuilder, Quaternion, Scene, StandardMaterial, Vector3,
 } from '@babylonjs/core';
 import { furnishRoom, tableReflections } from './room';
-import { buildPocket, buildStraightRail, railBase, railDepth, railGrain, railTop, sideOpening } from './table-trim';
+import { buildPocket, buildStraightRail, railBase, railDepth, railGrain, railTop } from './table-trim';
 import { pocketDropDuration, pocketDropImpact, pocketDropPose, startPocketDrop } from './pocket-drop';
 import { chooseShot } from './opponent';
 import { ShotHighlights, ShotRecording, type ShotHighlight } from './shot-highlights';
-import { cushions, cornerOpening, isMoving, length, pocketMouthRadius, pockets, rack, radius, shotSpeed, step, strikeBall, width } from './physics';
+import { configureTable, cushions, cornerOpening, isMoving, length, pocketMouthRadius, pockets, rack, radius, shotSpeed, sideOpening, step, strikeBall, tableGame, width } from './physics';
+
+// Pocket and cushion geometry differs per game, so settle it before any table is built.
+configureTable((launch.state?.snooker ?? ('game' in launch.mode && launch.mode.game === 'snooker')) ? 'snooker' : 'pool');
 
 const canvas = document.querySelector<HTMLCanvasElement>('#table')!;
 const tvCanvas = document.querySelector<HTMLCanvasElement>('#tvTable')!;
@@ -327,7 +330,6 @@ function weave() {
   return texture;
 }
 if (!headlessGraphics) {
-  cloth.diffuseTexture = weave();
   wood.diffuseTexture = railGrain(scene);
   furnishRoom(scene, material('room walnut', '#63452e', 0.34), brass);
 }
@@ -358,7 +360,11 @@ const bed = MeshBuilder.CreateGround('playing surface', { width, height: length 
 bed.material = cloth;
 bed.receiveShadows = true;
 bed.isPickable = true;
-for (const side of [-1, 1]) {
+// Rails, cushions and pockets follow the active game's pocket openings and are
+// rebuilt when a match switches between pool and snooker.
+let tableGeometry: Mesh[] = [];
+function buildRails() {
+ for (const side of [-1, 1]) {
   for (const end of [-1, 1]) {
     const railCenter = end * (sideOpening + length / 2 - cornerOpening) / 2;
     const railLength = length / 2 - cornerOpening - sideOpening;
@@ -375,6 +381,7 @@ for (const side of [-1, 1]) {
     const sight = box('rail sight', side * (width / 2 + 0.078), 0.064, z, 0.012, 0.002, 0.012, pearl);
     sight.rotation.y = Math.PI / 4;
   }
+ }
 }
 const championshipTrim = championshipInlays.map(({ x, z, width, depth, diamond }) => {
   const mesh = box('championship gold inlay', x, railTop + 0.001, z, width, 0.002, depth, championshipGold);
@@ -410,9 +417,26 @@ calledPocketMaterial.emissiveColor = Color3.FromHexString(calledPocketColor);
 calledPocketRing.material = calledPocketMaterial;
 calledPocketRing.isPickable = false;
 calledPocketRing.isVisible = false;
-for (const pocket of pockets) buildPocket(scene, pocket, wood, leather, dark);
-// One continuous beveled cushion per rail, with mitered pocket approaches.
-for (const c of cushions.filter(c => !c.jaw)) {
+const shadowCasterNames = ['cabinet', 'leg', 'side rail', 'end rail', 'solid pocket surround', 'continuous beveled cushion'];
+function syncShadowList() {
+  shadows.getShadowMap()!.renderList = scene.meshes.filter(mesh => mesh.name.startsWith('ball ') || shadowCasterNames.includes(mesh.name));
+}
+function buildTableGeometry() {
+ for (const mesh of tableGeometry) {
+  shadows.removeShadowCaster(mesh);
+  mesh.dispose();
+ }
+ const existing = new Set(scene.meshes);
+ buildRails();
+ pockets.forEach((pocket, index) => {
+  pocketSelectors[index].position.set(pocket.x, 0.07, pocket.z);
+  pocketCallRings[index].position.set(pocket.x, 0.035, pocket.z);
+  const ringScale = (pocketMouthRadius(pocket) - 0.005) / 0.08;
+  pocketCallRings[index].scaling.set(ringScale, 1, ringScale);
+ });
+ for (const pocket of pockets) buildPocket(scene, pocket, wood, leather, dark);
+ // One continuous beveled cushion per rail, with mitered pocket approaches.
+ for (const c of cushions.filter(c => !c.jaw)) {
   const distance = Math.hypot(c.bx - c.ax, c.bz - c.az);
   const tx = (c.bx - c.ax) / distance, tz = (c.bz - c.az) / distance;
   const nx = c.ax === c.bx ? Math.sign(c.ax) : 0;
@@ -442,7 +466,15 @@ for (const c of cushions.filter(c => !c.jaw)) {
   mesh.isPickable = false;
   mesh.receiveShadows = true;
   shadows.addShadowCaster(mesh);
+ }
+ tableGeometry = scene.meshes.filter(mesh => !existing.has(mesh)) as Mesh[];
+ if (!headlessGraphics) {
+  cloth.diffuseTexture?.dispose();
+  cloth.diffuseTexture = weave();
+ }
+ syncShadowList();
 }
+buildTableGeometry();
 rubber.backFaceCulling = false;
 
 const palette = ['#ffcb24', '#246fe5', '#ed354e', '#9552d8', '#ff8624', '#20ac77', '#a53657', '#101522'];
@@ -719,6 +751,10 @@ function canControl() {
   return onlineMode ? online.active && turn === online.seat && online.remainingMs() > 0 : !versusComputer || turn === 0;
 }
 function playerName(seat: number) {
+  if (seat === 1 && mode.kind === 'computer') {
+    const champion = careerStage(mode.city, mode.stage, mode.game).champion;
+    if (champion) return champion;
+  }
   return onlineMode ? seat === online.seat ? online.name : online.peerName : seat === 0 ? offlinePlayerOneName || online.name : versusComputer ? t('Computer') : offlinePlayerTwoName;
 }
 const colourNames = ['yellow', 'green', 'brown', 'blue', 'pink', 'black'];
@@ -778,9 +814,55 @@ function renderPlayerDetails() {
     container.append(eight);
   }
 }
+// Snooker: always show which ball is on, so the next colour is never a guess.
+const ballOn = document.querySelector<HTMLElement>('#ballOn')!;
+function showBallOn() {
+  ballOn.hidden = !snooker || finished;
+  if (ballOn.hidden) return;
+  const targets = legalTargets();
+  const reds = targets.some(index => index <= 15);
+  const sequence = !reds && !colourAfterRed;
+  const label = reds ? t('Red') : colourAfterRed ? t('Any colour') : targets.length ? t(colourNames[targets[0] - 16]) : '';
+  const icons = (reds ? [1] : colourAfterRed ? targets : targets.slice(0, 1)).map(index => {
+    const badge = ballBadge(index, true);
+    badge.classList.add('ball-on-icon');
+    return badge;
+  });
+  const title = document.createElement('span');
+  title.className = 'ball-on-title';
+  title.textContent = t('Ball on');
+  const name = document.createElement('strong');
+  name.textContent = label;
+  const points = document.createElement('small');
+  const value = reds ? 1 : colourAfterRed ? 0 : targets.length ? targets[0] - 14 : 0;
+  points.textContent = colourAfterRed ? t('2–7 points') : t(value === 1 ? '{points} point' : '{points} points', { points: value });
+  ballOn.replaceChildren(title, ...icons, name, points);
+  // During the final colour sequence, preview the colour that follows.
+  if (sequence && targets.length) {
+    const following = balls.findIndex((ball, index) => index > targets[0] && !ball.pocketed);
+    if (following > 0) {
+      const next = document.createElement('span');
+      next.className = 'ball-on-next';
+      next.append(t('then') + ' ', ballBadge(following, true), ' ' + t(colourNames[following - 16]));
+      ballOn.append(next);
+    }
+  } else if (reds) {
+    const next = document.createElement('span');
+    next.className = 'ball-on-next';
+    next.textContent = t('then any colour');
+    ballOn.append(next);
+  } else if (colourAfterRed) {
+    const next = document.createElement('span');
+    next.className = 'ball-on-next';
+    next.textContent = t(balls.some((ball, index) => index >= 1 && index <= 15 && !ball.pocketed) ? 'then a red' : 'then yellow');
+    ballOn.append(next);
+  }
+  ballOn.setAttribute('aria-label', t('Ball on') + ': ' + label);
+}
 function showScore() {
+  showBallOn();
   if (playerDetails.open) renderPlayerDetails();
-  score.replaceChildren(...[0, 1].map(seat => {
+  const seats = [0, 1].map(seat => {
     const item = document.createElement('button');
     item.type = 'button';
     item.setAttribute('aria-haspopup', 'dialog');
@@ -808,6 +890,7 @@ function showScore() {
     const detail = document.createElement('span');
     detail.className = 'player-group';
     const group = groups[seat];
+    if (snooker) detail.dataset.score = String(scores[seat]);
     detail.textContent = snooker ? t('Score · {score}', { score: scores[seat] })
       : group ? t('{group} · {count} left', { group: t(group), count: left }) : t('Open table');
     const tray = document.createElement('span');
@@ -835,7 +918,9 @@ function showScore() {
       item.append(turnBadge);
     }
     return item;
-  }));
+  });
+  // In snooker the ball on sits between the two players.
+  score.replaceChildren(seats[0], ...(snooker ? [ballOn] : []), seats[1]);
 }
 offlinePlayerTwoNameInput.onchange = () => {
   offlinePlayerTwoName = offlinePlayerTwoNameInput.value.trim().slice(0, 24) || 'Player 2';
@@ -878,18 +963,75 @@ function respot(index: number) {
   ballMeshes[index].position.set(spot.x, radius, z);
 }
 
+let challengeTime = 0;
+let challengeClockRunning = false;
+let challengeRating = 0;
 function challengeResult(challenge: NonNullable<ReturnType<typeof activeChallenge>>) {
-  if (winner !== 0) return t('Try again or return to challenges.');
-  return t(completeChallenge(challenge) ? 'Challenge completed.' : 'Challenge completed. Progress could not be saved.');
+  challengeRating = 0;
+  if (winner !== 0) {
+    return t(challenge.timeLimit ? 'Out of time. Try again or return to challenges.' : 'Try again or return to challenges.');
+  }
+  const before = challengeStars(challenge);
+  challengeRating = ratingFor(challenge, careerAttempts, (challenge.timeLimit ?? 0) - challengeTime);
+  if (!completeChallenge(challenge, challengeRating)) return t('Challenge completed. Progress could not be saved.');
+  const gained = Math.max(0, challengeRating - before);
+  if (gained) awardCoins(gained * starReward, challenge.game);
+  const rating = t(challengeRating === 3 ? 'Perfect! Three stars.' : challengeRating === 2 ? 'Two stars. One more for a perfect clear.' : 'One star. Clear it sooner for more.');
+  return rating + (gained ? ' ' + t('+{coins} coins', { coins: gained * starReward }) : '');
+}
+
+function failTimedChallenge() {
+  const challenge = activeChallenge();
+  if (!challenge || finished) return;
+  winner = 1;
+  finished = true;
+  circuitMessage = challengeResult(challenge);
+  showScore();
+  showReadyStatus();
+  saveGame();
+}
+
+// Short on-table callouts keep a run of good shots feeling like a run.
+const calloutElement = document.querySelector<HTMLElement>('#shotCallout')!;
+let calloutTimer: number | undefined;
+let potStreak = 0;
+function showCallout(text: string, tone: 'good' | 'great' | 'warn' = 'good') {
+  window.clearTimeout(calloutTimer);
+  calloutElement.textContent = text;
+  calloutElement.dataset.tone = tone;
+  calloutElement.hidden = false;
+  // Restart the entrance animation for back-to-back callouts.
+  calloutElement.style.animation = 'none';
+  void calloutElement.offsetWidth;
+  calloutElement.style.animation = '';
+  calloutTimer = window.setTimeout(() => { calloutElement.hidden = true; }, 1700);
+}
+function cheerShot(player: number, pots: number, legal: boolean) {
+  if (onlineMode || finished) return;
+  if (!legal || !pots) {
+    if (!legal && player === 0 && versusComputer) showCallout(t('Foul'), 'warn');
+    potStreak = 0;
+    return;
+  }
+  potStreak += pots;
+  if (versusComputer && player !== 0) return;
+  showCallout(potStreak >= 5 ? t('Unstoppable! {count} in a row', { count: potStreak })
+    : potStreak >= 3 ? t('On fire! {count} in a row', { count: potStreak })
+    : pots > 1 ? t('Double pot!') : potStreak === 2 ? t('Two in a row') : t('Nice pot'),
+    potStreak >= 3 || pots > 1 ? 'great' : 'good');
 }
 
 function continueCareerSeries(roundWinner?: number) {
-  if (mode.kind !== 'computer' || !careerStage(mode.city, mode.stage, mode.game).bestOfThree) return false;
+  if (mode.kind !== 'computer') return false;
+  const { racksToWin } = careerStage(mode.city, mode.stage, mode.game);
+  if (racksToWin < 2) return false;
   if (roundWinner === 0 || roundWinner === 1) {
     careerRacks[roundWinner]++;
-    if (careerRacks[roundWinner] === 2) return false;
+    if (careerRacks[roundWinner] >= racksToWin) return false;
   }
   resetMatch(true);
+  showCallout(t(snooker ? 'Frames {player}–{computer}' : 'Racks {player}–{computer}', { player: careerRacks[0], computer: careerRacks[1] }),
+    roundWinner === 0 ? 'good' : 'warn');
   saveGame();
   return true;
 }
@@ -908,6 +1050,19 @@ function finishShot() {
     const won = legal && (clear ? legalTargets().length === 0 : challenge.kind === 'contact' ||
       potted.includes(1) && (!needsCushion || careerBanked));
     recognizeShot(potted, legal && (clear || won));
+    cheerShot(0, legal ? potted.length : 0, legal || !scratch);
+    if (challenge.timeLimit && !won) {
+      // Against the clock a miss only costs time; a scratch costs five more seconds.
+      if (scratch) {
+        respot(0);
+        challengeTime += 5;
+        showCallout(t('Scratch · −5 seconds'), 'warn');
+      }
+      showScore();
+      showReadyStatus();
+      saveGame();
+      return;
+    }
     if (clear && legal && potted.length && !won) {
       showScore();
       showReadyStatus();
@@ -915,6 +1070,7 @@ function finishShot() {
       return;
     }
     careerAttempts++;
+    challengeClockRunning = false;
     if (!won && careerAttempts < challenge.attempts) {
       resetMatch(true);
     } else {
@@ -934,6 +1090,7 @@ function finishShot() {
     const scoringPots = potted.filter(index => index === 8 ? result.winner === turn
       : shotWasBreak || groupOf(index) === result.groups[turn]);
     recognizeShot(scoringPots, !result.foul && (result.winner === undefined || result.winner === turn));
+    cheerShot(turn, scoringPots.length, !result.foul);
     if (result.winner !== undefined && continueCareerSeries(result.winner)) return;
     groups = result.groups;
     winner = result.winner;
@@ -958,6 +1115,7 @@ function finishShot() {
   const foul = scratch || firstContact === undefined || !shotTargets.includes(firstContact) ||
     potted.some(index => !shotTargets.includes(index)) || (colourAfterRed && potted.length > 1);
   recognizeShot(potted, !foul);
+  cheerShot(turn, potted.length, !foul);
   const value = (index: number) => index <= 15 ? 1 : index - 14;
   if (foul) scores[1 - turn] += Math.max(4, value(shotTargets[0] ?? 0), value(firstContact ?? 0), ...potted.map(value));
   if (colourAfterRed || shotTargets[0] <= 15 || foul) {
@@ -1162,6 +1320,7 @@ function fire(strength: number) {
   shotTargets = legalTargets();
   previouslyPocketed = balls.map(ball => ball.pocketed);
   shotPower = Math.max(0, Math.min(1, Number.isFinite(strength) ? strength : 0));
+  if (activeChallenge()?.timeLimit) challengeClockRunning = true;
   strike = 0.19;
 }
 stroke.onpointerdown = event => {
@@ -1290,10 +1449,12 @@ function showReadyStatus() {
   const challenge = activeChallenge();
   objective.hidden = (mode.kind !== 'computer' && !challenge) || finished;
   if (challenge && !finished) {
-    objective.textContent = t(challenge.objective) + ' · ' + t('Attempts left: {count}', { count: challenge.attempts - careerAttempts });
+    objective.textContent = t(challenge.objective) + (challenge.timeLimit ? ''
+      : ' · ' + t('Attempts left: {count}', { count: challenge.attempts - careerAttempts })
+        + ' · ' + '★'.repeat(ratingFor(challenge, careerAttempts + 1)) + '☆'.repeat(3 - ratingFor(challenge, careerAttempts + 1)));
   } else if (mode.kind === 'computer' && !finished) {
     const stage = careerStage(mode.city, mode.stage, mode.game);
-    const counter = stage.bestOfThree ? t(snooker ? 'Frames won: You {player} · Computer {computer}'
+    const counter = stage.racksToWin > 1 ? t(snooker ? 'Frames won: You {player} · Computer {computer}'
       : 'Racks won: You {player} · Computer {computer}', { player: careerRacks[0], computer: careerRacks[1] }) : '';
     objective.textContent = [t(stage.objective), counter, careerClean ? t(careerGoal) : ''].filter(Boolean).join(' · ');
   }
@@ -1640,6 +1801,10 @@ function resetMatch(continueCareer = false) {
   const opening = mode.kind === 'computer' ? careerOpening(mode.city, mode.stage, mode.game, careerRacks[0] + careerRacks[1]) : undefined;
   balls = preset ?? opening?.balls ?? rack(snooker, Math.random);
   careerBanked = false;
+  challengeTime = 0;
+  challengeClockRunning = false;
+  potStreak = 0;
+  if (!continueCareer) { challengeRating = 0; showMatchIntro(); }
   turn = opening?.opener ?? 0;
   scores = [0, 0];
   groups = preset ? ['Solids', 'Stripes'] : [null, null];
@@ -1679,6 +1844,33 @@ function resetMatch(continueCareer = false) {
     mesh.position.set(ball.x, ball.pocketed ? -0.12 : radius, ball.z);
   });
 }
+// A short title card opens career matches and challenges; finals get the full billing.
+const matchIntro = document.querySelector<HTMLElement>('#matchIntro')!;
+let introTimer: number | undefined;
+function showMatchIntro() {
+  window.clearTimeout(introTimer);
+  const challenge = activeChallenge();
+  const stage = mode.kind === 'computer' ? careerStage(mode.city, mode.stage, mode.game) : undefined;
+  document.body.classList.toggle('final-match', Boolean(stage?.final));
+  if (!challenge && !stage || tvEnabled) { matchIntro.hidden = true; return; }
+  const text = (selector: string, value: string) => { matchIntro.querySelector<HTMLElement>(selector)!.textContent = value; };
+  matchIntro.dataset.kind = stage?.final ? 'final' : challenge ? 'challenge' : 'match';
+  if (stage && mode.kind === 'computer') {
+    text('.intro-eyebrow', stage.final ? t('{city} · The Final', { city: t(mode.city.name) })
+      : t(mode.city.name) + ' · ' + t('Game {number}', { number: mode.stage + 1 }));
+    text('.intro-title', t(stage.title));
+    text('.intro-versus', stage.champion ? t('You vs {champion}', { champion: stage.champion }) : t('You vs Computer') + ' · ' + t(difficulty));
+    text('.intro-detail', [t(stage.objective), stage.twist ? t(stage.twist) : ''].filter(Boolean).join(' '));
+  } else if (challenge) {
+    text('.intro-eyebrow', t('{tier} challenge', { tier: t(challenge.tier) }));
+    text('.intro-title', t(challenge.title));
+    text('.intro-versus', challenge.timeLimit ? t('{seconds} seconds on the clock', { seconds: challenge.timeLimit }) : t('First-try clear earns three stars'));
+    text('.intro-detail', t(challenge.objective));
+  }
+  matchIntro.hidden = false;
+  introTimer = window.setTimeout(() => { matchIntro.hidden = true; }, stage?.final ? 4200 : 2800);
+}
+matchIntro.onclick = () => { window.clearTimeout(introTimer); matchIntro.hidden = true; };
 function needsRerackConfirmation() {
   return !finished && (!breaking || rolling || strike > 0);
 }
@@ -1902,12 +2094,17 @@ select('cueStyle').onchange = updateCueStyle;
 if (equippedCareerCue) select('cueStyle').value = equippedCareerCue.id;
 updateCueStyle();
 function applyTableFinish() {
+  if (tableGame !== currentGame()) {
+    configureTable(currentGame());
+    buildTableGeometry();
+  }
   venue = mode.kind === 'computer' ? careerTable(mode.city.id, mode.stage, snooker) : undefined;
   const [felt, cushion, rail] = tableFinish(select('tableStyle').value, snooker, venue);
   railAccent.diffuseColor = Color3.FromHexString(venue?.accent ?? '#dfc48d');
   pearl.diffuseColor = Color3.FromHexString(venue?.accent ?? '#e8dfc9');
   championshipTrim.forEach(mesh => mesh.setEnabled(Boolean(venue?.championship)));
   document.body.classList.toggle('snooker-game', snooker);
+  document.body.classList.toggle('final-match', Boolean(venue?.championship));
   snookerLines.setEnabled(snooker);
   cloth.diffuseColor = Color3.FromHexString(felt);
   rubber.diffuseColor = Color3.FromHexString(cushion);
@@ -1938,7 +2135,7 @@ function gameState(): SavedGame {
     strike, shotPower, tip: [tipX, tipY], aimLocked, calledPocket,
     ...(onlineMode && onlineHighlight ? { highlight: onlineHighlight } : {}),
     ...(mode.kind === 'computer' ? { careerClean, careerRacks }
-      : mode.kind === 'challenge' ? { careerAttempts, careerBanked } : {}) };
+      : mode.kind === 'challenge' ? { careerAttempts, careerBanked, challengeTime } : {}) };
 }
 function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = false) {
   if (!animatePockets) {
@@ -1963,6 +2160,8 @@ function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = fals
   turn = s.turn;
   scores = [...s.scores];
   careerAttempts = s.careerAttempts ?? 0;
+  challengeTime = Number.isFinite(s.challengeTime) ? Math.max(0, s.challengeTime!) : 0;
+  challengeClockRunning = challengeTime > 0 && !s.finished;
   careerBanked = s.careerBanked ?? false;
   careerClean = s.careerClean ?? false;
   careerRacks = s.careerRacks ? [...s.careerRacks] : [0, 0];
@@ -2201,8 +2400,7 @@ const graphicsPresets: Record<string, { scale: number; pixels: number; shadowSiz
   High: { scale: 2, pixels: 10_000_000, shadowSize: 2048 },
   Ultra: { scale: 3, pixels: 16_600_000, shadowSize: 4096 },
 };
-shadows.getShadowMap()!.renderList = scene.meshes.filter(mesh => mesh.name.startsWith('ball ') ||
-  ['cabinet', 'leg', 'side rail', 'end rail', 'solid pocket surround', 'continuous beveled cushion'].includes(mesh.name));
+syncShadowList();
 
 function resize() {
   updateStrokeDirection();
@@ -2406,10 +2604,26 @@ function updateGameNotice() {
     !careerCues.some(cue => !progress.owned.includes(cue.id) && cue.price <= progress.coins);
   rematch.hidden = isTournament() || kind !== 'win' || wonByForfeit || onlineMode && online.seat !== 0;
   rematch.disabled = onlineMode && !online.active;
+  const activeNow = activeChallenge();
+  const rating = kind === 'win' && activeNow && winner === 0 ? challengeRating || challengeStars(activeNow) : 0;
+  const stars = document.querySelector<HTMLElement>('#noticeStars')!;
+  stars.hidden = !rating;
+  stars.replaceChildren(...[1, 2, 3].map(star => {
+    const item = document.createElement('span');
+    item.className = star <= rating ? 'star earned' : 'star';
+    item.textContent = '★';
+    return item;
+  }));
+  stars.setAttribute('aria-label', t('{count} of 3 stars', { count: rating }));
+  const wonFinal = kind === 'win' && mode.kind === 'computer' && winner === 0 && careerStage(mode.city, mode.stage, mode.game).final;
+  document.querySelector<HTMLElement>('#noticeTrophy')!.hidden = !wonFinal;
+  notice.dataset.outcome = !kind ? '' : isTournament() ? winner === 0 ? 'win' : 'loss' : 'win';
   document.querySelector<HTMLElement>('#noticeLabel')!.textContent = mode.kind === 'challenge' ? t('Challenges') : mode.kind === 'computer' ? t('Computer Career')
     : winningPlayer === undefined ? t('HONOURS EVEN') : t('VICTORY');
   document.querySelector<HTMLElement>('#noticeTitle')!.textContent = mode.kind === 'challenge' ? t(winner === 0 ? 'Challenge completed' : 'Challenge failed')
-    : mode.kind === 'computer' ? t(winner === undefined ? 'Match drawn' : winner === 0 ? 'Game cleared' : 'Game failed')
+    : mode.kind === 'computer' ? careerStage(mode.city, mode.stage, mode.game).final && winner !== undefined
+      ? winner === 0 ? t('Champion of {city}!', { city: t(mode.city.name) }) : t('{champion} keeps the title', { champion: playerName(1) })
+      : t(winner === undefined ? 'Match drawn' : winner === 0 ? 'Game cleared' : 'Game failed')
     : winningPlayer === undefined ? t('Match drawn') : t('{player} wins!', { player: playerName(winningPlayer) });
   document.querySelector<HTMLElement>('#noticeDetail')!.textContent = isTournament() ? circuitMessage || t('Saving tournament result…') : wonByForfeit ? t('Your opponent left and their timer expired.') : onlineMode && online.seat !== 0 ? t('What a game! Waiting for the host to start the next round.') : winningPlayer === undefined ? t('A close match. Time for a rematch?') : t('What a finish. Ready for another round?');
 }
@@ -2429,10 +2643,21 @@ engine.runRenderLoop(() => {
   updateTvControls();
   updateGameNotice();
   const clock = document.querySelector<HTMLElement>('#shotClock')!;
-  clock.hidden = !onlineMode;
+  const timed = activeChallenge()?.timeLimit;
+  clock.hidden = !onlineMode && !timed;
+  if (timed && !onlineMode) {
+    if (challengeClockRunning && !finished && !shotReplay && !document.querySelector('dialog[open]')) challengeTime += dt;
+    const left = Math.max(0, timed - challengeTime);
+    if (!left && !finished && !rolling && !strike) failTimedChallenge();
+  }
   const departureTime = online.departureDeadline === undefined ? undefined : Math.max(0, online.departureDeadline - performance.now());
   clock.textContent = departureTime !== undefined ? Math.ceil(departureTime / 1000) + 's' : finished ? t('Finished') : !online.active ? t('Paused') : rolling || strike ? t('In motion') : Math.ceil(online.remainingMs() / 1000) + 's';
   clock.classList.toggle('urgent', departureTime !== undefined ? departureTime <= 10000 : online.active && !rolling && !strike && online.remainingMs() <= 10000);
+  if (timed && !onlineMode) {
+    const left = Math.max(0, timed - challengeTime);
+    clock.textContent = finished ? t('Finished') : Math.ceil(left) + 's';
+    clock.classList.toggle('urgent', !finished && left <= 10);
+  }
   const callEligible = !snooker && !finished && !rolling && !strike && !shotReplay && legalTargets().includes(8);
   const showPocketPicker = callEligible && canControl() && !tvEnabled && calledPocket === undefined;
   if (showPocketPicker && callPocket.hidden) setPocketPickerOpen(true);

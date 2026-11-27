@@ -12,6 +12,7 @@ export interface SavedGame {
   calledPocket?: number;
   highlight?: [id: number, kind: ShotHighlight, player: number];
   careerAttempts?: number;
+  challengeTime?: number;
   careerBanked?: boolean;
   careerClean?: boolean;
   careerRacks?: [number, number];
@@ -25,7 +26,7 @@ export function validGame(value: unknown): value is SavedGame {
     && v.every(component => finite(component, 1)) && Math.abs(Math.hypot(...v) - 1) < 1e-6;
   const index = (v: unknown) => Number.isInteger(v) && Number(v) >= 0 && Number(v) < (s.snooker ? 22 : 16);
   return s.version === 1 && ['snooker', 'versusComputer', 'onlineMode', 'breaking', 'shotWasBreak', 'colourAfterRed', 'finished', 'rolling', 'aimLocked'].every(k => typeof (s as unknown as Record<string, unknown>)[k] === 'boolean')
-    && (s.careerAttempts === undefined || Number.isInteger(s.careerAttempts) && s.careerAttempts >= 0 && s.careerAttempts <= 3)
+    && (s.careerAttempts === undefined || Number.isInteger(s.careerAttempts) && s.careerAttempts >= 0 && s.careerAttempts <= 5)
     && (s.careerBanked === undefined || typeof s.careerBanked === 'boolean')
     && (s.careerClean === undefined || typeof s.careerClean === 'boolean')
     && (s.careerRacks === undefined || Array.isArray(s.careerRacks) && s.careerRacks.length === 2

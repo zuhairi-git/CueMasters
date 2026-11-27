@@ -9,7 +9,7 @@ const {
 const { careerTable } = await loadSource('table-finishes');
 const { cities } = await loadSource('circuit');
 const { isMoving, length, radius, rack, shotSpeed, step, strikeBall } = await loadSource('physics');
-const { challenges, challengeLayout, challengeCompleted, completeChallenge, getChallenge } = await loadSource('challenges');
+const { challenges, challengeLayout, challengeCompleted, challengeStars, completeChallenge, gameStars, getChallenge, ratingFor, tierUnlocked } = await loadSource('challenges');
 const [helsinki, stockholm, copenhagen] = cities;
 
 function freshStorage() {
@@ -79,8 +79,14 @@ test('every city level starts a full match in both games', () => {
     for (const city of cities) {
       for (const [index] of careerStages.entries()) {
         const stage = careerStage(city, index, game);
-        assert.equal(stage.bestOfThree, city === london && index === 9);
-        assert.match(stage.objective, /full/);
+        const final = index === 9;
+        assert.equal(stage.final, final);
+        assert.equal(Boolean(stage.champion), final);
+        // Every city ends in a series; pool's last two cities race to three.
+        assert.equal(stage.racksToWin, !final ? 1 : game === 'snooker' ? 2 : city.level >= 4 ? 3 : 2);
+        // Snooker finals are six-red frames until the full-frame London championship.
+        assert.equal(stage.sixRed, final && game === 'snooker' && city !== london);
+        assert.match(stage.objective, stage.sixRed ? /six-red/ : stage.racksToWin === 3 ? /three/ : /full/);
         assert.equal(stage.layout, undefined);
         assert.equal(stage.challenge, undefined);
       }
@@ -100,9 +106,11 @@ test('career stages vary the opening position and venue while keeping legal full
         positions.add(cue.x + ',' + cue.z);
         const venue = careerTable(city.id, stage, snooker);
         venues.add(JSON.stringify([venue.colors, venue.accent]));
-        assert.equal(venue.championship, city.id === 'london' && stage === careerStages.length - 1);
+        assert.equal(venue.championship, stage === careerStages.length - 1);
         assert.equal(opening.balls.length, snooker ? 22 : 16);
-        assert.ok(opening.balls.every(ball => !ball.pocketed));
+        const sixRed = careerStage(city, stage, game).sixRed;
+        assert.equal(opening.balls.filter(ball => ball.pocketed).length, sixRed ? 9 : 0);
+        assert.ok(opening.balls.every((ball, index) => !ball.pocketed || index > 6 && index <= 15));
         if (snooker) {
           assert.ok(cue.z <= -.74 && Math.hypot(cue.x, cue.z + .74) < .22);
         } else {
@@ -120,6 +128,11 @@ test('career stages vary the opening position and venue while keeping legal full
   const london = cities.at(-1);
   const final = careerStages.length - 1;
   assert.deepEqual([0, 1, 2].map(round => careerOpening(london, final, 'pool', round).opener), [0, 1, 0]);
+  // Each final has its own break rule.
+  assert.deepEqual([0, 1].map(round => careerOpening(cities[0], final, 'pool', round).opener), [0, 0]);
+  assert.deepEqual([0, 1].map(round => careerOpening(cities[1], final, 'pool', round).opener), [1, 1]);
+  assert.deepEqual([0, 1].map(round => careerOpening(cities[2], final, 'pool', round).opener), [1, 0]);
+  assert.equal(new Set(cities.map(city => careerStage(city, final).title)).size, cities.length);
 });
 
 test('Billiard and Snooker track progress and challenge completions separately', () => {
@@ -135,6 +148,20 @@ test('Billiard and Snooker track progress and challenge completions separately',
   const snookerEscape = getChallenge('snooker', 'escape');
   assert.equal(completeChallenge(poolEscape), true);
   assert.equal(challengeCompleted(poolEscape), true);
+  assert.equal(challengeStars(poolEscape), 1);
+  // The best rating is kept and stars unlock the next tier.
+  completeChallenge(poolEscape, 3);
+  completeChallenge(poolEscape, 2);
+  assert.equal(challengeStars(poolEscape), 3);
+  assert.equal(gameStars('pool'), 3);
+  assert.equal(tierUnlocked('pool', 'Rookie'), true);
+  assert.equal(tierUnlocked('pool', 'Pro'), false);
+  completeChallenge(getChallenge('pool', 'cut'), 2);
+  assert.equal(tierUnlocked('pool', 'Pro'), true);
+  assert.equal(ratingFor(poolEscape, 1), 3);
+  assert.equal(ratingFor(poolEscape, 3), 1);
+  const timed = getChallenge('pool', 'beat-the-clock');
+  assert.deepEqual([30, 10, 2].map(left => ratingFor(timed, 1, left)), [3, 2, 1]);
   assert.equal(challengeCompleted(snookerEscape), false);
 });
 
@@ -149,10 +176,10 @@ test('challenge balls do not overlap and the starter cue can complete the bank s
     }
   }
   const balls = challengeLayout(getChallenge('pool', 'bank'));
-  const angle = 1.4850457723982544;
+  const angle = 72 * Math.PI / 180;
   let banked = false;
   let first;
-  strikeBall(balls[0], Math.cos(angle), Math.sin(angle), shotSpeed(.75));
+  strikeBall(balls[0], Math.cos(angle), Math.sin(angle), shotSpeed(.5));
   for (let tick = 0; tick < 240 && balls.some(isMoving); tick++) {
     const contact = step(balls, 1 / 30, undefined, ball => { if (ball === balls[1]) banked = true; });
     first ??= contact;
@@ -164,7 +191,7 @@ test('challenge balls do not overlap and the starter cue can complete the bank s
 });
 
 test('both kick pots are reachable with a cue-ball cushion contact before the red or solid', () => {
-  for (const [game, angle] of [['pool', 1.32], ['snooker', Math.PI - 1.32]]) {
+  for (const [game, angle] of [['pool', 76.375 * Math.PI / 180], ['snooker', 103.75 * Math.PI / 180]]) {
     const balls = challengeLayout(getChallenge(game, 'kick-pot'));
     let first;
     let kick = false;
@@ -180,5 +207,19 @@ test('both kick pots are reachable with a cue-ball cushion contact before the re
     assert.equal(balls[1].pocketed, true, game);
     assert.equal(balls[0].pocketed, false, game);
     assert.equal(balls[game === 'pool' ? 9 : 16].pocketed, false, game);
+  }
+});
+
+test('no career opening starts with the cue ball on another ball', () => {
+  for (const game of ['pool', 'snooker']) {
+    for (const city of cities) for (const stage of careerStages.keys()) for (const round of [0, 1, 2]) {
+      const { balls } = careerOpening(city, stage, game, round, () => .5);
+      const [cue, ...others] = balls;
+      for (const ball of others) {
+        if (ball.pocketed) continue;
+        assert.ok(Math.hypot(ball.x - cue.x, ball.z - cue.z) >= 2 * radius + 0.01, [game, city.id, stage, round].join(' '));
+      }
+      if (game === 'snooker') assert.ok(cue.z <= -.74 && Math.hypot(cue.x, cue.z + .74) < .22);
+    }
   }
 });

@@ -205,7 +205,7 @@ export class SvgTable {
       const called = state.calledPocket === i;
       const color = called ? calledPocketColor : '#ffffff66';
       const borderWidth = called ? calledPocketBorderWidth * 1000 : 4;
-      guides += `<circle cx="${p.x * 1000}" cy="${-p.z * 1000}" r="${p.z === 0 ? 70 : 88}" fill="none" stroke="${color}" stroke-width="${borderWidth}"/>`;
+      guides += `<circle cx="${p.x * 1000}" cy="${-p.z * 1000}" r="${pocketMouthRadius(p) * 1000 + 4}" fill="none" stroke="${color}" stroke-width="${borderWidth}"/>`;
     });
     this.guides.innerHTML = guides;
     this.cue.style.display = state.rolling || state.finished ? 'none' : '';

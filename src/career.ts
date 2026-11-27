@@ -2,7 +2,7 @@ import { cities, computerProgress, type City, type Game } from './circuit';
 import { difficulties } from './difficulty';
 import { t } from './i18n';
 import { cityFinishes } from './table-finishes';
-import { rack } from './physics';
+import { rack, radius } from './physics';
 
 export const careerStages = [
   { title: 'Opening Match', rating: 0, opening: [0, -.65], opener: 0 },
@@ -17,12 +17,38 @@ export const careerStages = [
   { title: 'City Final', rating: 2, opening: [.23, -.87], opener: 0 },
 ] as const;
 
+// Every city ends in its own final: a named champion, a series format and a house rule.
+export const cityFinals: Record<string, { title: string; champion: string; racks: number; breaks: 'you' | 'champion' | 'alternate'; twist: string }> = {
+  helsinki: { title: 'Harbor Cup Final', champion: 'Aino Virtanen', racks: 2, breaks: 'you', twist: 'You break every rack.' },
+  stockholm: { title: 'Amber Crown Final', champion: 'Elsa Lindqvist', racks: 2, breaks: 'champion', twist: 'The champion breaks every rack.' },
+  copenhagen: { title: 'Canal Masters Final', champion: 'Magnus Holm', racks: 2, breaks: 'alternate', twist: 'Breaks alternate, champion first.' },
+  berlin: { title: 'Iron Gate Final', champion: 'Lena Brandt', racks: 3, breaks: 'alternate', twist: 'A long race to three. Breaks alternate.' },
+  london: { title: 'London Championship', champion: 'Sir Edmund Clarke', racks: 3, breaks: 'alternate', twist: 'The grand final on the gold table.' },
+};
+export const sixRedCount = 6;
+
 export function careerOpening(city: City, stage: number, game: Game, round: number, random = Math.random) {
   const snooker = game === 'snooker';
   const balls = rack(snooker, random);
-  const { opening: [x, z], opener } = careerStages[stage];
+  const { opening: [x, z] } = careerStages[stage];
+  const final = careerStage(city, stage, game);
+  const opener = !final.final ? careerStages[stage].opener
+    : final.breaks === 'you' ? 0 : final.breaks === 'champion' ? 1 : city.id === 'copenhagen' ? 1 : 0;
+  if (final.sixRed) for (let index = sixRedCount + 1; index <= 15; index++) balls[index].pocketed = true;
   const openingX = round % 2 ? -x : x;
   Object.assign(balls[0], snooker ? { x: openingX * .48, z: -.755 + (z + .65) * .45 } : { x: openingX, z });
+  // The cue ball never starts touching another ball: slide it along the baulk
+  // side of the D until it has clear cloth around it.
+  const cue = balls[0];
+  const clear = (cx: number) => balls.every((ball, index) => !index || ball.pocketed
+    || Math.hypot(ball.x - cx, ball.z - cue.z) >= 2 * radius + 0.012);
+  if (!clear(cue.x)) {
+    const direction = cue.x < 0 || round % 2 ? -1 : 1;
+    for (let offset = 0.005; offset < 0.3; offset += 0.005) {
+      const candidate = [cue.x + direction * offset, cue.x - direction * offset].find(clear);
+      if (candidate !== undefined) { cue.x = candidate; break; }
+    }
+  }
   if (!snooker) {
     // Leave the eight and the opposite-group rear corners in their legal rack positions.
     const indices = [1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14];
@@ -30,18 +56,28 @@ export function careerOpening(city: City, stage: number, game: Game, round: numb
     const rotation = (stage + (city.level - 1) * 3 + round * 5) % positions.length;
     indices.forEach((index, slot) => Object.assign(balls[index], positions[(slot + rotation) % positions.length]));
   }
-  return { balls, opener: round % 2 ? 1 - opener : opener };
+  return { balls, opener: final.final && final.breaks !== 'alternate' ? opener : round % 2 ? 1 - opener : opener };
 }
 
 export function careerStage(city: City, index: number, game: Game = 'pool') {
-  const bestOfThree = city.id === 'london' && index === careerStages.length - 1;
+  const final = index === careerStages.length - 1 ? cityFinals[city.id] : undefined;
+  const snooker = game === 'snooker';
+  // Snooker finals are quick six-red frames until the full-frame London championship.
+  const sixRed = Boolean(final) && snooker && city.id !== 'london';
+  const racksToWin = final ? snooker ? 2 : final.racks : 1;
   return {
     ...careerStages[index],
-    title: bestOfThree ? 'London Championship' : careerStages[index].title,
-    objective: game === 'snooker'
-      ? bestOfThree ? 'Win two full snooker frames.' : 'Win a full snooker frame.'
-      : bestOfThree ? 'Win two full eight-ball racks.' : 'Win a full eight-ball rack.',
-    bestOfThree,
+    title: final?.title ?? careerStages[index].title,
+    objective: snooker
+      ? sixRed ? 'Win two six-red frames.' : racksToWin > 1 ? 'Win two full snooker frames.' : 'Win a full snooker frame.'
+      : racksToWin === 3 ? 'Be first to win three eight-ball racks.' : racksToWin === 2 ? 'Win two full eight-ball racks.' : 'Win a full eight-ball rack.',
+    final: Boolean(final),
+    champion: final?.champion,
+    twist: final?.twist,
+    breaks: final?.breaks ?? 'alternate',
+    racksToWin,
+    sixRed,
+    bestOfThree: racksToWin === 2,
   };
 }
 
@@ -121,11 +157,24 @@ export function careerStageStatus(city: City, index: number, progress: Career, g
 }
 
 export function careerDifficulty(city: City, index: number) {
-  return difficulties[Math.min(difficulties.length - 1, careerStages[index].rating + Math.floor(city.level / 2))];
+  // City champions from Copenhagen onward play a level above the rest of their field.
+  const champion = index === careerStages.length - 1 && city.level >= 3 ? 1 : 0;
+  return difficulties[Math.min(difficulties.length - 1, careerStages[index].rating + Math.floor(city.level / 2) + champion)];
 }
 
 export function careerReward(index: number) {
   return { coins: index === 9 ? 175 : index === 8 ? 125 : 75, points: (index + 1) * 10 };
+}
+
+export function cityTrophy(city: City, progress: Career) {
+  return Boolean(progress.clears[city.id]?.[careerStages.length - 1]);
+}
+
+/** Adds coins earned outside career matches, such as challenge stars. */
+export function awardCoins(coins: number, game: Game = 'pool') {
+  const progress = careerProgress(game);
+  progress.coins += Math.max(0, Math.round(coins));
+  return saveCareer(progress, game);
 }
 
 export function finishCareerStage(city: City, index: number, matchId: string, won: boolean, skillGoal = false, game: Game = 'pool') {

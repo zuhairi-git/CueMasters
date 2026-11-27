@@ -1,15 +1,21 @@
 export const radius = 0.035;
 export const width = 1.27;
 export const length = 2.54;
-export const cornerOpening = 0.13;
-export const pockets = [-1, 1].flatMap(side =>
-  [-1, 0, 1].map(end => ({
-    x: side * (width / 2 + (end === 0 ? 0.024 : 0.016)),
-    z: end === 0 ? 0 : end * (length / 2 + 0.016),
-  }))
-);
+// Pocket openings are sized against the ball: a pool corner mouth is two balls
+// wide, a snooker mouth is tighter and its drop is cut closer to the cushion nose.
+export type TableGame = 'pool' | 'snooker';
+type TableSpec = { corner: number; side: number; cornerMouth: number; sideMouth: number; cornerOffset: number; sideOffset: number };
+export const tableSpecs: Record<TableGame, TableSpec> = {
+  pool: { corner: 0.106, side: 0.076, cornerMouth: 0.070, sideMouth: 0.064, cornerOffset: 0.010, sideOffset: 0.022 },
+  snooker: { corner: 0.094, side: 0.068, cornerMouth: 0.062, sideMouth: 0.058, cornerOffset: 0.006, sideOffset: 0.018 },
+};
+export let tableGame: TableGame = 'pool';
+let spec = tableSpecs.pool;
+export let cornerOpening = spec.corner;
+export let sideOpening = spec.side;
+export const pockets: { x: number; z: number }[] = [];
 
-export const pocketMouthRadius = (pocket: { z: number }) => pocket.z === 0 ? 0.067 : 0.085;
+export const pocketMouthRadius = (pocket: { z: number }) => pocket.z === 0 ? spec.sideMouth : spec.cornerMouth;
 
 function halfOverlapDistance(mouth: number) {
   // The overlap of the two discs is the sum of their circular segments.
@@ -28,8 +34,8 @@ function halfOverlapDistance(mouth: number) {
   return low;
 }
 
-const sideDropDistance = halfOverlapDistance(pocketMouthRadius({ z: 0 }));
-const cornerDropDistance = halfOverlapDistance(pocketMouthRadius({ z: 1 }));
+let sideDropDistance = 0;
+let cornerDropDistance = 0;
 export const pocketDropDistance = (pocket: { z: number }) => pocket.z === 0 ? sideDropDistance : cornerDropDistance;
 
 export type BallOrientation = [number, number, number, number];
@@ -84,22 +90,39 @@ type Sound = (kind: 'ball' | 'rail' | 'pocket', strength: number, ball?: Ball) =
 type Cushion = { ax: number; az: number; bx: number; bz: number; jaw?: boolean };
 // Match the six visible cushions, leaving actual openings at all six pockets.
 export const cushions: Cushion[] = [];
-for (const side of [-1, 1]) {
-  const x = side * (width / 2 - 0.005);
-  const z = side * (length / 2 - 0.005);
-  for (const end of [-1, 1]) {
-    cushions.push({ ax: x, az: end * 0.085, bx: x, bz: end * (length / 2 - cornerOpening) });
-  }
-  cushions.push({ ax: -width / 2 + cornerOpening, az: z, bx: width / 2 - cornerOpening, bz: z });
-  // Angled jaws funnel balls into the wells instead of leaving gaps into the room.
-  const sidePocket = pockets.find(p => Math.sign(p.x) === side && p.z === 0)!;
-  for (const end of [-1, 1]) {
-    cushions.push({ ax: x, az: end * 0.085, bx: sidePocket.x + side * 0.04, bz: end * 0.045, jaw: true });
-    const corner = pockets.find(p => Math.sign(p.x) === side && Math.sign(p.z) === end)!;
-    cushions.push({ ax: x, az: end * (length / 2 - cornerOpening), bx: corner.x + side * 0.04, bz: corner.z - end * 0.035, jaw: true });
-    cushions.push({ ax: side * (width / 2 - cornerOpening), az: end * (length / 2 - 0.005), bx: corner.x - side * 0.035, bz: corner.z + end * 0.04, jaw: true });
+/** Rebuilds the pockets and cushions for a game. Both arrays are updated in place. */
+export function configureTable(game: TableGame) {
+  tableGame = game;
+  spec = tableSpecs[game];
+  cornerOpening = spec.corner;
+  sideOpening = spec.side;
+  sideDropDistance = halfOverlapDistance(spec.sideMouth);
+  cornerDropDistance = halfOverlapDistance(spec.cornerMouth);
+  pockets.length = 0;
+  pockets.push(...[-1, 1].flatMap(side =>
+    [-1, 0, 1].map(end => ({
+      x: side * (width / 2 + (end === 0 ? spec.sideOffset : spec.cornerOffset)),
+      z: end === 0 ? 0 : end * (length / 2 + spec.cornerOffset),
+    }))
+  ));
+  cushions.length = 0;
+  const throat = spec.side * 0.53;
+  for (const side of [-1, 1]) {
+    const x = side * (width / 2 - 0.005);
+    const z = side * (length / 2 - 0.005);
+    for (const end of [-1, 1]) {
+      cushions.push({ ax: x, az: end * sideOpening, bx: x, bz: end * (length / 2 - cornerOpening) });
+    }
+    cushions.push({ ax: -width / 2 + cornerOpening, az: z, bx: width / 2 - cornerOpening, bz: z });
+    // Angled jaws funnel balls into the wells instead of leaving gaps into the room.
+    for (const end of [-1, 1]) {
+      cushions.push({ ax: x, az: end * sideOpening, bx: side * (width / 2 + 0.064), bz: end * throat, jaw: true });
+      cushions.push({ ax: x, az: end * (length / 2 - cornerOpening), bx: side * (width / 2 + 0.056), bz: end * (length / 2 - 0.019), jaw: true });
+      cushions.push({ ax: side * (width / 2 - cornerOpening), az: end * (length / 2 - 0.005), bx: side * (width / 2 - 0.019), bz: end * (length / 2 + 0.056), jaw: true });
+    }
   }
 }
+configureTable('pool');
 
 export function strikeBall(ball: Ball, dx: number, dz: number, speed: number, tipX = 0, tipY = 0) {
   const directionLength = Math.hypot(dx, dz);

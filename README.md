@@ -14,7 +14,18 @@ A static file host alone does not support online games.
   First clears earn career points and coins. Optional skill goals pay a one-time
   bonus and can be earned on replays. Points determine your career rank, and
   finishing a city unlocks a themed table finish in **Settings → Table**.
-  The London Championship is best-of-three.
+  Game ten in every city is its final against a named champion on a championship table,
+  each with its own format: Helsinki (you break every rack), Stockholm (the champion breaks),
+  Copenhagen (alternating breaks) are first to two racks; Berlin and the London Championship
+  are first to three. Snooker finals are first to two six-red frames, and London is two full frames.
+- **Challenges** are grouped into Rookie, Pro and Master tiers. Clearing a skill shot on the
+  first attempt earns three stars, the second two, later attempts one; bank and kick shots allow
+  five attempts. **Beat the Clock** and **Lightning Round** are timed clearances where misses only
+  cost time and a scratch costs five seconds. Stars unlock the next tier and each new star pays coins.
+- Pockets are sized against the balls: a pool corner pocket is about two balls wide and snooker
+  pockets are tighter (about 1.8 balls). Geometry lives in `tableSpecs` in `src/physics.ts`.
+- In snooker the **Ball on** pill under the title shows the next ball (red, any colour, or the
+  specific colour in the closing sequence), its value, and what follows it.
   Spend coins on cue upgrades in
   the **Equipment shop** on the career screen. Career progress and equipment
   live in your browser, and cities unlocked before the update remain accessible.

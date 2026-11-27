@@ -5,7 +5,7 @@ import ts from 'typescript';
 
 const source = await readFile(new URL('../src/physics.ts', import.meta.url), 'utf8');
 const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
-const { radius, width, length, pockets, rack, step, strikeBall, isMoving, shotSpeed, maxBallSpeed } = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
+const { radius, width, length, pockets, pocketDropDistance, configureTable, tableSpecs, rack, step, strikeBall, isMoving, shotSpeed, maxBallSpeed } = await import('data:text/javascript;base64,' + Buffer.from(js).toString('base64'));
 const ball = (x = 0, z = 0, vx = 0, vz = 0) => ({ x, z, vx, vz, spinX: vx, spinZ: vz, sideSpin: 0, pocketed: false });
 const advance = (balls, time, dt = 1 / 300) => {
   for (let t = 0; t < time - 1e-9; t += dt) step(balls, Math.min(dt, time - t));
@@ -105,7 +105,7 @@ test('each pocket admits a straight shot without an invisible cushion', () => {
 test('corner and side pockets drop a ball at half overlap, even at rest', () => {
   for (const p of pockets) {
     // These distances bracket the half-area point of the visible circular opening.
-    const [inside, outside] = p.z === 0 ? [0.0638, 0.0639] : [0.0825, 0.0826];
+    const [inside, outside] = [pocketDropDistance(p) - 0.00005, pocketDropDistance(p) + 0.00005];
     const toward = Math.hypot(p.x, p.z);
     const atDistance = distance => ball(p.x - distance * p.x / toward, p.z - distance * p.z / toward);
     const hanging = atDistance(outside);
@@ -233,5 +233,36 @@ test('six hard breaks with varied spin never leave the frame or gain energy', ()
       previousEnergy = currentEnergy;
       for (const b of balls) if (!b.pocketed) assert.ok(Math.abs(b.x) <= width / 2 + 0.04001 && Math.abs(b.z) <= length / 2 + 0.04001);
     }
+  }
+});
+
+test('pocket mouths are sized against the ball for each game', () => {
+  const ballWidth = 2 * radius;
+  for (const game of ['pool', 'snooker']) {
+    const spec = tableSpecs[game];
+    const cornerGap = (spec.corner - 0.005) * Math.SQRT2 / ballWidth;
+    const sideGap = 2 * spec.side / ballWidth;
+    assert.ok(cornerGap > 1.6 && cornerGap < 2.15, game + ' corner ' + cornerGap);
+    assert.ok(sideGap > 1.8 && sideGap < 2.3, game + ' side ' + sideGap);
+    assert.ok(2 * spec.cornerMouth / ballWidth <= 2.01 && 2 * spec.sideMouth / ballWidth > 1.5);
+  }
+  assert.ok(tableSpecs.snooker.corner < tableSpecs.pool.corner && tableSpecs.snooker.side < tableSpecs.pool.side);
+});
+
+test('snooker pockets still accept straight and rail-hugging pots', () => {
+  configureTable('snooker');
+  try {
+    for (const p of pockets) {
+      const distance = Math.hypot(p.x, p.z);
+      const b = ball(p.x - p.x / distance * 0.16, p.z - p.z / distance * 0.16, p.x / distance, p.z / distance);
+      advance([b], 0.25);
+      assert.equal(b.pocketed, true, JSON.stringify(p));
+    }
+    const hugging = ball(width / 2 - 0.04, 0.5, 0, 2);
+    advance([hugging], 1.5);
+    assert.equal(hugging.pocketed, true);
+    assert.equal(pockets.length, 6);
+  } finally {
+    configureTable('pool');
   }
 });

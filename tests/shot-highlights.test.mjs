@@ -8,8 +8,8 @@ const { rack, isMoving, shotSpeed, step, strikeBall } = await loadSource('physic
 
 test('live bank and kick challenge shots are recognized after settling, with fouls excluded', () => {
   for (const [challenge, angle, power, dt, expected] of [
-    ['bank', 1.4850457723982544, .75, 1 / 30, 'bank'],
-    ['kick-pot', 1.32, 1, 1 / 300, 'kick'],
+    ['bank', 72 * Math.PI / 180, .5, 1 / 30, 'bank'],
+    ['kick-pot', 76.375 * Math.PI / 180, 1, 1 / 300, 'kick'],
   ]) {
     const balls = challengeLayout(getChallenge('pool', challenge));
     const highlights = new ShotHighlights(balls);
