@@ -4,7 +4,9 @@ import { t } from './i18n';
 
 export const cities = cityData;
 export type City = typeof cities[number];
-export type Game = 'pool' | 'snooker';
+export const games = ['pool', 'nineball', 'snooker'] as const;
+export type Game = typeof games[number];
+export const isGame = (value: unknown): value is Game => games.includes(value as Game);
 export type Circuit = 'online' | 'computer';
 export type Progress = Record<string, { wins: number; losses: number }>;
 export type Mode =

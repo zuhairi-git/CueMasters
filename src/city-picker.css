@@ -213,10 +213,9 @@
   font-size: 1.65rem;
 }
 [data-theme="ivory"] .mode-icon { color: var(--accent); }
-.mode-card h2 { margin: 22px 0 0; font: 500 clamp(1.4rem, 2.5vw, 2rem)/1.15 Georgia, serif; }
-.mode-card p, #setupStatus { color: var(--muted); }
-.mode-card p { margin: 12px 0 24px; }
-.mode-card button { margin-top: auto; }
+.mode-card .mode-title { margin: 22px 0 0; font: 500 clamp(1.4rem, 2.5vw, 2rem)/1.15 Georgia, serif; }
+.mode-card .mode-text, #setupStatus { color: var(--muted); }
+.mode-card .mode-text { margin: 12px 0 0; }
 .home-action, .home-back {
   min-height: 44px;
   padding: 9px 15px;
@@ -376,8 +375,8 @@ button.selection-card { cursor: pointer; }
 @media (max-width: 680px) {
   .mode-grid { grid-template-columns: 1fr; }
   .mode-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 14px; }
-  .mode-card h2, .mode-card p, .mode-card button { margin: 0; align-self: center; }
-  .mode-card p, .mode-card button { grid-column: 2; justify-self: start; }
+  .mode-card .mode-title, .mode-card .mode-text { margin: 0; align-self: center; }
+  .mode-card .mode-text { grid-column: 2; justify-self: start; }
 }
 
 .harbor-clouds { animation: harbor-drift 36s ease-in-out infinite alternate; }

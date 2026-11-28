@@ -2,7 +2,7 @@ import { cities, computerProgress, type City, type Game } from './circuit';
 import { difficulties } from './difficulty';
 import { t } from './i18n';
 import { cityFinishes } from './table-finishes';
-import { rack, radius } from './physics';
+import { nineBallRack, rack, radius } from './physics';
 
 export const careerStages = [
   { title: 'Opening Match', rating: 0, opening: [0, -.65], opener: 0 },
@@ -29,7 +29,7 @@ export const sixRedCount = 6;
 
 export function careerOpening(city: City, stage: number, game: Game, round: number, random = Math.random) {
   const snooker = game === 'snooker';
-  const balls = rack(snooker, random);
+  const balls = game === 'nineball' ? nineBallRack(random) : rack(snooker, random);
   const { opening: [x, z] } = careerStages[stage];
   const final = careerStage(city, stage, game);
   const opener = !final.final ? careerStages[stage].opener
@@ -49,7 +49,7 @@ export function careerOpening(city: City, stage: number, game: Game, round: numb
       if (candidate !== undefined) { cue.x = candidate; break; }
     }
   }
-  if (!snooker) {
+  if (game === 'pool') {
     // Leave the eight and the opposite-group rear corners in their legal rack positions.
     const indices = [1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14];
     const positions = indices.map(index => ({ x: balls[index].x, z: balls[index].z }));
@@ -70,6 +70,8 @@ export function careerStage(city: City, index: number, game: Game = 'pool') {
     title: final?.title ?? careerStages[index].title,
     objective: snooker
       ? sixRed ? 'Win two six-red frames.' : racksToWin > 1 ? 'Win two full snooker frames.' : 'Win a full snooker frame.'
+      : game === 'nineball'
+        ? racksToWin === 3 ? 'Be first to win three nine-ball racks.' : racksToWin === 2 ? 'Win two nine-ball racks.' : 'Win a nine-ball rack.'
       : racksToWin === 3 ? 'Be first to win three eight-ball racks.' : racksToWin === 2 ? 'Win two full eight-ball racks.' : 'Win a full eight-ball rack.',
     final: Boolean(final),
     champion: final?.champion,
@@ -102,7 +104,7 @@ export const careerBonus = { coins: 10, points: 25 };
 export const careerGoal = 'Win without scratching';
 
 const key = 'billiard-career-v1';
-const careerKey = (game: Game) => game === 'snooker' ? 'snooker-career-v1' : key;
+const careerKey = (game: Game) => game === 'snooker' ? 'snooker-career-v1' : game === 'nineball' ? 'nineball-career-v1' : key;
 
 export function careerProgress(game: Game = 'pool'): Career {
   try {

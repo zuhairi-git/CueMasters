@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/src/hud.css">
   <link rel="stylesheet" href="/src/city-picker.css">
   <link rel="stylesheet" href="/src/arcade.css">
+  <link rel="stylesheet" href="/src/glass.css">
 <style>
 /* Shared startup and in-app spinner. */
 #cueLoader { position:fixed; inset:0; z-index:2147483647; display:grid; place-items:center; isolation:isolate; background:#080f20; color:#f3f7ff; transition:opacity .38s ease,visibility .38s ease; }
@@ -22,7 +23,7 @@
 #cueLoader::after { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(160deg,#080f2077,#080f20aa); }
 #cueLoader[hidden] { display:none; }
 #cueLoader.cue-loader--leaving { opacity:0; visibility:hidden; pointer-events:none; }
-.cue-loader__card { width:min(76vw,290px); min-height:160px; border:1px solid #ffffff2c; border-radius:24px; background:linear-gradient(150deg,#182c44,#0e182b); box-shadow:0 24px 65px #0008; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+.cue-loader__card { width:min(76vw,290px); min-height:160px; border:1px solid #ffffff38; border-radius:28px; background:linear-gradient(180deg,#ffffff1f,#ffffff00 46%),#0a1221cc; -webkit-backdrop-filter:blur(22px) saturate(165%); backdrop-filter:blur(22px) saturate(165%); box-shadow:inset 0 1px #ffffff42,0 24px 65px #0009; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
 .cue-loader__spinner { position:relative; width:78px; height:78px; display:grid; place-items:center; }
 .cue-loader__spinner::before { content:""; position:absolute; inset:0; border:4px solid #ffffff1e; border-top-color:#63ddf1; border-right-color:#63ddf180; border-radius:50%; animation:cue-loader-spin 1s linear infinite reverse; }
 .cue-loader__balls { position:relative; width:36px; height:36px; }
@@ -31,7 +32,7 @@
 .cue-loader__ball--two { background:radial-gradient(circle at 32% 25%,#9ad2ff,#226fd5 62%,#153b87); animation-delay:1s; }
 .cue-loader__ball--three { background:radial-gradient(circle at 32% 25%,#ffadb4,#d82940 62%,#801628); animation-delay:2s; }
 .cue-loader__ball span { width:17px; height:17px; display:grid; place-items:center; border-radius:50%; background:#f9f9f5; color:#182235; font-size:10px; }
-.cue-loader__label { font:600 12px/1.4 system-ui,sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#b9cde2; }
+.cue-loader__label { font:600 12px/1.4 system-ui,sans-serif; letter-spacing:.14em; text-transform:uppercase; color:#f4f7ff; }
 @keyframes cue-loader-spin { to { transform:rotate(-360deg); } }
 @keyframes cue-loader-ball { 0%,3% { opacity:0; transform:scale(.55) translateY(9px); } 10%,25% { opacity:1; transform:scale(1) translateY(0); } 32%,100% { opacity:0; transform:scale(.65) translateY(-8px); } }
 @media (prefers-reduced-motion:reduce) { .cue-loader__spinner::before,.cue-loader__ball { animation:none; } .cue-loader__ball--one { opacity:1; transform:none; } #cueLoader { transition:none; } }
@@ -67,6 +68,8 @@
         <fieldset>
           <legend>Sound</legend>
           <div class="sound-row"><div><strong>Ball &amp; pocket sounds</strong><small>Soft clicks and pocket drops</small></div><button class="ui-button" id="soundToggle" type="button" aria-pressed="true">Sound on</button></div>
+          <label class="ui-field"><span>Ball sounds</span><span class="ui-select-wrap"><select class="ui-select" id="soundStyle"><option value="studio">Studio · New</option><option value="classic">Classic</option></select></span></label>
+          <div class="sound-row"><div><strong>Hear the difference</strong><small>A cue strike, a ball contact, a cushion and a pocket drop</small></div><button class="ui-button" id="soundPreview" type="button">Play sample</button></div>
           <label class="volume-row" for="volume"><span>Volume</span><input id="volume" type="range" min="0" max="100" value="45"><output id="volumeLabel" for="volume">45%</output></label>
         </fieldset>
       </div>
@@ -117,38 +120,39 @@
         <button class="avatar-choice home-avatar" id="openAppSettings" type="button" aria-label="Settings" title="Settings" aria-haspopup="dialog" aria-controls="appSettings"></button>
       </div>
       <div id="homeModes">
-        <p class="home-kicker">Pool &amp; Snooker</p>
+        <p class="home-kicker">8-Ball · 9-Ball · Snooker</p>
         <h1 id="cityPickerTitle">Choose your game</h1>
         <p class="home-tagline">Climb five cities, take each champion's title and master every trick shot.</p>
         <div class="home-games" role="group" aria-label="Game type">
-          <button class="home-back" type="button" data-game="pool" aria-pressed="true">Billiard</button>
+          <button class="home-back" type="button" data-game="pool" aria-pressed="true">8-Ball</button>
+          <button class="home-back" type="button" data-game="nineball" aria-pressed="false">9-Ball</button>
           <button class="home-back" type="button" data-game="snooker" aria-pressed="false">Snooker</button>
         </div>
         <div class="mode-grid">
-          <article class="mode-card mode-online" id="onlineModeCard">
+          <button class="mode-card mode-online" id="onlineModeCard" type="button" data-mode="online" aria-labelledby="onlineModeTitle" aria-describedby="onlineModeText">
             <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M10 5h12v8a6 6 0 0 1-12 0zm0 3H5v3a5 5 0 0 0 6 5m11-8h5v3a5 5 0 0 1-6 5m-5 3v7m-6 1h12"/></svg></span>
-            <h2>Tournaments – Online Play</h2>
-            <p>Face real players in eight-ball and win a medal in every city.</p>
-            <button class="home-action" type="button" data-mode="online">Play Online</button>
-          </article>
-          <article class="mode-card mode-computer">
+            <span class="mode-title" id="onlineModeTitle">Tournaments – Online Play</span>
+            <span class="mode-text" id="onlineModeText">Face real players in eight-ball and win a medal in every city.</span>
+            <span class="mode-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13m-5-6 6 6-6 6"/></svg></span>
+          </button>
+          <button class="mode-card mode-computer" type="button" data-mode="computer" aria-labelledby="computerModeTitle" aria-describedby="computerModeText">
             <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><rect x="7" y="7" width="18" height="18" rx="3"/><path d="M12 12h8v8h-8zm1-8v3m6-3v3m-6 18v3m6-3v3M4 13h3m-3 6h3m18-6h3m-3 6h3"/></svg></span>
-            <h2>Computer Career</h2>
-            <p>Beat nine rivals in each city, then take the title from its champion.</p>
-            <button class="home-action" type="button" data-mode="computer">Play Career</button>
-          </article>
-          <article class="mode-card mode-training">
+            <span class="mode-title" id="computerModeTitle">Computer Career</span>
+            <span class="mode-text" id="computerModeText">Beat nine rivals in each city, then take the title from its champion.</span>
+            <span class="mode-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13m-5-6 6 6-6 6"/></svg></span>
+          </button>
+          <button class="mode-card mode-training" type="button" data-mode="training" aria-labelledby="trainingModeTitle" aria-describedby="trainingModeText">
             <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="21" cy="11" r="6"/><path d="m5 27 10-10m5-8h2v4h-2z"/></svg></span>
-            <h2>Training – Solo or Against Computer</h2>
-            <p>Practice shots or play the computer at any difficulty.</p>
-            <button class="home-action" type="button" data-mode="training">Start Training</button>
-          </article>
-          <article class="mode-card mode-challenges">
+            <span class="mode-title" id="trainingModeTitle">Training – Solo or Against Computer</span>
+            <span class="mode-text" id="trainingModeText">Practice shots or play the computer at any difficulty.</span>
+            <span class="mode-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13m-5-6 6 6-6 6"/></svg></span>
+          </button>
+          <button class="mode-card mode-challenges" id="challengesModeCard" type="button" data-mode="challenges" aria-labelledby="challengesModeTitle" aria-describedby="challengesModeText">
             <span class="mode-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><circle cx="16" cy="16" r="5"/><path d="M16 2v8m0 12v8M2 16h8m12 0h8"/></svg></span>
-            <h2>Challenges</h2>
-            <p>Earn up to three stars on skill shots and race the clock.</p>
-            <button class="home-action" type="button" data-mode="challenges">Play Challenges</button>
-          </article>
+            <span class="mode-title" id="challengesModeTitle">Challenges</span>
+            <span class="mode-text" id="challengesModeText">Earn up to three stars on skill shots and race the clock.</span>
+            <span class="mode-go" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h13m-5-6 6 6-6 6"/></svg></span>
+          </button>
         </div>
         <div class="home-links">
           <button class="home-back" id="resumeMatch" type="button" hidden>Resume saved game</button>
@@ -303,7 +307,7 @@
     <div class="dialog-body">
     <div class="settings-heading"><h2 id="settingsTitle">Game settings</h2></div>
     <fieldset><legend>Play</legend>
-    <label class="ui-field"><span>Game</span><span class="ui-select-wrap"><select class="ui-select" id="game"><option value="pool">Pool · Eight-ball</option><option value="snooker">Snooker</option></select></span></label>
+    <label class="ui-field"><span>Game</span><span class="ui-select-wrap"><select class="ui-select" id="game"><option value="pool">Pool · Eight-ball</option><option value="nineball">Pool · Nine-ball</option><option value="snooker">Snooker</option></select></span></label>
     <label class="ui-field"><span>Play</span><span class="ui-select-wrap"><select class="ui-select" id="opponent"><option value="solo">Practice · Control both players</option><option value="computer">Against computer</option></select></span></label>
     <label class="ui-field" id="offlinePlayerTwoNameRow"><span>Player 2 name</span><input class="ui-select" id="offlinePlayerTwoName" maxlength="24" autocomplete="off"></label>
     <label class="ui-field"><span>Difficulty</span><span class="ui-select-wrap"><select class="ui-select" id="difficulty"><option value="Beginner">Beginner</option><option value="Easy">Easy</option><option value="Medium" selected>Medium</option><option value="Hard">Hard</option><option value="Expert">Expert</option></select></span></label>
@@ -312,6 +316,7 @@
     </fieldset><fieldset><legend>Room &amp; equipment</legend>
     <label class="ui-field"><span>Cue</span><span class="ui-select-wrap"><select class="ui-select" id="cueStyle"><option value="Classic Maple">Classic Maple</option><option value="Rosewood">Rosewood</option><option value="Carbon Black" selected>Carbon Black</option></select></span></label>
     <p class="settings-note" id="trainingCueNote" hidden></p>
+    <label class="ui-field"><span>Ball sounds</span><span class="ui-select-wrap"><select class="ui-select" id="gameSoundStyle"><option value="studio">Studio · New</option><option value="classic">Classic</option></select></span></label>
     <label class="ui-field" id="tableStyleRow"><span>Table</span><span class="ui-select-wrap"><select class="ui-select" id="tableStyle"><option value="Club Green" selected>Club Green</option><option value="Tournament Blue">Tournament Blue</option><option value="Burgundy Lounge">Burgundy Lounge</option></select></span></label>
     </fieldset><fieldset class="desktop-control-settings"><legend>Controls</legend>
     <label class="ui-field desktop-control-layout"><span>Shot controls</span><span class="ui-select-wrap"><select class="ui-select" id="controlLayout"><option value="horizontal">Horizontal · Bottom</option><option value="vertical" selected>Vertical · Side</option></select></span></label>

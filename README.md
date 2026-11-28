@@ -7,8 +7,12 @@ A static file host alone does not support online games.
 
 ## Play
 
-- Choose **Billiard** (eight-ball) or **Snooker** on the homepage. Each game
+- Choose **8-Ball**, **9-Ball** or **Snooker** on the homepage. Each game
   has its own career progress, equipment, challenge completions, and saved match.
+- **9-Ball** is played with balls one to nine in a diamond rack: hit the lowest ball
+  on the table first, any ball that drops after a legal hit keeps your turn, and the
+  nine wins the rack whenever it falls legally. It has Training and a Computer Career;
+  online play and Challenges are eight-ball and snooker only.
   Win ten full games in each city in **Computer Career** to open the next city.
   Open **Challenges** for preset shots and **Training** for practice.
   First clears earn career points and coins. Optional skill goals pay a one-time
@@ -125,11 +129,15 @@ the turn and gives the opponent ball in hand. Practice and computer games have n
 
 `npm test` covers collisions, friction/spin, shot power, pocket approaches, containment,
 rules, saved-state validation, cue clearance, aiming guides, QR decoding and two-client
-online reconnection. `npm run build` includes TypeScript checking. Visual and touch/camera
-review is manual.
+online reconnection. `tests/contrast.test.mjs` checks every text/surface pairing of the glass
+skin (`src/glass.css`) against WCAG AA in all themes. `npm run build` includes TypeScript
+checking. Visual and touch/camera review is manual.
 
 ## Audio
 
 Pool impacts use clips from SoundBible's public-domain [Playing Pool recording](https://soundbible.com/2035-Playing-Pool.html),
 trimmed into cue, ball, rail and pocket effects. A synthesized fallback is used if the
-recording cannot be loaded.
+recording cannot be loaded. That is the **Classic** ball sound. The default **Studio**
+style is fully synthesized (resin clicks, leather tip, rubber cushions, a pocket drop and
+a small room reverb) and needs no download. Switch between them under Settings → Sound on
+the home screen (with a Play sample button) or in Game settings at the table.

@@ -3,7 +3,7 @@ import { shotHighlights, type ShotHighlight } from './shot-highlights';
 import type { Groups } from './pool-rules';
 
 export interface SavedGame {
-  version: 1; balls: Ball[]; snooker: boolean; versusComputer: boolean; onlineMode: boolean;
+  version: 1; balls: Ball[]; snooker: boolean; nineBall?: boolean; versusComputer: boolean; onlineMode: boolean;
   turn: number; scores: number[]; groups: Groups; winner?: number; breaking: boolean;
   shotWasBreak: boolean; colourAfterRed: boolean; finished: boolean; firstContact?: number;
   shotTargets: number[]; previouslyPocketed: boolean[]; rolling: boolean;
@@ -26,6 +26,7 @@ export function validGame(value: unknown): value is SavedGame {
     && v.every(component => finite(component, 1)) && Math.abs(Math.hypot(...v) - 1) < 1e-6;
   const index = (v: unknown) => Number.isInteger(v) && Number(v) >= 0 && Number(v) < (s.snooker ? 22 : 16);
   return s.version === 1 && ['snooker', 'versusComputer', 'onlineMode', 'breaking', 'shotWasBreak', 'colourAfterRed', 'finished', 'rolling', 'aimLocked'].every(k => typeof (s as unknown as Record<string, unknown>)[k] === 'boolean')
+    && (s.nineBall === undefined || typeof s.nineBall === 'boolean' && !(s.nineBall && s.snooker))
     && (s.careerAttempts === undefined || Number.isInteger(s.careerAttempts) && s.careerAttempts >= 0 && s.careerAttempts <= 5)
     && (s.careerBanked === undefined || typeof s.careerBanked === 'boolean')
     && (s.careerClean === undefined || typeof s.careerClean === 'boolean')

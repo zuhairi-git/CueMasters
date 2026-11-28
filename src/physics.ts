@@ -75,6 +75,35 @@ export function rack(snooker = false, random?: () => number): Ball[] {
   return balls;
 }
 
+/**
+ * Nine-ball diamond: the one on the foot spot, the nine in the middle, the rest
+ * in any order. The array keeps all sixteen pool balls so saved games, the
+ * renderers and online play share one shape; balls ten to fifteen start pocketed.
+ */
+export function nineBallRack(random?: () => number): Ball[] {
+  const balls = rack(false);
+  const spacing = 2 * radius + (random ? 0.0025 : 0.0005);
+  const slots: [number, number][] = [];
+  [1, 2, 3, 2, 1].forEach((count, row) => {
+    for (let column = 0; column < count; column++) {
+      const jitter = () => random && row ? (random() - 0.5) * 0.0016 : 0;
+      slots.push([(column - (count - 1) / 2) * spacing + jitter(), 0.48 + row * spacing * Math.sqrt(3) / 2 + jitter()]);
+    }
+  });
+  const others = [2, 3, 4, 5, 6, 7, 8];
+  if (random) {
+    for (let i = others.length - 1; i > 0; i--) {
+      const j = Math.min(i, Math.floor(random() * (i + 1)));
+      [others[i], others[j]] = [others[j], others[i]];
+    }
+  }
+  // Slot 0 is the apex and slot 4 the centre of the diamond.
+  const order = [1, ...others.slice(0, 3), 9, ...others.slice(3)];
+  order.forEach((index, slot) => Object.assign(balls[index], { x: slots[slot][0], z: slots[slot][1] }));
+  for (let index = 10; index < balls.length; index++) balls[index].pocketed = true;
+  return balls;
+}
+
 // spinX/spinZ are the horizontal surface speeds produced by rotation, in m/s.
 // sideSpin is angular velocity about the vertical axis, in radians/s.
 export const rollingDeceleration = 0.25;

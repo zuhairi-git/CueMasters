@@ -29,6 +29,35 @@ export function resolvePoolShot(input: {
   return { groups, foul, winner, turn: keptTurn ? turn : 1 - turn, respotEight: breaking && potted.includes(8) };
 }
 
+/** Nine-ball: the lowest-numbered ball on the table must be struck first. */
+export function nineBallOn(pocketed: boolean[]) {
+  for (let index = 1; index <= 9; index++) if (!pocketed[index]) return index;
+}
+
+export function nineBallTargets(pocketed: boolean[]) {
+  const on = nineBallOn(pocketed);
+  return on === undefined ? [] : [on];
+}
+
+/**
+ * Nine-ball needs no called shots: any ball that drops after a legal hit keeps
+ * the turn, and the nine wins the rack whenever it falls legally, the break and
+ * combinations included. A nine pocketed on a foul returns to the foot spot.
+ */
+export function resolveNineBallShot(input: {
+  turn: number; targets: number[]; firstContact?: number; potted: number[]; scratch: boolean;
+}) {
+  const { turn, targets, potted, scratch } = input;
+  const foul = scratch || input.firstContact === undefined || !targets.includes(input.firstContact);
+  const nine = potted.includes(9);
+  return {
+    foul,
+    winner: nine && !foul ? turn : undefined,
+    turn: !foul && potted.length ? turn : 1 - turn,
+    respotNine: nine && foul,
+  };
+}
+
 export function snookerRemainingPoints(pocketed: boolean[], colourAfterRed: boolean): number {
   let reds = 0;
   for (let i = 1; i <= 15; i++) {

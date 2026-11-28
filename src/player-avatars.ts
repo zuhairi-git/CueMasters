@@ -1,7 +1,9 @@
-import sheet from './player-avatar-sheet.svg';
+import { avatarArt, avatarLooks } from './avatar-art';
 import { t } from './i18n';
 
-const illustratedAvatars = Array.from({ length: 16 }, (_, index) => ({
+export { rivalAvatar, robotAvatar } from './avatar-art';
+
+const illustratedAvatars = avatarLooks.map((_, index) => ({
   id: 'illustrated-' + (index + 1),
   label: 'Avatar {number}',
   number: index + 1,
@@ -58,9 +60,7 @@ export function installAvatarPicker(onPrimaryAvatarChange: () => void) {
   };
 }
 
+/** An animated portrait. The wrapper clips it to a circle and is hidden from assistive tech. */
 export function avatarMarkup(id: string) {
-  const index = Math.max(0, illustratedAvatars.findIndex(option => option.id === id));
-  const x = (index % 4) * -25;
-  const y = Math.floor(index / 4) * -25;
-  return `<span class="avatar-illustration" aria-hidden="true"><img src="${sheet}" alt="" draggable="false" style="transform:translate(${x}%, ${y}%)"></span>`;
+  return `<span class="avatar-illustration" aria-hidden="true">${avatarArt(id)}</span>`;
 }

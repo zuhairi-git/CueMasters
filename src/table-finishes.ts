@@ -42,8 +42,8 @@ const championshipGold = '#f3ca75';
 
 const channels = (color: string) => [1, 3, 5].map(at => parseInt(color.slice(at, at + 2), 16));
 const hex = (rgb: number[]) => '#' + rgb.map(value => Math.round(Math.max(0, Math.min(255, value))).toString(16).padStart(2, '0')).join('');
-const mix = (from: string, to: string, share: number) => hex(channels(from).map((value, i) => value + (channels(to)[i] - value) * share));
-const shade = (color: string, light: number) => hex(channels(color).map(value => value * light));
+export const mix = (from: string, to: string, share: number) => hex(channels(from).map((value, i) => value + (channels(to)[i] - value) * share));
+export const shade = (color: string, light: number) => hex(channels(color).map(value => value * light));
 
 // Snooker finals keep a red cloth, tinted for the host city.
 const finalReds: Record<string, string> = {

@@ -55,7 +55,7 @@ function potCandidates(balls: Ball[], legal: number[]) {
   return shots.sort((a, b) => a.cost - b.cost);
 }
 
-function evaluateShot(balls: Ball[], legal: number[], shot: Candidate, lookAhead: boolean, snooker: boolean) {
+function evaluateShot(balls: Ball[], legal: number[], shot: Candidate, lookAhead: boolean, snooker: boolean, nineBall = false) {
   const simulated = balls.map(ball => ({ ...ball }));
   const cue = simulated[0];
   strikeBall(cue, Math.sin(shot.angle), Math.cos(shot.angle), shotSpeed(shot.power));
@@ -67,6 +67,19 @@ function evaluateShot(balls: Ball[], legal: number[], shot: Candidate, lookAhead
   }
   if (cue.pocketed || contact === undefined || !legal.includes(contact)) {
     return { valid: false, score: -1000 - shot.cost };
+  }
+  if (nineBall) {
+    // Any ball may drop after a legal hit, and the nine ends the rack on the spot.
+    const potted = simulated.filter((ball, i) => i > 0 && ball.pocketed && !balls[i].pocketed).length;
+    if (!balls[9].pocketed && simulated[9].pocketed) return { valid: true, score: 1000, potted };
+    if (!potted) return { valid: true, score: -shot.cost };
+    let score = potted * 60 - shot.cost;
+    if (lookAhead) {
+      const next = simulated.findIndex((ball, i) => i > 0 && i <= 9 && !ball.pocketed);
+      const following = next > 0 ? potCandidates(simulated, [next]) : [];
+      if (following.length) score += 25 / (1 + following[0].cost);
+    }
+    return { valid: true, score, potted };
   }
   if (!snooker && balls.length === 16 && !balls[8].pocketed && simulated[8].pocketed) {
     const isLegalEight = legal.length === 1 && legal[0] === 8;
@@ -95,7 +108,7 @@ function evaluateShot(balls: Ball[], legal: number[], shot: Candidate, lookAhead
   return { valid: true, score, potted: potted.length };
 }
 
-export function chooseShot(balls: Ball[], legal: number[], difficulty: Difficulty, random = Math.random): Shot | undefined {
+export function chooseShot(balls: Ball[], legal: number[], difficulty: Difficulty, random = Math.random, nineBall = false): Shot | undefined {
   if (!legal.length) return;
   const cue = balls[0];
   const nearest = [...legal].sort((a, b) =>
@@ -117,7 +130,7 @@ export function chooseShot(balls: Ball[], legal: number[], difficulty: Difficult
     if (candidates.length) {
       let best = -Infinity;
       for (const c of candidates.slice(0, 2)) {
-        const res = evaluateShot(balls, legal, c, false, balls.length === 22);
+        const res = evaluateShot(balls, legal, c, false, balls.length === 22, nineBall);
         if (res.score > best) { best = res.score; shot = c; }
       }
     }
@@ -136,7 +149,7 @@ export function chooseShot(balls: Ball[], legal: number[], difficulty: Difficult
   for (const c of candidates.slice(0, maxCandidates)) {
     for (const mult of powerMults) {
       const option: Candidate = { ...c, power: Math.min(0.95, c.power * mult) };
-      const res = evaluateShot(balls, legal, option, lookAhead, snooker);
+      const res = evaluateShot(balls, legal, option, lookAhead, snooker, nineBall);
       if (res.score > bestScore) {
         bestScore = res.score;
         shot = option;
@@ -154,7 +167,7 @@ export function chooseShot(balls: Ball[], legal: number[], difficulty: Difficult
     const baseAngle = Math.atan2(safeTarget.x - cue.x, safeTarget.z - cue.z);
     for (const offset of [-0.035, 0.035]) {
       const safetyShot: Candidate = { angle: baseAngle + offset, power: 0.24, cost: 2, pocket: undefined, target };
-      const res = evaluateShot(balls, legal, safetyShot, false, snooker);
+      const res = evaluateShot(balls, legal, safetyShot, false, snooker, nineBall);
       if (res.valid && res.score > bestScore) {
         bestScore = res.score;
         shot = safetyShot;

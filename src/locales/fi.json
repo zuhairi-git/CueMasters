@@ -644,5 +644,20 @@
   "Earn up to three stars on skill shots and race the clock.": "Ansaitse jopa kolme tähteä taitolyönneistä ja kilpaile kelloa vastaan.",
   "Face real players in eight-ball and win a medal in every city.": "Kohtaa oikeita pelaajia kasipallossa ja voita mitali joka kaupungissa.",
   "Play Challenges": "Pelaa haasteita",
-  "Tap to start": "Aloita napauttamalla"
+  "Tap to start": "Aloita napauttamalla",
+  "8-Ball": "Kasipallo",
+  "9-Ball": "Ysipallo",
+  "8-Ball · 9-Ball · Snooker": "Kasipallo · Ysipallo · Snooker",
+  "Pool · Nine-ball": "Pool · Ysipallo",
+  "Play nine-ball at any difficulty.": "Pelaa ysipalloa haluamallasi vaikeustasolla.",
+  "Nine-ball · Balls potted: {count}": "Ysipallo · Pussitetut pallot: {count}",
+  "{count} potted": "{count} pussitettu",
+  "Win a nine-ball rack.": "Voita ysipalloerä.",
+  "Win two nine-ball racks.": "Voita kaksi ysipalloerää.",
+  "Be first to win three nine-ball racks.": "Voita ensimmäisenä kolme ysipalloerää.",
+  "Ball sounds": "Pallojen äänet",
+  "Studio · New": "Studio · Uusi",
+  "Hear the difference": "Kuuntele ero",
+  "A cue strike, a ball contact, a cushion and a pocket drop": "Lyönti, pallojen osuma, valli ja pussitus",
+  "Play sample": "Toista näyte"
 }

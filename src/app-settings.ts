@@ -4,13 +4,18 @@ import { remoteKey } from './tv-controls';
 import { navigateTvDialog } from './tv-dialogs';
 import { avatarMarkup, installAvatarPicker, playerAvatar } from './player-avatars';
 import { savePagePanel } from './page-state';
+import { gameAudio, soundStyles, type SoundStyle } from './audio';
 
 const tvKey = 'billiard-tv';
 const soundKey = '3dbilliard-sound';
 const graphicsKey = 'billiard-graphics';
 const backgroundKey = 'billiard-home-background';
 let tvChoice: 'on' | 'off' | null = null;
-export const soundPreference = { enabled: true, volume: 0.45 };
+export const soundPreference: { enabled: boolean; volume: number; style: SoundStyle } = { enabled: true, volume: 0.45, style: 'studio' };
+
+export function saveSoundPreference() {
+  try { localStorage.setItem(soundKey, JSON.stringify(soundPreference)); } catch {}
+}
 
 export function tvPreference() {
   return tvChoice;
@@ -30,6 +35,8 @@ export function installAppSettings() {
   const soundToggle = document.querySelector<HTMLButtonElement>('#soundToggle')!;
   const volume = document.querySelector<HTMLInputElement>('#volume')!;
   const volumeLabel = document.querySelector<HTMLOutputElement>('#volumeLabel')!;
+  const soundStyle = document.querySelector<HTMLSelectElement>('#soundStyle')!;
+  const soundPreview = document.querySelector<HTMLButtonElement>('#soundPreview')!;
   const graphics = document.querySelector<HTMLSelectElement>('#quality')!;
 
   const renderBackgroundName = installHomeBackground(dialog);
@@ -43,9 +50,11 @@ export function installAppSettings() {
     if (saved && typeof saved.enabled === 'boolean' && Number.isFinite(saved.volume)) {
       soundPreference.enabled = saved.enabled;
       volume.value = String(Math.max(0, Math.min(100, saved.volume * 100)));
+      if (soundStyles.includes(saved.style)) soundPreference.style = saved.style;
     }
   } catch {}
   soundPreference.volume = Number(volume.value) / 100;
+  soundStyle.value = soundPreference.style;
   try {
     const saved = localStorage.getItem(graphicsKey);
     if (saved && [...graphics.options].some(option => option.value === saved)) graphics.value = saved;
@@ -58,11 +67,13 @@ export function installAppSettings() {
     soundToggle.textContent = t(soundPreference.enabled ? 'Sound on' : 'Sound off');
     soundToggle.setAttribute('aria-pressed', String(soundPreference.enabled));
     volumeLabel.value = volume.value + '%';
+    soundPreview.disabled = !soundPreference.enabled;
   }
 
   function saveSound() {
     soundPreference.volume = Number(volume.value) / 100;
-    try { localStorage.setItem(soundKey, JSON.stringify(soundPreference)); } catch {}
+    saveSoundPreference();
+    gameAudio.configure(soundPreference.enabled, soundPreference.volume);
     render();
   }
 
@@ -93,6 +104,16 @@ export function installAppSettings() {
     saveSound();
   };
   volume.oninput = saveSound;
+  soundStyle.onchange = () => {
+    soundPreference.style = soundStyle.value === 'classic' ? 'classic' : 'studio';
+    gameAudio.setStyle(soundPreference.style);
+    saveSound();
+  };
+  soundPreview.onclick = () => {
+    gameAudio.configure(soundPreference.enabled, soundPreference.volume);
+    gameAudio.setStyle(soundPreference.style);
+    void gameAudio.preview();
+  };
   graphics.onchange = () => {
     try { localStorage.setItem(graphicsKey, graphics.value); } catch {}
   };

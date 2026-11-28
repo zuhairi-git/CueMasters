@@ -7,6 +7,7 @@ import { installDialogFallback, installDialogDismissal } from './tv-dialogs';
 import { t } from './i18n';
 import { installAppSettings, setTvPreference, tvPreference } from './app-settings';
 import { setupPwa } from './pwa';
+import { installGlassFx } from './glass-fx';
 
 // Reusable for future async screens: showCueLoader('Loading match…'); hideCueLoader().
 const loader = document.querySelector<HTMLElement>('#cueLoader');
@@ -34,6 +35,7 @@ async function start() {
   installDialogFallback();
   installDialogDismissal();
   installAppSettings();
+  installGlassFx();
   setupPwa();
   // The home screen waits for a player choice. Never keep its loader up
   // while awaiting that interaction.

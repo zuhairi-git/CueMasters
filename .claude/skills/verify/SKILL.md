@@ -21,5 +21,7 @@ Rules:
 - Do **not** open or drive a browser to verify the game (no preview pane, no screenshots, no Chrome automation).
 - Visual, touch and responsive review is done by the project owner on real devices. When a change is
   visual, describe what changed and which screens/sizes to look at instead of checking it yourself.
+- Any change to colours, backgrounds, glass surfaces, themes or text must also follow the `contrast` skill:
+  `tests/contrast.test.mjs` (part of `npm test`) has to keep every text/surface pairing at WCAG AA.
 - If a layout or gameplay value needs checking, do it with a test or a Node script against `src/`
   (see `tests/load-source.mjs`), not in a browser.

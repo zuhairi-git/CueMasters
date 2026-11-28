@@ -1,5 +1,5 @@
 import { showCueLoader, hideCueLoader } from './bootstrap';
-import { cities, cityDifficulty, cityStatus, fetchOnlineProgress, getPlayerSecret, onlineMedalName, type Circuit, type Game, type Mode, type Progress } from './circuit';
+import { cities, cityDifficulty, cityStatus, fetchOnlineProgress, getPlayerSecret, isGame, onlineMedalName, type Circuit, type Game, type Mode, type Progress } from './circuit';
 import { difficulties } from './difficulty';
 import { validGame, type SavedGame } from './saved-game';
 import { remoteKey } from './tv-controls';
@@ -110,13 +110,18 @@ const solo: Extract<Mode, { kind: 'training' }> = { kind: 'training', game: 'poo
 export let launch: { mode: Mode; state?: SavedGame; awaitingOnline?: boolean } = { mode: solo };
 
 export function preferredGame(): Game {
-  try { return localStorage.getItem(preferenceKey) === 'snooker' ? 'snooker' : 'pool'; }
-  catch { return 'pool'; }
+  try {
+    const saved = localStorage.getItem(preferenceKey);
+    return isGame(saved) ? saved : 'pool';
+  } catch { return 'pool'; }
 }
+
+const stateGame = (state: SavedGame): Game => state.snooker ? 'snooker' : state.nineBall ? 'nineball' : 'pool';
+export const gameLabel = (game: Game) => game === 'snooker' ? 'Snooker' : game === 'nineball' ? '9-Ball' : '8-Ball';
 
 export function saveSession(mode: Mode, state: SavedGame, awaitingOnline = false) {
   try {
-    localStorage.setItem(sessionKey(state.snooker ? 'snooker' : 'pool'), JSON.stringify({ mode, state, awaitingOnline }));
+    localStorage.setItem(sessionKey(stateGame(state)), JSON.stringify({ mode, state, awaitingOnline }));
   } catch {}
 }
 
@@ -124,17 +129,17 @@ export function clearSession(game: Game) {
   try {
     localStorage.removeItem(sessionKey(game));
     const legacy = JSON.parse(localStorage.getItem(legacySaveKey) ?? 'null');
-    if (legacy && Boolean((legacy.state ?? legacy).snooker) === (game === 'snooker')) localStorage.removeItem(legacySaveKey);
+    if (legacy && game !== 'nineball' && Boolean((legacy.state ?? legacy).snooker) === (game === 'snooker')) localStorage.removeItem(legacySaveKey);
   } catch {}
 }
 
 function savedSession(game: Game): typeof launch | undefined {
   try {
     const saved = JSON.parse(localStorage.getItem(sessionKey(game)) ?? localStorage.getItem(legacySaveKey) ?? 'null');
-    if (validGame(saved) && saved.snooker === (game === 'snooker')) {
+    if (validGame(saved) && stateGame(saved) === game) {
       return { mode: saved.onlineMode ? { kind: 'casual' } : { ...solo, game, opponent: saved.versusComputer ? 'computer' : 'solo' }, state: saved };
     }
-    if (!saved || !validGame(saved.state) || saved.state.snooker !== (game === 'snooker')) return;
+    if (!saved || !validGame(saved.state) || stateGame(saved.state) !== game) return;
     const mode = saved.mode;
     if (game === 'pool' && mode?.kind === 'casual') return { mode, state: saved.state };
     if (mode?.kind === 'training' && ['solo', 'computer'].includes(mode.opponent) && difficulties.includes(mode.difficulty)) {
@@ -156,7 +161,8 @@ function savedSession(game: Game): typeof launch | undefined {
 }
 
 export function labelGame(mode: Mode) {
-  const city = t('city' in mode ? mode.city.name : mode.kind === 'training' ? 'Training' : 'Invite play');
+  const city = t('city' in mode ? mode.city.name : mode.kind === 'training' ? 'Training' : 'Invite play')
+    + (mode.kind === 'training' && mode.game === 'nineball' ? ' · ' + t('9-Ball') : '');
   const name = mode.kind === 'computer' ? city + ' · ' + t(careerStage(mode.city, mode.stage, mode.game).title)
     : mode.kind === 'challenge' ? t(getChallenge(mode.game, mode.challenge)!.title) : city;
   document.querySelector<HTMLElement>('#gameCity')!.textContent = name;
@@ -195,24 +201,27 @@ export async function chooseGame() {
     let view: Setup | 'difficulty' | 'stages' | 'shop' | undefined;
     let selectedCity: typeof cities[number] | undefined;
     const start = (mode: Mode) => resolve({ mode });
-    const gameName = () => t(game === 'snooker' ? 'Snooker' : 'Billiard');
+    const gameName = () => t(gameLabel(game));
 
     const gameButtons = [...modes.querySelectorAll<HTMLButtonElement>('button[data-game]')];
     const updateGame = () => {
       for (const button of gameButtons) button.setAttribute('aria-pressed', String(button.dataset.game === game));
-      document.querySelector<HTMLElement>('#onlineModeCard')!.hidden = game === 'snooker';
-      document.querySelector<HTMLElement>('#casualOnline')!.hidden = game === 'snooker';
+      // Online play is eight-ball only, and nine-ball has no challenge ladder yet.
+      document.querySelector<HTMLElement>('#onlineModeCard')!.hidden = game !== 'pool';
+      document.querySelector<HTMLElement>('#casualOnline')!.hidden = game !== 'pool';
+      document.querySelector<HTMLElement>('#challengesModeCard')!.hidden = game === 'nineball';
       picker.dataset.game = game;
       const { coins, points } = careerProgress(game);
       const chip = (name: string, value: string, label: string) => `<span class="wallet-chip wallet-${name}"><strong>${value}</strong><small>${label}</small></span>`;
       document.querySelector<HTMLElement>('#homeWallet')!.innerHTML = chip('rank', t(careerRank(points)), t('Rank'))
-        + chip('coins', String(coins), t('Coins')) + chip('stars', gameStars(game) + '/' + challenges.filter(challenge => challenge.game === game).length * maxStars, t('Stars'));
+        + chip('coins', String(coins), t('Coins'))
+        + (game === 'nineball' ? '' : chip('stars', gameStars(game) + '/' + challenges.filter(challenge => challenge.game === game).length * maxStars, t('Stars')));
       const session = savedSession(game);
       resume.hidden = !session;
       resume.onclick = session ? () => resolve(session) : null;
     };
     for (const button of gameButtons) button.onclick = () => {
-      game = button.dataset.game === 'snooker' ? 'snooker' : 'pool';
+      game = isGame(button.dataset.game) ? button.dataset.game : 'pool';
       try { localStorage.setItem(preferenceKey, game); } catch {}
       savePage({ game, view: 'home' });
       updateGame();
@@ -331,7 +340,7 @@ export async function chooseGame() {
       title.textContent = t('Training') + ' · ' + gameName();
       list.dataset.layout = 'training';
       const computer = selectionCard({
-        title: t('Against Computer'), subtitle: t('Practice match'), detail: t(game === 'snooker' ? 'Play snooker at any difficulty.' : 'Play eight-ball at any difficulty.'),
+        title: t('Against Computer'), subtitle: t('Practice match'), detail: t(game === 'snooker' ? 'Play snooker at any difficulty.' : game === 'nineball' ? 'Play nine-ball at any difficulty.' : 'Play eight-ball at any difficulty.'),
         artwork: tableArt(5), action: t('Choose difficulty'),
         play: showDifficulty,
       });

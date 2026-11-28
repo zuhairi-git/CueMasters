@@ -219,7 +219,7 @@
 }
 [data-theme="ivory"] .mode-icon { color: #0b1424; }
 .mode-icon svg { stroke-width: 2; }
-.mode-card h2 {
+.mode-card .mode-title {
   margin-top: 18px;
   font-family: var(--display);
   font-size: clamp(1.15rem, 1.9vw, 1.5rem);
@@ -227,10 +227,7 @@
   letter-spacing: .03em;
   text-transform: uppercase;
 }
-.mode-card p { margin: 10px 0 20px; font-size: .92rem; line-height: 1.45; }
-.mode-card .home-action { position: static; width: 100%; }
-/* The whole tile starts the mode, not just its button. */
-.mode-card .home-action::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+.mode-card .mode-text { margin: 10px 0 0; font-size: .92rem; line-height: 1.45; }
 .home-links .home-back { border-radius: 999px; padding-inline: 18px; }
 #resumeMatch { border-color: var(--accent); color: var(--accent); }
 
@@ -446,10 +443,9 @@ button.selection-card:active { transform: scale(.985); }
   .wallet-chip { flex: 1; min-width: 0; padding: 5px 8px; }
   .mode-card { padding: 14px; gap: 6px 14px; border-radius: 18px; }
   .mode-card::before { display: none; }
-  .mode-icon { width: 50px; height: 50px; border-radius: 15px; grid-row: 1 / span 3; align-self: start; }
-  .mode-card h2 { margin-top: 0; font-size: 1.12rem; }
-  .mode-card p { margin: 0; font-size: .86rem; }
-  .mode-card .home-action { width: auto; min-height: 40px; margin-top: 4px; padding: 6px 16px; font-size: .82rem; }
+  .mode-icon { width: 50px; height: 50px; border-radius: 15px; grid-row: 1 / span 2; align-self: center; }
+  .mode-card .mode-title { margin-top: 0; padding-right: 30px; font-size: 1.12rem; }
+  .mode-card .mode-text { margin: 0; padding-right: 30px; font-size: .86rem; }
   .home-links { gap: 8px; margin-top: 18px; }
   .home-links .home-back { flex: 1 1 auto; }
   .selection-copy { padding: 13px 15px 15px; }
@@ -469,10 +465,9 @@ button.selection-card:active { transform: scale(.985); }
   .home-games .home-back { min-height: 38px; }
   .mode-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .mode-card { display: flex; padding: 10px; border-radius: 16px; }
-  .mode-card p { display: none; }
+  .mode-card .mode-text { display: none; }
   .mode-icon { width: 38px; height: 38px; border-radius: 12px; }
-  .mode-card h2 { margin: 8px 0 10px; font-size: .92rem; }
-  .mode-card .home-action { width: 100%; min-height: 38px; padding: 4px 8px; font-size: .74rem; }
+  .mode-card .mode-title { margin: 8px 0 0; font-size: .92rem; }
   .home-links { margin-top: 10px; }
   .city-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .match-intro .intro-title { font-size: clamp(1.6rem, 9vh, 2.6rem); }
@@ -664,7 +659,6 @@ header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: #ff8a75; ba
 [data-theme="ivory"] .star.earned { color: #99600c; text-shadow: none; }
 [data-theme="ivory"] .tier-heading span, [data-theme="ivory"] .selection-detail { color: #5a4a39; }
 [data-theme="ivory"] .selection-action { color: #5e3a0c; border-color: #805122; background: #8051221f; }
-[data-theme="ivory"] .mode-card p { color: #54453a; }
 [data-theme="ivory"] .selection-card[data-status="locked"] { opacity: .9; }
 
 /* The thin scoreboard is a flex row: clear the old grid alignment so name and

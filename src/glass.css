@@ -1,0 +1,614 @@
+/* Cue Master glass skin. Loaded last.
+   Text colours are "ink" tokens and the surfaces they sit on are "pane" tokens.
+   Every ink/pane pairing is checked by tests/contrast.test.mjs, so:
+   - never write a literal text colour in this file, add or reuse an --ink-* token;
+   - keep the values in the @tokens blocks literal (hex or rgba), the test reads them. */
+
+/* @tokens club */
+:root {
+  --ink: #f4f7ff;
+  --ink-soft: #ccd6e8;
+  --ink-gold: #f5c451;
+  --ink-on-gold: #231703;
+  --ink-link: #8fe3f5;
+  --ink-good: #a5ecc4;
+  --ink-danger: #ffb3a6;
+  /* Fixed in every theme: text on a veiled photo, badges over artwork, labels on pastel fills. */
+  --ink-photo: #f4f7ff;
+  --ink-badge: #f4f7ff;
+  --ink-badge-good: #a5ecc4;
+  --ink-badge-gold: #f5c451;
+  --ink-on-tint: #0b1424;
+  --pane-badge: rgba(6, 10, 20, .88);
+  --pane: rgba(13, 21, 38, .84);
+  --pane-strong: rgba(10, 16, 30, .95);
+  --pane-inset: rgba(255, 255, 255, .05);
+  --pane-control: rgba(255, 255, 255, .10);
+  --pane-gold: rgba(245, 196, 81, .10);
+  --sheen-peak: rgba(255, 255, 255, .08);
+  --veil: rgba(8, 15, 32, .62);
+  --page: #070b16;
+  --page-glow: #16304e;
+  --panel: #0f192c;
+  --control: #17263f;
+  --hover: #213556;
+  --edge: rgba(255, 255, 255, .26);
+  --edge-soft: rgba(255, 255, 255, .12);
+  --aurora-a: #1d6fd6;
+  --aurora-b: #12a58a;
+  --aurora-c: #7a4be0;
+  --sheen-button: rgba(255, 255, 255, .28);
+}
+/* @tokens midnight */
+:root[data-theme="midnight"] {
+  --ink: #eef3ff;
+  --ink-soft: #cdd7ee;
+  --ink-gold: #f1cf7c;
+  --ink-on-gold: #201503;
+  --ink-link: #b9d6ff;
+  --ink-good: #a8ebc6;
+  --ink-danger: #ffb5aa;
+  --pane: rgba(19, 26, 48, .85);
+  --pane-strong: rgba(14, 20, 38, .95);
+  --pane-inset: rgba(255, 255, 255, .05);
+  --pane-control: rgba(255, 255, 255, .10);
+  --pane-gold: rgba(241, 207, 124, .10);
+  --sheen-peak: rgba(255, 255, 255, .08);
+  --veil: rgba(20, 21, 52, .68);
+  --page: #0d1424;
+  --page-glow: #273452;
+  --panel: #182237;
+  --control: #202e48;
+  --hover: #2b3d5c;
+  --edge: rgba(214, 226, 255, .28);
+  --edge-soft: rgba(214, 226, 255, .13);
+  --aurora-a: #4b5fd6;
+  --aurora-b: #2f7fb8;
+  --aurora-c: #8b4fd0;
+}
+/* @tokens ivory */
+:root[data-theme="ivory"] {
+  --ink: #2b2319;
+  --ink-soft: #554535;
+  --ink-gold: #6b4208;
+  --ink-on-gold: #fff9ee;
+  --ink-link: #1c5873;
+  --ink-good: #1c6340;
+  --ink-danger: #9a2c1c;
+  --pane: rgba(255, 251, 243, .86);
+  --pane-strong: rgba(255, 250, 240, .95);
+  --pane-inset: rgba(86, 57, 31, .06);
+  --pane-control: rgba(86, 57, 31, .09);
+  --pane-gold: rgba(128, 81, 34, .12);
+  --sheen-peak: rgba(255, 255, 255, .5);
+  --veil: rgba(52, 34, 18, .68);
+  --page: #ebe2d2;
+  --page-glow: #fff9ee;
+  --panel: #fff9ee;
+  --control: #f0e5d3;
+  --hover: #e7d9c3;
+  --edge: rgba(255, 255, 255, .85);
+  --edge-soft: rgba(86, 57, 31, .22);
+  --aurora-a: #e9b76a;
+  --aurora-b: #d98f6a;
+  --aurora-c: #c9a15a;
+  --sheen-button: rgba(255, 255, 255, .12);
+}
+/* Everything drawn over the table keeps one dark palette in every theme. */
+/* @tokens table */
+.game-hud, .game-notice, .shot-callout, .shot-highlight, .match-intro, .call-pocket, .fullscreen-notice, #cueLoader {
+  --ink: #f4f7ff;
+  --ink-soft: #ccd6e8;
+  --ink-gold: #f5c451;
+  --ink-on-gold: #231703;
+  --ink-link: #8fe3f5;
+  --ink-good: #a5ecc4;
+  --ink-danger: #ffb3a6;
+  --pane: rgba(10, 18, 33, .86);
+  --pane-strong: rgba(8, 14, 27, .95);
+  --pane-inset: rgba(255, 255, 255, .05);
+  --pane-control: rgba(255, 255, 255, .10);
+  --pane-gold: rgba(245, 196, 81, .12);
+  --sheen-peak: rgba(255, 255, 255, .08);
+  --page: #070b16;
+  --page-glow: #16304e;
+  --panel: #0f192c;
+  --control: #17263f;
+  --hover: #213556;
+  --edge: rgba(255, 255, 255, .26);
+  --edge-soft: rgba(255, 255, 255, .12);
+}
+
+/* The older stylesheets read these names; point them at the checked tokens. */
+:root, :root[data-theme], .game-hud, .game-notice, .shot-callout, .shot-highlight, .match-intro, .call-pocket, .fullscreen-notice {
+  --text: var(--ink);
+  --muted: var(--ink-soft);
+  --accent: var(--ink-gold);
+  --on-accent: var(--ink-on-gold);
+  --gold: var(--ink-gold);
+  --danger: var(--ink-danger);
+  --border: var(--edge-soft);
+  --surface: var(--page);
+  --glass-blur: blur(22px) saturate(165%);
+  --glass-shadow: 0 18px 44px rgba(0, 0, 0, .42), 0 2px 6px rgba(0, 0, 0, .28);
+  --glass-rim: inset 0 1px 0 var(--edge), inset 0 0 0 1px var(--edge-soft);
+  --sheen: linear-gradient(180deg, var(--sheen-peak), transparent 46%);
+}
+.game-hud, .game-notice, .shot-callout, .shot-highlight, .match-intro, .call-pocket, .fullscreen-notice { --accent: var(--ink-link); color: var(--ink); color-scheme: dark; }
+.game-notice { --accent: var(--ink-gold); }
+:root[data-theme="ivory"] { --glass-shadow: 0 18px 40px rgba(60, 38, 16, .22), 0 2px 6px rgba(60, 38, 16, .14); }
+
+@property --glare { syntax: '<number>'; inherits: false; initial-value: 0; }
+@property --tilt-x { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --tilt-y { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
+/* One recipe for every pane: tint, sheen, a light that follows the pointer, a bright rim. */
+.mode-card, .selection-card, .wallet-chip, .home-games, #setupStatus:not(:empty), .install-help, .home-kicker,
+.ui-dialog, .game-notice:not([hidden]), #pocketPicker:not([hidden]), .fullscreen-notice:not([hidden]), .shot-highlight:not([hidden]),
+footer.game-hud, .camera-zoom.game-hud {
+  background-color: var(--pane);
+  background-image:
+    radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, calc(var(--glare) * .06)), transparent 70%),
+    var(--sheen);
+  border: 1px solid var(--edge-soft);
+  box-shadow: var(--glass-rim), var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: var(--ink);
+  transition: --glare .25s ease-out, transform .22s cubic-bezier(.2, .8, .2, 1), box-shadow .22s ease-out, border-color .22s ease-out;
+}
+.is-lit { --glare: 1; }
+
+/* ---------- Page and home ---------- */
+body { background: var(--page); color: var(--ink); }
+.city-picker { background: radial-gradient(ellipse at 50% 0%, var(--page-glow), var(--page) 72%); color: var(--ink); }
+/* Slow coloured light behind the glass on the plain screens. */
+.city-picker::before, .city-picker::after {
+  content: "";
+  position: fixed;
+  z-index: -2;
+  width: 62vmax;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: .34;
+  pointer-events: none;
+}
+.city-picker::before { top: -24vmax; left: -16vmax; background: radial-gradient(closest-side, var(--aurora-a), transparent); }
+.city-picker::after { bottom: -28vmax; right: -18vmax; background: radial-gradient(closest-side, var(--aurora-b), transparent 70%), radial-gradient(closest-side at 30% 30%, var(--aurora-c), transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .city-picker::before { animation: aurora-a 26s ease-in-out infinite alternate; }
+  .city-picker::after { animation: aurora-b 32s ease-in-out infinite alternate; }
+}
+@keyframes aurora-a { to { transform: translate3d(18vmax, 10vmax, 0) scale(1.15); } }
+@keyframes aurora-b { to { transform: translate3d(-16vmax, -12vmax, 0) scale(.9); } }
+
+/* Photo backgrounds sit under a veil dark enough for the light text above them. */
+.background-art:is([data-background="sapphire"], [data-background="golden"]) {
+  --background-overlay: linear-gradient(180deg, var(--veil), var(--veil));
+}
+.city-picker:is([data-background-screen="cities"], [data-background-screen="levels"]) .home-backdrop::before { background: transparent; }
+.background-art[data-background="emerald"] { --background-base: #071513; }
+.background-art[data-background="twilight"] { --background-base: #0e1024; }
+/* Text straight on a photo or glow backdrop is always the light table ink. */
+.city-picker:not([data-background-screen]) .home-backdrop:not([data-background="classic"]) ~ .city-picker-content :is(h1, .home-tagline),
+.city-picker[data-background-screen="cities"] .home-backdrop:not([data-background="classic"]):not([data-hide-background-cities]) ~ .city-picker-content :is(#setupTitle, .tier-heading h3, .tier-heading span),
+.city-picker[data-background-screen="levels"] .home-backdrop:not([data-background="classic"]):not([data-hide-background-levels]) ~ .city-picker-content :is(#setupTitle, .tier-heading h3, .tier-heading span) {
+  color: var(--ink-photo);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .7), 0 0 2px rgba(0, 0, 0, .6);
+}
+.city-picker h1, #setupTitle { color: var(--ink); }
+.home-tagline { color: var(--ink); }
+[data-theme="ivory"] .home-backdrop[data-background="classic"] ~ .city-picker-content .home-tagline { color: var(--ink-soft); }
+.tier-heading h3 { color: var(--ink); }
+.tier-heading span, [data-theme="ivory"] .tier-heading span { color: var(--ink-soft); }
+.tier-heading { border-bottom-color: var(--edge-soft); }
+/* A locked tier says so with its padlock, not by fading its text. */
+.tier-heading[data-locked] { opacity: 1; }
+
+.home-kicker, [data-theme="ivory"] .home-backdrop[data-background="classic"] ~ .city-picker-content .home-kicker {
+  width: fit-content;
+  margin: 0 auto 12px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  color: var(--ink-gold);
+  text-shadow: none;
+  letter-spacing: .26em;
+}
+.wallet-chip, #setupStatus:not(:empty) { border-color: var(--edge-soft); background-color: var(--pane); color: var(--ink) !important; border-radius: 16px; }
+.wallet-chip strong { color: var(--ink); }
+.wallet-chip small { color: var(--ink-soft); }
+.wallet-coins strong, .wallet-stars strong { color: var(--ink-gold); }
+@media (hover: hover) { .wallet-chip:hover { transform: translateY(-2px); } }
+
+.home-games { border-color: var(--edge-soft); background-color: var(--pane); padding: 5px; }
+.home-games .home-back { min-width: min(27vw, 140px); color: var(--ink); }
+.home-games .home-back:not([aria-pressed="true"]) { color: var(--ink); }
+.home-games [aria-pressed="true"] {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink-gold) 80%, #fff), var(--ink-gold) 55%, color-mix(in srgb, var(--ink-gold) 86%, #000));
+  color: var(--ink-on-gold);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 6px 18px color-mix(in srgb, var(--ink-gold) 34%, transparent);
+}
+.home-games .home-back[data-game="pool"]::before { background: radial-gradient(circle at 50% 50%, #fff 0 24%, transparent 26%), radial-gradient(circle at 34% 28%, #6b7280 0 12%, #1a1d26 60%, #000); }
+.home-games .home-back[data-game="nineball"]::before { background: radial-gradient(circle at 50% 50%, #fff 0 22%, transparent 24%), linear-gradient(180deg, #fff8e6 0 24%, #f4b51d 24% 76%, #fff8e6 76%); }
+@media (hover: hover) { .home-games .home-back:not([aria-pressed="true"]):hover { background: var(--pane-control); filter: none; } }
+
+.mode-card {
+  border-color: color-mix(in srgb, var(--mode-accent) 34%, var(--edge-soft));
+  border-top-width: 1px;
+  border-radius: 26px;
+  background-image:
+    radial-gradient(300px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, calc(var(--glare) * .06)), transparent 70%),
+    var(--sheen),
+    linear-gradient(160deg, color-mix(in srgb, var(--mode-accent) 14%, transparent), transparent 60%);
+  transform: perspective(900px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transition: --glare .25s ease-out, --tilt-x .18s ease-out, --tilt-y .18s ease-out, transform .22s cubic-bezier(.2, .8, .2, 1), box-shadow .22s ease-out, border-color .22s ease-out;
+}
+/* The whole card is the button: no inner action, an arrow hints where it goes. */
+button.mode-card { width: 100%; min-height: 0; margin: 0; font: inherit; text-align: left; cursor: pointer; color: var(--ink); -webkit-tap-highlight-color: transparent; }
+.mode-card .mode-title, .mode-card .mode-text { display: block; }
+.mode-card .mode-title { color: var(--ink); }
+.mode-card .mode-text { color: var(--ink-soft); }
+.mode-card .mode-go {
+  position: absolute;
+  top: clamp(16px, 2.2vw, 26px);
+  right: clamp(16px, 2.2vw, 26px);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--edge-soft);
+  border-radius: 50%;
+  background: var(--pane-control);
+  color: var(--ink-soft);
+  transition: transform .25s cubic-bezier(.2, .9, .3, 1.3), color .2s ease-out, border-color .2s ease-out, background-color .2s ease-out;
+}
+.mode-go svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.mode-card:is(:hover, :focus-visible) .mode-go { transform: translateX(3px); border-color: var(--mode-accent); background: color-mix(in srgb, var(--mode-accent) 28%, transparent); color: var(--ink); }
+.mode-card:focus-visible { outline: 2px solid var(--ink-gold); outline-offset: 4px; }
+.mode-card:active { transform: perspective(900px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) scale(.98); }
+@media (max-width: 680px) { .mode-card .mode-go { top: 50%; right: 14px; width: 30px; height: 30px; margin-top: -15px; } }
+@media (max-height: 520px) and (orientation: landscape) { .mode-card .mode-go { display: none; } }
+@media (hover: hover) {
+  .mode-card:hover {
+    transform: perspective(900px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateY(-5px);
+    border-color: color-mix(in srgb, var(--mode-accent) 70%, var(--edge));
+    box-shadow: var(--glass-rim), 0 0 0 1px color-mix(in srgb, var(--mode-accent) 45%, transparent), 0 26px 60px rgba(0, 0, 0, .5), 0 0 44px color-mix(in srgb, var(--mode-accent) 22%, transparent);
+  }
+  .mode-card:hover .mode-icon { transform: translateY(-2px) rotate(-4deg) scale(1.06); }
+}
+.mode-icon, [data-theme="ivory"] .mode-icon { transition: transform .25s cubic-bezier(.2, .9, .3, 1.3); color: var(--ink-on-tint); }
+/* Stand-alone actions (the online retry) keep a light fill in every theme so their dark label stays readable. */
+.home-action { --mode-accent: #8de4f1; color: var(--ink-on-tint); }
+.home-back { border-color: var(--edge-soft); background-color: var(--pane); color: var(--ink); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.home-links .home-back, .career-nav .home-back { box-shadow: var(--glass-rim), 0 8px 20px rgba(0, 0, 0, .25); }
+#resumeMatch { border-color: var(--ink-gold); color: var(--ink-gold); }
+.settings-languages [aria-pressed="true"] { background: var(--ink-gold); color: var(--ink-on-gold); }
+.install-help { color: var(--ink); border-radius: 16px; }
+
+/* ---------- Selection cards ---------- */
+.selection-card { border-radius: 22px; border-color: var(--edge-soft); color: var(--ink); }
+.selection-card:hover, .selection-card:focus-visible { background-color: var(--pane); border-color: var(--ink-gold); }
+@media (hover: hover) {
+  button.selection-card:hover { transform: translateY(-5px); box-shadow: var(--glass-rim), 0 0 0 1px var(--ink-gold), 0 24px 50px rgba(0, 0, 0, .46); }
+}
+.selection-title { color: var(--ink); }
+.selection-subtitle, [data-theme="ivory"] .selection-subtitle { color: var(--ink-gold); }
+.selection-detail, [data-theme="ivory"] .selection-detail { color: var(--ink-soft); }
+.selection-action, [data-theme="ivory"] .selection-action { color: var(--ink-gold); border-color: color-mix(in srgb, var(--ink-gold) 55%, transparent); background: var(--pane-gold); }
+.selection-card[data-final] { border-color: var(--ink-gold); background-image: var(--sheen), linear-gradient(135deg, var(--pane-gold), transparent 62%); }
+.selection-card[data-final] .selection-title, [data-theme="ivory"] .selection-card[data-final] .selection-title { color: var(--ink-gold); }
+.selection-card[data-status="locked"], [data-theme="ivory"] .selection-card[data-status="locked"] { opacity: 1; }
+.selection-card[data-status="locked"] .selection-scene { filter: saturate(.3) brightness(.62); }
+/* Badges over the artwork carry their own dark chip so the scene never decides their contrast. */
+.city-status, [data-status="locked"] .city-status, [data-status="completed"] .city-status {
+  border-color: rgba(255, 255, 255, .3);
+  background: var(--pane-badge);
+  color: var(--ink-badge);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+[data-status="completed"] .city-status { color: var(--ink-badge-good); }
+.selection-number { background: var(--pane-badge); color: var(--ink-badge-gold); border-color: var(--ink-badge-gold); }
+.selection-ribbon { color: var(--ink-on-tint); }
+.star { color: color-mix(in srgb, var(--ink-soft) 45%, transparent); }
+.star.earned, [data-theme="ivory"] .star.earned { color: var(--ink-gold); }
+
+/* ---------- Buttons and fields ---------- */
+.ui-button, .ui-select { border-color: var(--edge-soft); color: var(--ink); }
+.ui-button:where(:not(#stroke, #tip, #fineAim, #spinBall, .zoom-button, .hud-action, .ui-button--primary, [aria-pressed="true"])) {
+  background-image:
+    radial-gradient(120px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, calc(var(--glare) * .08)), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, .06), transparent 55%);
+  box-shadow: inset 0 1px 0 var(--edge-soft), 0 2px 8px rgba(0, 0, 0, .22);
+  transition: --glare .2s ease-out, transform .12s ease-out, filter .12s ease-out, box-shadow .16s ease-out, border-color .16s ease-out, background-color .16s ease-out;
+}
+.ui-button--primary:where(:not(.hud-action)), .ui-button[aria-pressed="true"]:where(:not(.hud-action)) {
+  border-color: color-mix(in srgb, var(--ink-gold) 60%, #fff);
+  background-color: var(--ink-gold);
+  background-image: linear-gradient(180deg, var(--sheen-button), transparent 50%, rgba(0, 0, 0, .14));
+  color: var(--ink-on-gold);
+}
+.fx-press { animation: fx-press .45s ease-out; }
+@keyframes fx-press {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ink-gold) 55%, transparent); }
+  to { box-shadow: 0 0 0 12px transparent; }
+}
+:focus-visible { outline-color: var(--ink-gold); }
+
+/* ---------- Dialogs ---------- */
+.ui-dialog {
+  border-color: var(--edge-soft);
+  border-radius: 26px;
+  background-color: var(--pane-strong);
+  background-image: var(--sheen);
+  box-shadow: var(--glass-rim), 0 34px 90px rgba(0, 0, 0, .6);
+  color: var(--ink);
+}
+.ui-dialog::backdrop { background: color-mix(in srgb, var(--page) 62%, transparent); -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%); }
+.ui-dialog h2, .ui-dialog strong, .ui-dialog label, .ui-dialog h3 { color: var(--ink); }
+.ui-dialog p, .ui-dialog small, .ui-field, .settings-note { color: var(--ink-soft); }
+.ui-dialog legend, .eyebrow, .barcode-heading { color: var(--ink-gold); }
+.ui-dialog fieldset { border-color: var(--edge-soft); border-radius: 18px; background: var(--pane-inset); }
+.ui-dialog-actions { background: transparent; border-top-color: var(--edge-soft); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ui-select { background-color: var(--control); }
+#invite { background: var(--pane-inset); border-color: var(--edge-soft); }
+#inviteLink, #spinValue { color: var(--ink-link); }
+.online-medals li span { color: var(--ink-gold); }
+.spin-direction { color: var(--ink-soft); }
+.avatar-choice { border-color: var(--edge-soft); background: var(--pane-inset); transition: transform .18s cubic-bezier(.2, .9, .3, 1.3), box-shadow .18s ease-out, border-color .18s ease-out; }
+.avatar-choice[aria-pressed="true"] { border-color: var(--ink-gold); box-shadow: 0 0 0 2px var(--ink-gold), 0 0 18px color-mix(in srgb, var(--ink-gold) 45%, transparent); }
+.avatar-choice-buttons { gap: 8px; }
+.avatar-choice-buttons .avatar-choice { width: 54px; height: 54px; padding: 2px; }
+@media (hover: hover) { .avatar-choice:hover { transform: translateY(-3px) scale(1.08); } }
+.background-option[aria-pressed="true"] { border-color: var(--ink-gold); box-shadow: inset 0 0 0 1px var(--ink-gold); background-image: none; background-color: var(--control); color: var(--ink); }
+.background-option small { color: var(--ink-soft); }
+#mobileGameMenu .hud-action { background: var(--control); border-color: var(--edge-soft); color: var(--ink); }
+#mobileGameMenu .hud-action > svg { color: var(--ink-gold); background: var(--pane-inset); border-color: var(--edge-soft); }
+#mobileGameMenu .menu-description { color: var(--ink-soft); }
+#mobileGameMenu .hud-action::after { color: var(--ink-gold); }
+#mobileGameMenu .hud-action[aria-pressed="true"] { border-color: var(--ink-gold); background: var(--hover); color: var(--ink); }
+#mobileGameMenu .hud-action:hover:enabled { background: var(--hover); border-color: var(--ink-gold); color: var(--ink); }
+#mobileGameMenu .hud-action:disabled { opacity: .55; }
+
+/* ---------- Match HUD ---------- */
+@media (min-width: 601px) {
+  header.game-hud > .game-heading, header.game-hud > #score, header.game-hud > nav {
+    border: 1px solid var(--edge-soft);
+    border-radius: 16px;
+    background-color: var(--pane);
+    background-image: radial-gradient(220px circle at var(--mx, 50%) var(--my, 0%), rgba(255, 255, 255, calc(var(--glare) * .06)), transparent 70%), var(--sheen);
+    box-shadow: var(--glass-rim), 0 10px 28px rgba(0, 0, 0, .38);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+    transition: --glare .25s ease-out;
+  }
+  header.game-hud .game-heading > #status { color: var(--ink); }
+  header.game-hud .game-heading > #careerObjective { color: var(--ink-soft); }
+  header.game-hud .game-city, .final-match .game-city { color: var(--ink-gold); }
+  header.game-hud #score .player-score .player-avatar { flex-basis: 26px; width: 26px; height: 26px; }
+}
+@media (max-width: 600px) {
+  header.game-hud > #score {
+    border: 1px solid var(--edge-soft);
+    background-color: var(--pane);
+    background-image: var(--sheen);
+    box-shadow: var(--glass-rim), 0 10px 28px rgba(0, 0, 0, .38);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
+  }
+  .compact-hud header.game-hud > #score { border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  /* The hint line floats over the cloth on phones, so it carries its own chip. */
+  .compact-hud header.game-hud #status, header.game-hud #status {
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--pane-strong);
+    color: var(--ink);
+  }
+  .compact-hud header.game-hud #careerObjective, header.game-hud #careerObjective { padding: 2px 10px; border-radius: 999px; background: var(--pane-strong); color: var(--ink-soft); }
+  .camera-zoom.game-hud, .camera-zoom.game-hud #fineAim { background-color: var(--pane-inset); }
+  .camera-zoom.game-hud { box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .game-hud #mobileMenu { border-color: var(--edge-soft); background-color: var(--pane-strong); color: var(--ink); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+}
+footer.game-hud, .camera-zoom.game-hud { border-radius: 18px; }
+.game-hud #status { color: var(--ink); }
+#careerObjective { color: var(--ink-soft); }
+header.game-hud #score .player-score, .compact-hud header.game-hud #score .player-score {
+  border: 1px solid var(--edge-soft);
+  border-radius: 12px;
+  background: var(--pane-strong);
+  color: var(--ink);
+  box-shadow: none;
+  transition: border-color .25s ease-out, box-shadow .25s ease-out, background-color .25s ease-out;
+}
+header.game-hud #score .player-score.active, .compact-hud header.game-hud #score .player-score.active {
+  border-color: var(--ink-gold);
+  background: linear-gradient(180deg, var(--pane-gold), transparent), var(--pane-strong);
+  box-shadow: inset 0 -2px 0 var(--ink-gold), 0 0 22px color-mix(in srgb, var(--ink-gold) 28%, transparent);
+}
+header.game-hud #score .player-score .player-name, header.game-hud #score .player-score.active .player-name { color: var(--ink); }
+header.game-hud #score .player-score .player-group, header.game-hud #score .player-score.active .player-group { color: var(--ink-soft); }
+header.game-hud #score .player-score .potted-balls.empty { color: var(--ink-soft); }
+header.game-hud #score .player-turn { color: var(--ink-gold); }
+header.game-hud #score .player-turn::before { background: var(--ink-gold); }
+.snooker-game header.game-hud #score .player-score .player-group::after, .snooker-game.compact-hud .game-hud .player-group::after { color: var(--ink); }
+.compact-hud header.game-hud #score::after, header.game-hud #score::after { color: var(--ink-soft); opacity: 1; }
+.ball-on:not([hidden]) { border-color: color-mix(in srgb, var(--ink-gold) 55%, transparent); border-radius: 12px; background: linear-gradient(180deg, var(--pane-gold), transparent), var(--pane-strong); color: var(--ink); }
+.ball-on-title { color: var(--ink-gold); }
+.ball-on-next { color: var(--ink-soft); border-left-color: var(--edge-soft); }
+header.game-hud #shotClock:not([hidden]), #shotClock:not([hidden]) { border: 1px solid color-mix(in srgb, var(--ink-gold) 55%, transparent); background: linear-gradient(180deg, var(--pane-gold), transparent), var(--pane-strong); color: var(--ink-gold); }
+header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: var(--ink-danger); background: var(--pane-strong); color: var(--ink-danger); }
+.game-hud .hud-action, header.game-hud #openSettings {
+  border-color: var(--edge-soft);
+  border-radius: 12px;
+  background: var(--pane-control);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 var(--edge-soft);
+  transition: background-color .16s ease-out, border-color .16s ease-out, transform .16s cubic-bezier(.2, .9, .3, 1.3), box-shadow .16s ease-out, color .16s ease-out;
+}
+@media (hover: hover) {
+  .game-hud .hud-action:hover:enabled { border-color: var(--ink-link); background: rgba(255, 255, 255, .14); color: var(--ink); transform: translateY(-1px); box-shadow: inset 0 1px 0 var(--edge), 0 6px 16px rgba(0, 0, 0, .3); }
+}
+.game-hud .hud-action[aria-pressed="true"] { border-color: var(--ink-gold); background: linear-gradient(180deg, color-mix(in srgb, var(--ink-gold) 82%, #fff), var(--ink-gold)); color: var(--ink-on-gold); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 0 16px color-mix(in srgb, var(--ink-gold) 40%, transparent); }
+.game-hud .hud-action:disabled { opacity: .5; }
+footer.game-hud .control-label, .game-hud .zoom-label, .fine-aim > small { color: var(--ink-soft); }
+.game-hud .zoom-button { color: var(--ink); }
+.game-hud .zoom-button:hover { background: var(--pane-control); color: var(--ink-link); }
+.zoom-value, footer.game-hud #powerValue { color: var(--ink-link); }
+footer.game-hud #powerValue { border-block-color: var(--edge-soft); }
+footer.game-hud #stroke { border-color: var(--edge-soft); border-radius: 12px; background: linear-gradient(180deg, rgba(0, 0, 0, .34), rgba(0, 0, 0, .16)); box-shadow: inset 0 2px 10px rgba(0, 0, 0, .5), 0 1px 0 var(--edge-soft); }
+#panTable[aria-pressed="true"] { color: var(--ink-link); background: var(--pane-control); box-shadow: inset 0 0 0 1px var(--ink-link); }
+body.tv-mode #tvStep, body.tv-mode #tvHelp { color: var(--ink); }
+body.tv-mode #tvPower { color: var(--ink-link); }
+
+/* ---------- Over the table ---------- */
+.call-pocket { color: var(--ink); }
+#pocketPicker:not([hidden]) { background-color: var(--pane-strong); border-radius: 16px; }
+.fullscreen-notice:not([hidden]), .shot-highlight:not([hidden]) { background-color: var(--pane-strong); border-radius: 18px; }
+.shot-highlight:not([hidden]) { border-color: var(--ink-gold); color: var(--ink); }
+.shot-highlight::before { background: var(--ink-gold); }
+.shot-highlight-copy strong { color: var(--ink-gold); }
+.shot-highlight-copy small { color: var(--ink); }
+.shot-callout:not([hidden]), .shot-callout:not([data-tone="great"]) { background: var(--pane-strong); color: var(--ink-gold); border-color: var(--ink-gold); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.shot-callout[data-tone="great"], .shot-callout[data-tone="great"]:not([hidden]) { background: linear-gradient(180deg, #ffe08a, #f5c451 50%, #d99a22); color: var(--ink-on-gold); border-color: #fff3c4; }
+.shot-callout[data-tone="warn"], .shot-callout[data-tone="warn"]:not([data-tone="great"]) { border-color: var(--ink-danger); color: var(--ink-danger); }
+.match-intro:not([hidden]) { color: var(--ink); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.intro-eyebrow, .match-intro[data-kind="final"] .intro-title { color: var(--ink-gold); }
+.intro-versus { border-color: var(--edge); background: var(--pane-control); color: var(--ink); }
+.intro-detail { color: var(--ink); }
+.intro-hint { color: var(--ink-soft); }
+/* The hint pulses, but never dims below readable. */
+@keyframes intro-pulse { 50% { opacity: .75; } }
+
+/* ---------- Result screen ---------- */
+.result-backdrop:not([hidden]) { background: radial-gradient(ellipse at center, rgba(4, 8, 16, .5), rgba(4, 8, 16, .78)); -webkit-backdrop-filter: blur(10px) saturate(130%); backdrop-filter: blur(10px) saturate(130%); }
+.game-notice, :root[data-theme="ivory"] .game-notice { --result-text: var(--ink); }
+.game-notice:not([hidden]) {
+  overflow: hidden auto;
+  width: min(420px, calc(100% - 28px));
+  border-radius: 28px;
+  background-color: var(--pane-strong);
+  color: var(--ink);
+  text-shadow: none;
+  box-shadow: var(--glass-rim), 0 30px 90px rgba(0, 0, 0, .66);
+}
+.game-notice[data-outcome="win"]:not([hidden]) { border-color: color-mix(in srgb, var(--ink-gold) 60%, transparent); box-shadow: var(--glass-rim), 0 30px 90px rgba(0, 0, 0, .66), 0 0 70px color-mix(in srgb, var(--ink-gold) 22%, transparent); }
+.game-notice .eyebrow { color: var(--ink-gold); }
+.game-notice[data-outcome="loss"] .eyebrow { color: var(--ink-danger); }
+.game-notice strong { color: var(--ink); }
+.game-notice small { color: var(--ink); }
+.game-notice .ui-button:not(.ui-button--primary) { color: var(--ink); }
+.game-notice .ui-button:disabled { background-color: var(--control); color: var(--ink-soft); }
+.result-player { color: var(--ink); }
+.result-winner { background: var(--ink-gold); color: var(--ink-on-gold); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.result-portrait { position: relative; display: grid; place-items: center; width: 84px; height: 84px; }
+.result-player .avatar-illustration { position: relative; width: 68px; height: 68px; box-shadow: 0 0 0 2px var(--edge), 0 8px 20px rgba(0, 0, 0, .45); }
+.result-player.is-winner .avatar-illustration { width: 78px; height: 78px; box-shadow: 0 0 0 3px var(--ink-gold), 0 0 30px color-mix(in srgb, var(--ink-gold) 55%, transparent); }
+.result-player.is-runner-up .avatar-illustration { filter: saturate(.55) brightness(.8); }
+.result-rays { position: absolute; inset: -34px; border-radius: 50%; opacity: 0; pointer-events: none; }
+.is-winner .result-rays {
+  opacity: .9;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--ink-gold) 46%, transparent) 0 8deg, transparent 8deg 22deg);
+  -webkit-mask-image: radial-gradient(closest-side, transparent 44%, #000 50%, transparent 100%);
+  mask-image: radial-gradient(closest-side, transparent 44%, #000 50%, transparent 100%);
+}
+.result-crown { position: absolute; z-index: 1; top: -15px; left: 50%; width: 36px; transform: translateX(-50%) rotate(-6deg); filter: drop-shadow(0 3px 5px rgba(0, 0, 0, .5)); }
+.result-crown svg { display: block; width: 100%; fill: #f5c451; stroke: #8a5a08; stroke-width: 1.5; stroke-linejoin: round; }
+@media (max-height: 500px) {
+  .result-portrait { width: 60px; height: 60px; }
+  .result-player .avatar-illustration { width: 46px; height: 46px; }
+  .result-player.is-winner .avatar-illustration { width: 52px; height: 52px; }
+  .result-rays { inset: -20px; }
+  .result-crown { top: -12px; width: 26px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .is-winner .result-rays { animation: rays-turn 14s linear infinite, rays-arrive .7s ease-out both; }
+  .result-crown { animation: crown-drop .8s cubic-bezier(.2, 1.5, .4, 1) .25s both; }
+  .result-player.is-winner .result-portrait { animation: winner-pop .7s cubic-bezier(.2, 1.4, .4, 1) both; }
+  .result-winner { animation: winner-pop .5s cubic-bezier(.2, 1.4, .4, 1) .45s both; }
+  /* A band of light crosses the winning card once it has landed. */
+  .game-notice[data-outcome="win"]:not([hidden])::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .16) 50%, transparent 62%);
+    transform: translateX(-120%);
+    animation: card-shine 1.5s ease-out .5s both;
+    pointer-events: none;
+  }
+  .game-notice[data-outcome="win"] #noticeTitle { animation: title-rise .6s cubic-bezier(.2, .9, .3, 1.2) .2s both; }
+}
+@keyframes rays-turn { to { transform: rotate(360deg); } }
+@keyframes rays-arrive { from { opacity: 0; scale: .4; } }
+@keyframes crown-drop { from { opacity: 0; transform: translate(-50%, -34px) rotate(-30deg); } }
+@keyframes winner-pop { from { opacity: 0; transform: scale(.5); } }
+@keyframes card-shine { to { transform: translateX(120%); } }
+@keyframes title-rise { from { opacity: 0; transform: translateY(14px) scale(.92); } }
+
+/* ---------- Celebration ---------- */
+.confetti-piece { width: 8px; height: 13px; border-radius: 2px; }
+.confetti-piece.streamer { width: 5px; height: 26px; border-radius: 3px; }
+.victory-flash { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, rgba(255, 236, 170, .55), transparent 62%); animation: victory-flash .9s ease-out both; }
+@keyframes victory-flash { from { opacity: 1; } to { opacity: 0; } }
+.firework { position: absolute; width: 0; height: 0; }
+.firework::before { content: ""; position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: #fff; box-shadow: 0 0 22px 8px var(--spark); animation: firework-core .5s ease-out both; }
+.firework i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--spark); box-shadow: 0 0 9px 1px var(--spark); animation: firework-spark 1.25s cubic-bezier(.15, .7, .3, 1) var(--late) both; }
+@keyframes firework-core { from { opacity: 1; transform: scale(.2); } to { opacity: 0; transform: scale(2.6); } }
+@keyframes firework-spark {
+  0% { opacity: 1; transform: translate(0, 0) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), calc(var(--dy) + 34px)) scale(.25); }
+}
+@media (prefers-reduced-motion: reduce) { .firework, .victory-flash { display: none; } }
+
+/* ---------- Animated portraits ---------- */
+.avatar-illustration { display: block; background: var(--control); }
+.avatar-illustration > svg { display: block; width: 100%; height: 100%; }
+.av-eyes, .av-mouth, .av-glow { transform-box: fill-box; transform-origin: center; }
+.av-head { transform-box: view-box; transform-origin: 50px 70px; }
+.player-avatar { box-shadow: 0 0 0 1px var(--edge); }
+@media (prefers-reduced-motion: no-preference) {
+  .av-eyes { animation: av-blink 5.2s var(--av-delay, 0s) infinite; }
+  .av-glow { animation: av-glow 2.4s var(--av-delay, 0s) ease-in-out infinite; }
+  .av-glint { animation: av-glint 4.6s var(--av-delay, 0s) ease-in-out infinite; }
+  /* Larger portraits breathe and sway; the small scoreboard ones only blink. */
+  :is(.avatar-choice, .result-player) .av-head { animation: av-sway 6.4s var(--av-delay, 0s) ease-in-out infinite; }
+  :is(.avatar-choice, .result-player) .av-body { animation: av-breathe 4.2s var(--av-delay, 0s) ease-in-out infinite; }
+  .player-score.active .av-head { animation: av-sway 3.6s ease-in-out infinite; }
+  .avatar-choice:is(:hover, :focus-visible, [aria-pressed="true"]) .av-head { animation: av-nod .7s ease-in-out infinite; }
+  .result-player.is-winner .av-head { animation: av-cheer .8s ease-in-out infinite; }
+  .result-player.is-winner .av-mouth { transform: scale(1.25); }
+  .result-player.is-runner-up .av-head { animation: none; transform: rotate(5deg) translateY(2px); }
+  .result-player.is-runner-up .av-mouth { transform: scaleY(-.7); }
+}
+@keyframes av-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.08); } }
+@keyframes av-sway { 0%, 100% { transform: rotate(-1.8deg); } 50% { transform: rotate(1.8deg) translateY(-.6px); } }
+@keyframes av-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(1.2px); } }
+@keyframes av-nod { 0%, 100% { transform: rotate(0) translateY(0); } 30% { transform: rotate(-5deg) translateY(-1.5px); } 70% { transform: rotate(5deg) translateY(-1.5px); } }
+@keyframes av-cheer { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-4px) rotate(4deg); } }
+@keyframes av-glow { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@keyframes av-glint { 0%, 70%, 100% { opacity: .15; transform: translateX(-2px); } 80% { opacity: .75; transform: translateX(2px); } }
+
+/* hud.css gives the HUD its own button colours per theme; keep them on the checked table values. */
+:root[data-theme="midnight"] .game-hud, :root[data-theme="ivory"] .game-hud { --panel: #0f192c; --surface: #070b16; --control: #17263f; --hover: #213556; }
+
+/* ---------- Devices and preferences ---------- */
+/* Three games share the switch: on phones each takes a third and drops its ball icon. */
+@media (max-width: 520px) {
+  .home-games { width: 100%; }
+  .home-games .home-back { flex: 1 1 0; min-width: 0; padding-inline: 6px; overflow: hidden; font-size: .86rem; letter-spacing: .04em; text-overflow: ellipsis; white-space: nowrap; }
+  .home-games .home-back::before { display: none; }
+}
+/* Long lists on touch screens skip the live blur so scrolling stays smooth. */
+@media (pointer: coarse) { .selection-card { -webkit-backdrop-filter: none; backdrop-filter: none; background-color: var(--pane-strong); } }
+body.tv-mode :is(.game-hud, .ui-dialog, header.game-hud > *), body.tv-mode .ui-dialog::backdrop { -webkit-backdrop-filter: none; backdrop-filter: none; }
+@media (prefers-reduced-transparency: reduce) {
+  :root, .game-hud, .game-notice { --pane: var(--panel); --pane-strong: var(--panel); --glass-blur: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mode-card, .selection-card, .wallet-chip, .hud-action, .avatar-choice, .mode-icon { transition: none; transform: none; }
+  .fx-press { animation: none; }
+}

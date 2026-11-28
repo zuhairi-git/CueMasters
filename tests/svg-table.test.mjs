@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { loadSource } from './load-source.mjs';
 const { careerTable, challengeTable, championshipInlays, railSights } = await loadSource('table-finishes');
 const { SvgTable, svgViewport } = await loadSource('svg-table');
-const { width, length, pockets } = await loadSource('physics');
+const { width, length, pockets, configureTable } = await loadSource('physics');
 
 test('all six pocket rims and openings render above the overhead table materials', () => {
   const table = { innerHTML: '' };
@@ -63,6 +63,30 @@ test('rail sights stay on the rails and render for every motif', () => {
     assert.notEqual(table.innerHTML, plain);
     assert.equal([...table.innerHTML.matchAll(new RegExp('stroke="' + venue.trim + '" stroke-width="2"', 'g'))].length, pockets.length);
     assert.doesNotMatch(table.innerHTML, /NaN|undefined/);
+  }
+});
+
+test('rails, cushions and their shadows are shaded square to each rail, without filters', () => {
+  const table = { innerHTML: '' };
+  const renderer = Object.assign(Object.create(SvgTable.prototype), { table });
+  for (const game of ['snooker', 'pool']) {
+    configureTable(game);
+    renderer.artwork({ snooker: game === 'snooker', tableStyle: 'Club Green', balls: [] });
+    const art = table.innerHTML;
+    // Gradients and patterns only: the table stays cheap to repaint under moving balls.
+    assert.doesNotMatch(art, /filter|NaN|undefined/);
+    for (const kind of ['rail', 'cushion', 'shade']) for (const side of 'lrtb') {
+      const gradient = art.match(new RegExp('<linearGradient id="sv-' + kind + '-' + side
+        + '" gradientUnits="userSpaceOnUse" x1="(-?[0-9.]+)" y1="(-?[0-9.]+)" x2="(-?[0-9.]+)" y2="(-?[0-9.]+)"'));
+      assert.ok(gradient, kind + ' ' + side);
+      const [x1, y1, x2, y2] = gradient.slice(1).map(Number);
+      // A gradient that runs along a rail, or diagonally, streaks over its length.
+      assert.equal('lr'.includes(side) ? y1 : x1, 0);
+      assert.equal('lr'.includes(side) ? y2 : x2, 0);
+      assert.ok(Math.abs(x2 - x1 + y2 - y1) > 30 && Math.abs(x2 - x1 + y2 - y1) < 90);
+    }
+    assert.equal([...art.matchAll(/fill="url\(#sv-cushion-[lrtb]\)"/g)].length, 6);
+    assert.equal([...art.matchAll(/fill="url\(#sv-cap\)"/g)].length, pockets.length);
   }
 });
 

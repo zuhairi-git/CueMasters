@@ -1,4 +1,4 @@
-import type { Game } from './circuit';
+import { isGame, type Game } from './circuit';
 
 const views = ['home', 'training', 'difficulty', 'challenges', 'online', 'computer', 'stages', 'shop', 'match'] as const;
 export type PageView = typeof views[number];
@@ -14,7 +14,8 @@ const key = 'cue-master-page';
 function validPage(value: unknown): value is Page {
   if (!value || typeof value !== 'object') return false;
   const { game, view, city, panel } = value as Page;
-  return (game === 'pool' || game === 'snooker') && views.includes(view)
+  return isGame(game) && views.includes(view)
+    && (view !== 'challenges' || game !== 'nineball')
     && (view !== 'online' || game === 'pool')
     && (view !== 'stages' || typeof city === 'string')
     && (city === undefined || typeof city === 'string' && (view === 'stages' || view === 'shop'))
@@ -49,7 +50,7 @@ export function savePagePanel(panel: Page['panel']) {
 export function linkedPage(url: URL, preferredGame: Game): Page | undefined {
   const params = url.searchParams;
   const requestedGame = params.get('game');
-  const game = requestedGame === 'pool' || requestedGame === 'snooker' ? requestedGame : preferredGame;
+  const game = isGame(requestedGame) ? requestedGame : preferredGame;
   if (params.get('table') === '3d') return { game, view: 'match' };
   const circuit = params.get('circuit');
   if (circuit === 'computer') {
@@ -58,6 +59,6 @@ export function linkedPage(url: URL, preferredGame: Game): Page | undefined {
     if (city) return { game, view: 'stages', city };
     return { game, view: 'computer' };
   }
-  if (circuit === 'challenges' || circuit === 'online' && game === 'pool') return { game, view: circuit };
+  if (circuit === 'challenges' && game !== 'nineball' || circuit === 'online' && game === 'pool') return { game, view: circuit };
   if (requestedGame || circuit) return { game, view: 'home' };
 }

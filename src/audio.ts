@@ -1,10 +1,140 @@
 export type SoundKind = 'cue' | 'ball' | 'rail' | 'pocket';
+/** Classic: the original recording and synth. Studio: modelled resin, leather and rubber in a small room. */
+export type SoundStyle = 'classic' | 'studio';
+export const soundStyles: readonly SoundStyle[] = ['studio', 'classic'];
 type RecordedSoundKind = Extract<SoundKind, 'cue' | 'ball'>;
 
 type SoundEvent = { kind: SoundKind; strength: number };
 
 const maxPendingSounds = 24;
 const maxSoundsPerFlush = 8;
+const studioVariants = 4;
+// [frequency in Hz, decay per second, amplitude]
+type Mode = [number, number, number];
+
+/** Decaying partials struck together: the ring of a hard object. */
+function ring(modes: Mode[], time: number, pitch: number) {
+  let sample = 0;
+  for (let mode = 0; mode < modes.length; mode++) {
+    const [frequency, decay, amplitude] = modes[mode];
+    sample += Math.sin(time * Math.PI * 2 * frequency * pitch + mode * 1.37) * amplitude * Math.exp(-time * decay);
+  }
+  return sample;
+}
+
+function normalize(data: Float32Array, peak: number) {
+  let loudest = 0;
+  for (let i = 0; i < data.length; i++) loudest = Math.max(loudest, Math.abs(data[i]));
+  if (!loudest) return;
+  const tail = Math.min(data.length, 96);
+  for (let i = 0; i < data.length; i++) data[i] *= peak / loudest * Math.min(1, (data.length - 1 - i) / tail);
+}
+
+/**
+ * Studio sounds are rendered once per strength tier and variant, then replayed.
+ * Each models what is struck: resin on resin, leather on resin, resin on rubber,
+ * and a ball dropping through a leather pocket onto the return rail.
+ */
+function renderStudio(kind: SoundKind, tier: number, variant: number, sampleRate: number, random = Math.random) {
+  const intensity = [0.3, 0.62, 1][tier];
+  const pitch = 1 + (variant - (studioVariants - 1) / 2) * 0.03;
+  const duration = kind === 'pocket' ? 0.86 : kind === 'cue' ? 0.16 : kind === 'rail' ? 0.2 : 0.09;
+  const data = new Float32Array(Math.ceil(sampleRate * duration));
+  let previousNoise = 0;
+  let softNoise = 0;
+  let rumble = 0;
+  // A pocketed ball clips the lip, lands, then rattles to rest on the rail below.
+  const bounces: [number, number][] = [[0.11, 0.5], [0.185, 0.36], [0.245, 0.26], [0.29, 0.18], [0.325, 0.12]];
+  for (let i = 0; i < data.length; i++) {
+    const time = i / sampleRate;
+    const noise = random() * 2 - 1;
+    const bright = noise - previousNoise * 0.86;
+    previousNoise = noise;
+    if (kind === 'ball') {
+      const click = bright * (0.2 + 0.5 * intensity) * Math.exp(-time * 2400);
+      const clack = ring([
+        [1180, 190, 0.22], [2740, 260, 0.5], [4350, 330, 0.34 + 0.2 * intensity],
+        [6120, 420, 0.18 + 0.3 * intensity], [8900, 560, 0.08 + 0.25 * intensity],
+      ], time, pitch);
+      data[i] = (1 - Math.exp(-time * 9000)) * (clack + click);
+    } else if (kind === 'cue') {
+      softNoise += (noise - softNoise) * Math.min(1, 2500 * 2 * Math.PI / sampleRate);
+      const chalk = softNoise * 0.3 * Math.exp(-time * 240);
+      const tock = ring([
+        [240, 38, 0.16], [420, 70, 0.35], [860, 95, 0.4], [1650, 150, 0.3], [2900, 260, 0.12 + 0.2 * intensity],
+      ], time, pitch);
+      data[i] = (1 - Math.exp(-time * 2200)) * (tock + chalk);
+    } else if (kind === 'rail') {
+      softNoise += (noise - softNoise) * Math.min(1, 800 * 2 * Math.PI / sampleRate);
+      // The rubber gives, so the thump falls in pitch as it dies away.
+      const phase = 2 * Math.PI * pitch * (95 * time + (75 / 18) * (1 - Math.exp(-time * 18)));
+      const thump = Math.sin(phase) * 0.8 * Math.exp(-time * 42);
+      const knock = ring([[330, 80, 0.25], [610, 130, 0.1 * intensity]], time, pitch);
+      data[i] = (1 - Math.exp(-time * 900)) * (thump + knock + softNoise * 0.35 * Math.exp(-time * 90));
+    } else {
+      softNoise += (noise - softNoise) * Math.min(1, 1400 * 2 * Math.PI / sampleRate);
+      rumble += (noise - rumble) * Math.min(1, 320 * 2 * Math.PI / sampleRate);
+      let sample = ring([[2600, 300, 0.2], [4200, 380, 0.12]], time, pitch) * 0.35;
+      const landing = time - 0.03;
+      if (landing > 0) {
+        sample += (1 - Math.exp(-landing * 700)) * (ring([[128, 22, 0.7], [262, 30, 0.35]], landing, pitch)
+          + softNoise * 0.4 * Math.exp(-landing * 55));
+      }
+      for (const [at, level] of bounces) {
+        const since = time - at;
+        if (since > 0) {
+          sample += level * (1 - Math.exp(-since * 2600)) * (ring([[520, 120, 0.6], [1340, 190, 0.35], [2400, 260, 0.2]], since, pitch)
+            + softNoise * 0.25 * Math.exp(-since * 160));
+        }
+      }
+      const rolling = Math.max(0, time - 0.3) / (duration - 0.3);
+      sample += rumble * 1.6 * Math.sin(Math.PI * Math.min(1, rolling)) ** 2 * (0.75 + 0.25 * Math.sin(time * 2 * Math.PI * 23));
+      data[i] = sample;
+    }
+  }
+  normalize(data, 0.9);
+  return data;
+}
+
+/** A small, soft room: a few early reflections and a short diffuse tail. */
+function renderRoom(sampleRate: number, channel: number, random = Math.random) {
+  const data = new Float32Array(Math.ceil(sampleRate * 0.42));
+  let smooth = 0;
+  for (let i = 0; i < data.length; i++) {
+    const time = i / sampleRate;
+    // The tail darkens as it decays, as soft furnishings swallow the highs first.
+    smooth += ((random() * 2 - 1) - smooth) * Math.max(0.08, 0.7 * Math.exp(-time * 9));
+    data[i] = smooth * Math.exp(-time * 11) * (1 - Math.exp(-time * 400));
+  }
+  for (const [at, level] of [[0.011, 0.5], [0.019, -0.36], [0.031, 0.27], [0.047, -0.18]]) {
+    const index = Math.floor((at + channel * 0.0023) * sampleRate);
+    if (index < data.length) data[index] += level;
+  }
+  return data;
+}
+
+/** A rising bell arpeggio that settles on the full chord. */
+function renderFanfare(sampleRate: number) {
+  const data = new Float32Array(Math.ceil(sampleRate * 1.9));
+  const notes: [number, number, number][] = [
+    [523.25, 0, 0.5], [659.25, 0.1, 0.5], [783.99, 0.2, 0.5], [1046.5, 0.3, 0.62],
+    [523.25, 0.52, 0.3], [783.99, 0.52, 0.3], [1318.51, 0.52, 0.34],
+  ];
+  for (let i = 0; i < data.length; i++) {
+    const time = i / sampleRate;
+    let sample = 0;
+    for (const [frequency, at, level] of notes) {
+      const since = time - at;
+      if (since <= 0) continue;
+      const angle = since * 2 * Math.PI * frequency;
+      sample += level * (1 - Math.exp(-since * 900)) * (Math.sin(angle) * Math.exp(-since * 3.4)
+        + 0.42 * Math.sin(angle * 2) * Math.exp(-since * 5.5) + 0.2 * Math.sin(angle * 3.01) * Math.exp(-since * 8));
+    }
+    data[i] = sample;
+  }
+  normalize(data, 0.8);
+  return data;
+}
 
 export class GameAudio {
   private context?: AudioContext;
@@ -14,8 +144,12 @@ export class GameAudio {
   private recordings?: Partial<Record<RecordedSoundKind, AudioBuffer[]>>;
   private recordingsLoading?: Promise<void>;
   private pending: SoundEvent[] = [];
+  private studio = new Map<string, AudioBuffer>();
+  private room?: AudioNode;
+  private fanfareBuffer?: AudioBuffer;
   enabled = true;
   volume = 0.45;
+  style: SoundStyle = 'classic';
 
   async unlock() {
     if (!this.enabled) return;
@@ -44,7 +178,7 @@ export class GameAudio {
       primer.connect(this.context.destination);
       primer.onended = () => primer.disconnect();
       primer.start(0);
-      void this.loadRecordings(this.context);
+      if (this.style === 'classic') void this.loadRecordings(this.context);
     } catch {
       // Gameplay remains available if the browser cannot start audio.
     }
@@ -55,6 +189,47 @@ export class GameAudio {
     this.volume = Math.max(0, Math.min(1, volume));
     if (this.context && this.output) this.output.gain.setTargetAtTime(enabled ? this.volume : 0, this.context.currentTime, 0.02);
     if (!enabled) this.pending.length = 0;
+  }
+
+  setStyle(style: SoundStyle) {
+    this.style = style;
+    if (style === 'classic' && this.context) void this.loadRecordings(this.context);
+  }
+
+  /** Plays one strike, contact and pocket drop so a style can be auditioned from settings. */
+  async preview() {
+    await this.unlock();
+    const context = this.context;
+    if (!this.enabled || !context || !this.output) return;
+    try { await context.resume(); } catch { /* Playback stays optional. */ }
+    if (this.style === 'classic') await this.loadRecordings(context);
+    this.output.gain.setTargetAtTime(this.volume, context.currentTime, 0.02);
+    this.play(context, 'cue', 2.4);
+    this.play(context, 'ball', 2.1, 0.2);
+    this.play(context, 'rail', 1.6, 0.42);
+    this.play(context, 'pocket', 1.5, 0.62);
+  }
+
+  /** A short victory chime for the result screen. */
+  fanfare() {
+    const context = this.context;
+    if (!this.enabled || !context || !this.output || context.state !== 'running' || document.hidden) return;
+    if (!this.fanfareBuffer) {
+      const data = renderFanfare(context.sampleRate);
+      this.fanfareBuffer = context.createBuffer(1, data.length, context.sampleRate);
+      this.fanfareBuffer.getChannelData(0).set(data);
+    }
+    this.output.gain.setTargetAtTime(this.volume, context.currentTime, 0.02);
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    gain.gain.value = 0.3;
+    source.buffer = this.fanfareBuffer;
+    source.connect(gain);
+    gain.connect(this.output);
+    const room = this.roomSend(context);
+    if (room) gain.connect(room);
+    source.onended = () => { source.disconnect(); gain.disconnect(); };
+    source.start(context.currentTime + 0.05);
   }
 
   updateMotion(balls: readonly { vx: number; vz: number; pocketed: boolean }[]) {
@@ -94,11 +269,15 @@ export class GameAudio {
     for (const { kind, strength } of events) this.play(context, kind, strength);
   }
 
-  private play(context: AudioContext, kind: SoundKind, strength: number) {
+  private play(context: AudioContext, kind: SoundKind, strength: number, delay = Math.random() * 0.006) {
+    if (this.style === 'studio') {
+      this.playStudio(context, kind, strength, delay);
+      return;
+    }
     if (kind === 'cue' || kind === 'ball') {
       const recordedVariants = this.recordings?.[kind];
       if (recordedVariants?.length) {
-        this.playRecording(context, kind, strength, recordedVariants[Math.floor(Math.random() * recordedVariants.length)]);
+        this.playRecording(context, kind, strength, recordedVariants[Math.floor(Math.random() * recordedVariants.length)], delay);
         return;
       }
     }
@@ -156,7 +335,69 @@ export class GameAudio {
     filter.connect(gain);
     gain.connect(this.output!);
     source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
-    source.start(context.currentTime + Math.random() * 0.006);
+    source.start(context.currentTime + delay);
+  }
+
+  private playStudio(context: AudioContext, kind: SoundKind, strength: number, delay: number) {
+    const intensity = Math.min(1, Math.max(0, strength / (kind === 'cue' ? 4 : kind === 'rail' ? 3 : kind === 'pocket' ? 3 : 2.5)));
+    const tier = intensity < 0.34 ? 0 : intensity < 0.7 ? 1 : 2;
+    const variant = Math.floor(Math.random() * studioVariants);
+    const key = kind + tier + variant;
+    let buffer = this.studio.get(key);
+    if (!buffer) {
+      const data = renderStudio(kind, tier, variant, context.sampleRate);
+      buffer = context.createBuffer(1, data.length, context.sampleRate);
+      buffer.getChannelData(0).set(data);
+      this.studio.set(key, buffer);
+    }
+    const source = context.createBufferSource();
+    const gain = context.createGain();
+    const filter = context.createBiquadFilter();
+    // Softer contacts are duller as well as quieter.
+    filter.type = 'lowpass';
+    filter.frequency.value = kind === 'pocket' ? 5200 : kind === 'rail' ? 1500 + intensity * 1500
+      : kind === 'cue' ? 3600 + intensity * 5000 : 4800 + intensity * 12000;
+    gain.gain.value = Math.min(0.62, (kind === 'pocket' ? 0.16 : 0.02) + 0.52 * intensity ** 0.85);
+    source.buffer = buffer;
+    source.playbackRate.value = 0.975 + Math.random() * 0.05 + (kind === 'ball' ? intensity * 0.03 : 0);
+    source.connect(filter);
+    filter.connect(gain);
+    const nodes: AudioNode[] = [source, filter, gain];
+    let last: AudioNode = gain;
+    if (typeof context.createStereoPanner === 'function') {
+      // A little width keeps a busy break from collapsing into one point.
+      const panner = context.createStereoPanner();
+      panner.pan.value = (Math.random() * 2 - 1) * (kind === 'pocket' ? 0.45 : 0.28);
+      gain.connect(panner);
+      nodes.push(panner);
+      last = panner;
+    }
+    last.connect(this.output!);
+    const room = this.roomSend(context);
+    if (room) {
+      const send = context.createGain();
+      send.gain.value = kind === 'pocket' ? 0.3 : kind === 'rail' ? 0.12 : 0.2;
+      last.connect(send);
+      send.connect(room);
+      nodes.push(send);
+    }
+    source.onended = () => { for (const node of nodes) node.disconnect(); };
+    source.start(context.currentTime + delay);
+  }
+
+  /** The shared room reverb, created on first use where the browser supports it. */
+  private roomSend(context: AudioContext) {
+    if (this.room || typeof context.createConvolver !== 'function') return this.room;
+    const convolver = context.createConvolver();
+    const impulse = context.createBuffer(2, Math.ceil(context.sampleRate * 0.42), context.sampleRate);
+    for (let channel = 0; channel < 2; channel++) impulse.getChannelData(channel).set(renderRoom(context.sampleRate, channel));
+    convolver.buffer = impulse;
+    const level = context.createGain();
+    level.gain.value = 0.55;
+    convolver.connect(level);
+    level.connect(this.output!);
+    this.room = convolver;
+    return this.room;
   }
 
   private loadRecordings(context: AudioContext) {
@@ -196,7 +437,7 @@ export class GameAudio {
     return this.recordingsLoading;
   }
 
-  private playRecording(context: AudioContext, kind: RecordedSoundKind, strength: number, buffer: AudioBuffer) {
+  private playRecording(context: AudioContext, kind: RecordedSoundKind, strength: number, buffer: AudioBuffer, delay: number) {
     const intensity = Math.min(1, Math.max(0, strength / (kind === 'cue' ? 4 : 2.5)));
     const source = context.createBufferSource();
     const gain = context.createGain();
@@ -211,7 +452,7 @@ export class GameAudio {
     filter.connect(gain);
     gain.connect(this.output!);
     source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
-    source.start(context.currentTime + Math.random() * 0.006);
+    source.start(context.currentTime + delay);
   }
 
   private startClothBed(context: AudioContext) {
@@ -241,3 +482,6 @@ export class GameAudio {
     source.start();
   }
 }
+
+/** One audio engine for the whole app, so settings can audition what the table plays. */
+export const gameAudio = new GameAudio();

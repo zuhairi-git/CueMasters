@@ -1,10 +1,11 @@
 import { showCueLoader, hideCueLoader } from './bootstrap';
 import { t } from './i18n';
-import { avatarMarkup, playerAvatar } from './player-avatars';
+import { avatarMarkup, playerAvatar, rivalAvatar, robotAvatar } from './player-avatars';
+import { celebrate, stopCelebration } from './celebration';
 import { cueArtwork } from './svg-cue';
 import { ballBadge } from './svg-ball';
-import { GameAudio } from './audio';
-import { soundPreference, tvPreference } from './app-settings';
+import { gameAudio } from './audio';
+import { saveSoundPreference, soundPreference, tvPreference } from './app-settings';
 import { RemoteShot, remoteKey, remotePlacement } from './tv-controls';
 import { SvgTable } from './svg-table';
 import { TvTable, calledPocketBorderWidth, calledPocketColor } from './tv-table';
@@ -13,14 +14,14 @@ import { installFullscreenControl } from './fullscreen';
 import { cueLength, cuePose } from './cue-geometry';
 import { directionToBall, traceShot } from './aim-guide';
 import { OnlineGame } from './online';
-import { cities, onlineMedalName, resultMessage } from './circuit';
+import { cities, onlineMedalName, resultMessage, type Game } from './circuit';
 import { awardCoins, careerCityStatus, careerCue, careerCues, careerDifficulty, careerGoal, careerOpening, careerProgress, careerRank, careerStage, careerStages, careerStageStatus, finishCareerStage } from './career';
 import { careerTable, challengeTable, championshipInlays, cityFinishes, railSights, tableFinish, type CareerTable, type Motif } from './table-finishes';
 import { challengeLayout, challengeStars, completeChallenge, getChallenge, ratingFor, starReward } from './challenges';
 import { clearSession, labelGame, launch, saveSession } from './home';
 import { savedPage, savePage, savePagePanel } from './page-state';
 import type { Difficulty } from './difficulty';
-import { groupOf, poolTargets, resolvePoolShot, snookerRemainingPoints, type Groups } from './pool-rules';
+import { groupOf, nineBallTargets, poolTargets, resolveNineBallShot, resolvePoolShot, snookerRemainingPoints, type Groups } from './pool-rules';
 import { validGame, type SavedGame } from './saved-game';
 import { constrainOrbit } from './camera-bounds';
 import {
@@ -32,7 +33,7 @@ import { buildPocket, buildStraightRail, railBase, railDepth, railGrain, railTop
 import { pocketDropDuration, pocketDropImpact, pocketDropPose, startPocketDrop } from './pocket-drop';
 import { chooseShot } from './opponent';
 import { ShotHighlights, ShotRecording, type ShotHighlight } from './shot-highlights';
-import { configureTable, cushions, cornerOpening, isMoving, length, pocketMouthRadius, pockets, rack, radius, shotSpeed, sideOpening, step, strikeBall, tableGame, width } from './physics';
+import { configureTable, cushions, cornerOpening, isMoving, length, nineBallRack, pocketMouthRadius, pockets, rack, radius, shotSpeed, sideOpening, step, strikeBall, tableGame, width } from './physics';
 
 // Pocket and cushion geometry differs per game, so settle it before any table is built.
 configureTable((launch.state?.snooker ?? ('game' in launch.mode && launch.mode.game === 'snooker')) ? 'snooker' : 'pool');
@@ -191,8 +192,19 @@ shotReplayToggle.onclick = () => {
   }
 };
 updateReplaySetting();
-const sound = new GameAudio();
+const sound = gameAudio;
 sound.configure(soundPreference.enabled, soundPreference.volume);
+sound.setStyle(soundPreference.style);
+// The same choice is offered at the table, where a change can be heard on the next shot.
+const gameSoundStyle = document.querySelector<HTMLSelectElement>('#gameSoundStyle')!;
+gameSoundStyle.value = soundPreference.style;
+gameSoundStyle.onchange = () => {
+  soundPreference.style = gameSoundStyle.value === 'classic' ? 'classic' : 'studio';
+  document.querySelector<HTMLSelectElement>('#soundStyle')!.value = soundPreference.style;
+  saveSoundPreference();
+  sound.setStyle(soundPreference.style);
+  sound.queue('ball', 2);
+};
 document.addEventListener('pointerdown', () => { void sound.unlock(); });
 document.addEventListener('keydown', () => { void sound.unlock(); });
 let webglUnavailable = false;
@@ -586,6 +598,8 @@ function syncOfflinePlayerNameVisibility() {
 }
 select('opponent').onchange = syncOfflinePlayerNameVisibility;
 let snooker = launch.state?.snooker ?? ('game' in launch.mode && launch.mode.game === 'snooker');
+// Nine-ball shares the pool table and ball set; only the rack and the rules differ.
+let nineBall = launch.state ? Boolean(launch.state.nineBall) : 'game' in launch.mode && launch.mode.game === 'nineball';
 const hudToggle = document.querySelector<HTMLButtonElement>('#toggleHud')!;
 const cameraZoomEl = document.querySelector<HTMLElement>('.camera-zoom');
 cameraZoomEl?.addEventListener('click', event => {
@@ -652,7 +666,8 @@ let mode = launch.mode;
 let venue: CareerTable | undefined;
 const isTournament = () => 'city' in mode || mode.kind === 'challenge';
 const activeChallenge = () => mode.kind === 'challenge' ? getChallenge(mode.game, mode.challenge) : undefined;
-const currentGame = () => snooker ? 'snooker' : 'pool';
+const currentGame = (): Game => snooker ? 'snooker' : nineBall ? 'nineball' : 'pool';
+const tableKind = () => snooker ? 'snooker' : 'pool';
 let difficulty: Difficulty = mode.kind === 'computer' ? careerDifficulty(mode.city, mode.stage) : mode.kind === 'training' ? mode.difficulty : 'Medium';
 const equippedCareerCue = mode.kind === 'computer' ? careerCue(mode.game) : undefined;
 let careerAttempts = 0;
@@ -660,7 +675,7 @@ let careerBanked = false;
 let careerClean = true;
 let careerRacks: [number, number] = [0, 0];
 let versusComputer = mode.kind === 'computer' || mode.kind === 'training' && mode.opponent === 'computer';
-const online = new OnlineGame(mode.kind === 'computer' || mode.kind === 'challenge' || snooker);
+const online = new OnlineGame(mode.kind === 'computer' || mode.kind === 'challenge' || snooker || nineBall);
 let onlineMode = mode.kind === 'online';
 let awaitingOnline = onlineMode && (!launch.state || launch.awaitingOnline === true);
 let circuitMessage = '';
@@ -773,14 +788,33 @@ function playerName(seat: number) {
   return onlineMode ? seat === online.seat ? online.name : online.peerName : seat === 0 ? offlinePlayerOneName || online.name : versusComputer ? t('Computer') : offlinePlayerTwoName;
 }
 const colourNames = ['yellow', 'green', 'brown', 'blue', 'pink', 'black'];
+/** The portrait shown for a seat: the player's pick, the robot, a named rival, or a stand-in for an online peer. */
+function seatAvatar(seat: number) {
+  const local = playerAvatar(0);
+  if (onlineMode) {
+    // Online profiles don't share avatar selections, so give the peer a distinct portrait.
+    const peer = local === 'illustrated-2' ? 'illustrated-1' : 'illustrated-2';
+    return seat === (online.seat === 0 ? 0 : 1) ? local : peer;
+  }
+  if (seat === 1 && versusComputer) {
+    const champion = mode.kind === 'computer' ? careerStage(mode.city, mode.stage, mode.game).champion : undefined;
+    return champion ? rivalAvatar(champion, local) : robotAvatar;
+  }
+  return playerAvatar(seat);
+}
 
 function legalTargets() {
   const active = balls.flatMap((ball, index) => index && !ball.pocketed ? [index] : []);
+  if (nineBall) return nineBallTargets(balls.map(ball => ball.pocketed));
   if (!snooker) return poolTargets(balls.map(ball => ball.pocketed), groups[turn]);
   const reds = active.filter(index => index <= 15);
   const colours = active.filter(index => index > 15);
   if (colourAfterRed) return colours;
   return reds.length ? reds : colours.slice(0, 1);
+}
+// Only eight-ball asks for a called pocket, and only for the black.
+function needsCalledPocket() {
+  return !snooker && !nineBall && legalTargets().includes(8);
 }
 
 const playerDetails = document.querySelector<HTMLDialogElement>('#playerDetails')!;
@@ -797,6 +831,7 @@ function renderPlayerDetails() {
   const current = finished ? winner === detailsSeat ? t('Winner') : t('Game finished') : turn === detailsSeat ? t('At the table now') : t('Waiting for their turn');
   const group = groups[detailsSeat];
   let summaryText = current + ' · ' + (snooker ? t('Score: {score}. Balls below are shared table totals.', { score: scores[detailsSeat] })
+    : nineBall ? t('Nine-ball · Balls potted: {count}', { count: scores[detailsSeat] })
     : group ? t('{group} group', { group: t(group) }) : t('Open table · Groups unassigned. Showing all object balls.'));
   if (online.playerId && detailsSeat === (online.seat ?? 0)) {
     summaryText += ' · ID: ' + online.playerId;
@@ -804,7 +839,7 @@ function renderPlayerDetails() {
   document.getElementById('playerDetailsSummary')!.textContent = summaryText;
   const container = document.getElementById('playerDetailsBalls')!;
   container.replaceChildren();
-  const indices = balls.flatMap((_, i) => i > 0 && (snooker || !group || groupOf(i) === group) ? [i] : []);
+  const indices = balls.flatMap((_, i) => i > 0 && (nineBall ? i <= 9 : snooker || !group || groupOf(i) === group) ? [i] : []);
   for (const potted of [true, false]) {
     const numbers = indices.filter(i => balls[i].pocketed === potted);
     const section = document.createElement('section');
@@ -829,12 +864,35 @@ function renderPlayerDetails() {
     container.append(eight);
   }
 }
-// Snooker: always show which ball is on, so the next colour is never a guess.
+// Snooker and nine-ball: always show which ball is on, so the next one is never a guess.
 const ballOn = document.querySelector<HTMLElement>('#ballOn')!;
 function showBallOn() {
-  ballOn.hidden = !snooker || finished;
+  ballOn.hidden = !(snooker || nineBall) || finished;
   if (ballOn.hidden) return;
   const targets = legalTargets();
+  if (nineBall) {
+    const title = document.createElement('span');
+    title.className = 'ball-on-title';
+    title.textContent = t('Ball on');
+    const label = targets.length ? t('Ball {number}', { number: targets[0] }) : '';
+    const name = document.createElement('strong');
+    name.textContent = label;
+    const icons = targets.map(index => {
+      const badge = ballBadge(index);
+      badge.classList.add('ball-on-icon');
+      return badge;
+    });
+    ballOn.replaceChildren(title, ...icons, name);
+    const following = balls.findIndex((ball, index) => index > (targets[0] ?? 9) && index <= 9 && !ball.pocketed);
+    if (following > 0) {
+      const next = document.createElement('span');
+      next.className = 'ball-on-next';
+      next.append(t('then') + ' ', ballBadge(following));
+      ballOn.append(next);
+    }
+    ballOn.setAttribute('aria-label', t('Ball on') + ': ' + label);
+    return;
+  }
   const reds = targets.some(index => index <= 15);
   const sequence = !reds && !colourAfterRed;
   const label = reds ? t('Red') : colourAfterRed ? t('Any colour') : targets.length ? t(colourNames[targets[0] - 16]) : '';
@@ -890,28 +948,27 @@ function showScore() {
     marker.className = 'group-marker ' + (snooker || !groups[seat] ? 'open' : groups[seat]!.toLowerCase());
     marker.setAttribute('aria-hidden', 'true');
     marker.classList.add('svg-group-marker');
-    const icon = ballBadge(snooker ? 1 : groups[seat] === 'Stripes' ? 9 : groups[seat] === 'Solids' ? 1 : 0, snooker);
+    const icon = ballBadge(snooker ? 1 : nineBall || groups[seat] === 'Stripes' ? 9 : groups[seat] === 'Solids' ? 1 : 0, snooker);
     marker.append(...icon.childNodes);
     const left = balls.filter((ball, index) => !ball.pocketed && groupOf(index) === groups[seat]).length;
     const name = document.createElement('strong');
     name.className = 'player-name';
-    if (!onlineMode || seat === online.seat) {
-      const avatar = document.createElement('span');
-      avatar.className = 'player-avatar';
-      avatar.innerHTML = avatarMarkup(playerAvatar(onlineMode ? 0 : seat));
-      name.append(avatar);
-    }
+    const avatar = document.createElement('span');
+    avatar.className = 'player-avatar';
+    avatar.innerHTML = avatarMarkup(seatAvatar(seat));
+    name.append(avatar);
     name.append(document.createTextNode(playerName(seat)));
     const detail = document.createElement('span');
     detail.className = 'player-group';
     const group = groups[seat];
     if (snooker) detail.dataset.score = String(scores[seat]);
     detail.textContent = snooker ? t('Score · {score}', { score: scores[seat] })
+      : nineBall ? t('{count} potted', { count: scores[seat] })
       : group ? t('{group} · {count} left', { group: t(group), count: left }) : t('Open table');
     const tray = document.createElement('span');
     tray.className = 'potted-balls';
-    if (!snooker && groups[seat]) {
-      const numbers = balls.flatMap((ball, index) => groupOf(index) === groups[seat] ? [{number: index, potted: ball.pocketed}] : []);
+    if (nineBall || !snooker && groups[seat]) {
+      const numbers = balls.flatMap((ball, index) => (nineBall ? index >= 1 && index <= 9 : groupOf(index) === groups[seat]) ? [{number: index, potted: ball.pocketed}] : []);
       numbers.sort((a, b) => Number(a.potted) - Number(b.potted) || a.number - b.number);
       for (const ball of numbers) {
         const badge = ballBadge(ball.number);
@@ -935,7 +992,7 @@ function showScore() {
     return item;
   });
   // In snooker the ball on sits between the two players.
-  score.replaceChildren(seats[0], ...(snooker ? [ballOn] : []), seats[1]);
+  score.replaceChildren(seats[0], ...(snooker || nineBall ? [ballOn] : []), seats[1]);
 }
 offlinePlayerTwoNameInput.onchange = () => {
   offlinePlayerTwoName = offlinePlayerTwoNameInput.value.trim().slice(0, 24) || 'Player 2';
@@ -959,7 +1016,8 @@ offlinePlayerNameInput.onchange = () => {
 };
 
 function respot(index: number) {
-  const spot = rack(snooker)[index];
+  // A nine pocketed on a foul goes back on the foot spot, where the one was racked.
+  const spot = nineBall && index === 9 ? nineBallRack()[1] : rack(snooker)[index];
   const available = (x: number, z: number) => balls.every((ball, other) =>
     other === index || ball.pocketed || Math.hypot(ball.x - x, ball.z - z) >= 2 * radius + 0.001);
   let z = spot.z;
@@ -1096,6 +1154,30 @@ function finishShot() {
     }
     showReadyStatus();
     saveGame();
+    return;
+  }
+  if (nineBall) {
+    const result = resolveNineBallShot({ turn, targets: shotTargets, firstContact, potted, scratch });
+    const legalPots = result.foul ? [] : potted;
+    recognizeShot(legalPots, !result.foul);
+    cheerShot(turn, legalPots.length, !result.foul);
+    scores[turn] += legalPots.length;
+    if (result.winner !== undefined && continueCareerSeries(result.winner)) return;
+    winner = result.winner;
+    finished = winner !== undefined;
+    if (result.respotNine) respot(9);
+    if (scratch) respot(0);
+    if (!finished) turn = result.turn;
+    placement = result.foul && !finished ? 'foul' : undefined;
+    if (placement && canControl() && viewMode) viewToggle.click();
+    breaking = false;
+    cpuWait = 0.85;
+    if (finished && mode.kind === 'computer') {
+      recordComputerResult();
+      saveGame();
+    }
+    showScore();
+    showReadyStatus();
     return;
   }
   if (!snooker) {
@@ -1313,7 +1395,7 @@ spinBall.onkeydown = event => {
 function fire(strength: number) {
   if (rolling || strike || shotReplay) return;
   if (onlineMode && (!online.active || online.remainingMs() <= 0)) return;
-  if (!snooker && legalTargets().includes(8) && calledPocket === undefined) {
+  if (needsCalledPocket() && calledPocket === undefined) {
     if (!tvEnabled) setPocketPickerOpen(true);
     return;
   }
@@ -1446,7 +1528,7 @@ function selectPocket(pocket: number | undefined) {
   showReadyStatus();
 }
 pocketChoice.onchange = () => {
-  if (!canControl() || rolling || strike || !legalTargets().includes(8)) return;
+  if (!canControl() || rolling || strike || !needsCalledPocket()) return;
   selectPocket(pocketChoice.value === '' ? undefined : Number(pocketChoice.value));
 };
 function toggleAimLock() {
@@ -1683,7 +1765,7 @@ for (const controlCanvas of [canvas, tvCanvas]) {
     if (viewMode || !canControl() || finished || rolling || strike) return;
     event.preventDefault();
     const bounds = controlCanvas.getBoundingClientRect();
-    if (!snooker && legalTargets().includes(8)) {
+    if (needsCalledPocket()) {
       if (uses2dTable()) {
         const hit = tableHit(event, true);
         const index = hit ? pockets.findIndex(p => Math.hypot(p.x - hit.x, p.z - hit.z) <= 0.09) : -1;
@@ -1814,7 +1896,7 @@ function resetMatch(continueCareer = false) {
   const challenge = activeChallenge();
   const preset = challenge ? challengeLayout(challenge) : undefined;
   const opening = mode.kind === 'computer' ? careerOpening(mode.city, mode.stage, mode.game, careerRacks[0] + careerRacks[1]) : undefined;
-  balls = preset ?? opening?.balls ?? rack(snooker, Math.random);
+  balls = preset ?? opening?.balls ?? (nineBall ? nineBallRack(Math.random) : rack(snooker, Math.random));
   careerBanked = false;
   challengeTime = 0;
   challengeClockRunning = false;
@@ -1912,6 +1994,7 @@ async function startSettingsMatch() {
     onlineMode = false;
   }
   snooker = select('game').value === 'snooker';
+  nineBall = select('game').value === 'nineball';
   versusComputer = select('opponent').value === 'computer';
   difficulty = select('difficulty').value as Difficulty;
   mode = { kind: 'training', game: currentGame(), opponent: versusComputer ? 'computer' : 'solo', difficulty };
@@ -2055,7 +2138,7 @@ document.querySelector<HTMLButtonElement>('#noticeRetry')!.onclick = () => {
 };
 document.querySelector<HTMLButtonElement>('#noticeNext')!.onclick = () => restartCareerStage(nextCareerStage());
 document.querySelector<HTMLButtonElement>('#openSettings')!.onclick = () => {
-  select('game').value = snooker ? 'snooker' : 'pool';
+  select('game').value = currentGame();
   select('opponent').value = versusComputer ? 'computer' : 'solo';
   select('difficulty').value = difficulty;
   for (const field of ['game', 'opponent', 'difficulty']) select(field).disabled = isTournament();
@@ -2109,8 +2192,8 @@ select('cueStyle').onchange = updateCueStyle;
 if (equippedCareerCue) select('cueStyle').value = equippedCareerCue.id;
 updateCueStyle();
 function applyTableFinish() {
-  if (tableGame !== currentGame()) {
-    configureTable(currentGame());
+  if (tableGame !== tableKind()) {
+    configureTable(tableKind());
     buildTableGeometry();
   }
   const challenge = activeChallenge();
@@ -2123,6 +2206,7 @@ function applyTableFinish() {
   pearl.diffuseColor = Color3.FromHexString(venue?.accent ?? '#e8dfc9');
   championshipTrim.forEach(mesh => mesh.setEnabled(Boolean(venue?.championship)));
   document.body.classList.toggle('snooker-game', snooker);
+  document.body.classList.toggle('nineball-game', nineBall);
   document.body.classList.toggle('final-match', Boolean(venue?.championship));
   snookerLines.setEnabled(snooker);
   cloth.diffuseColor = Color3.FromHexString(felt);
@@ -2149,7 +2233,7 @@ select('tableStyle').onchange = () => {
   try { localStorage.setItem('billiard-table-finish', select('tableStyle').value); } catch {}
 };
 function gameState(): SavedGame {
-  return { version: 1, balls, snooker, versusComputer, onlineMode, turn, scores, groups, winner, breaking, shotWasBreak,
+  return { version: 1, balls, snooker, ...(nineBall ? { nineBall } : {}), versusComputer, onlineMode, turn, scores, groups, winner, breaking, shotWasBreak,
     colourAfterRed, finished, firstContact, shotTargets, previouslyPocketed, rolling, placement, aim: [aim.x, aim.z],
     strike, shotPower, tip: [tipX, tipY], aimLocked, calledPocket,
     ...(onlineMode && onlineHighlight ? { highlight: onlineHighlight } : {}),
@@ -2172,8 +2256,9 @@ function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = fals
   } else if (!animatePockets) pocketDrops.clear();
   s.balls.forEach((ball, index) => { if (!ball.pocketed) pocketDrops.delete(index); });
   balls = s.balls.map(ball => ({ ...ball }));
-  const gameChanged = snooker !== s.snooker;
+  const gameChanged = snooker !== s.snooker || nineBall !== Boolean(s.nineBall);
   snooker = s.snooker;
+  nineBall = Boolean(s.nineBall);
   if (gameChanged) applyTableFinish();
   versusComputer = s.versusComputer;
   turn = s.turn;
@@ -2250,7 +2335,7 @@ online.onPaired = (resume, cityId) => {
   wonByForfeit = false;
   onlineMode = true;
   versusComputer = false;
-  snooker = false;
+  snooker = nineBall = false;
   if (validGame(resume)) applyGame(resume);
   else resetMatch();
   saveGame();
@@ -2302,7 +2387,7 @@ online.onInput = value => {
   if (direction.lengthSquared() < 0.5 || direction.lengthSquared() > 1.5) return;
   aim = direction.normalize();
   setTip(input.tip[0], input.tip[1]);
-  if (!snooker && legalTargets().includes(8)) {
+  if (needsCalledPocket()) {
     calledPocket = Number.isInteger(input.calledPocket) && input.calledPocket! >= 0 && input.calledPocket! < 6 ? input.calledPocket : undefined;
   }
   if (placement) {
@@ -2522,7 +2607,7 @@ document.addEventListener('keydown', event => {
   if (rolling || strike || !canControl() || finished) return;
   if (strokePointer !== undefined || aimPointer !== undefined) return;
   const stage = remote.stage;
-  const needsPocket = !snooker && legalTargets().includes(8);
+  const needsPocket = needsCalledPocket();
   if (stage === 'place' && placement && ['left', 'right', 'up', 'down'].includes(key)) {
     const position = remotePlacement(balls, placement, key, camera.alpha);
     if (position) Object.assign(balls[0], position);
@@ -2547,38 +2632,17 @@ const resultBackdrop = document.querySelector<HTMLElement>('#resultBackdrop')!;
 const resultPlayers = document.querySelector<HTMLElement>('#resultPlayers')!;
 const confetti = document.querySelector<HTMLElement>('#victoryConfetti')!;
 let celebratedWin = false;
-let confettiCleanup: number | undefined;
 function celebrateWin() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  confetti.replaceChildren();
-  window.clearTimeout(confettiCleanup);
-  const colors = ['#eac16a', '#fff0b7', '#61baa0', '#e29872', '#f5e8ce'];
-  const pieces = document.createDocumentFragment();
-  for (let i = 0; i < 54; i++) {
-    const piece = document.createElement('span');
-    piece.className = 'confetti-piece';
-    piece.style.left = (i / 54 * 100) + '%';
-    piece.style.setProperty('--confetti-color', colors[i % colors.length]);
-    piece.style.setProperty('--fall-time', (2.7 + Math.random() * 1.1) + 's');
-    piece.style.setProperty('--fall-delay', (Math.random() * 0.65) + 's');
-    piece.style.setProperty('--drift', (Math.random() * 140 - 70) + 'px');
-    piece.style.setProperty('--spin', (Math.random() * 900 - 450) + 'deg');
-    pieces.append(piece);
-  }
-  confetti.append(pieces);
-  confettiCleanup = window.setTimeout(() => confetti.replaceChildren(), 4600);
+  const grand = mode.kind === 'computer' && winner === 0 && careerStage(mode.city, mode.stage, mode.game).final;
+  celebrate(confetti, grand);
+  sound.fanfare();
 }
 function updateGameNotice() {
   if (shotReplay) return;
   const kind = finished ? 'win' : '';
   const winningPlayer = winner ?? (scores[0] === scores[1] ? undefined : scores[0] > scores[1] ? 0 : 1);
   const names = [playerName(0), playerName(1)];
-  const localAvatar = playerAvatar(0);
-  // Online profiles don't share avatar selections, so give the peer a distinct portrait.
-  const peerAvatar = localAvatar === 'illustrated-2' ? 'illustrated-1' : 'illustrated-2';
-  const avatars = onlineMode
-    ? online.seat === 0 ? [localAvatar, peerAvatar] : [peerAvatar, localAvatar]
-    : [localAvatar, playerAvatar(1)];
+  const avatars = [seatAvatar(0), seatAvatar(1)];
   const key = JSON.stringify([kind, winningPlayer, wonByForfeit, onlineMode, online.active, online.seat, names, avatars, document.documentElement.lang, circuitMessage]);
   if (key === noticeKey) return;
   noticeKey = key;
@@ -2588,17 +2652,19 @@ function updateGameNotice() {
     resultPlayers.replaceChildren(...names.map((name, seat) => {
       const player = document.createElement('div');
       player.className = 'result-player';
-      player.innerHTML = avatarMarkup(avatars[seat]);
+      player.innerHTML = '<span class="result-portrait"><span class="result-rays"></span>' + avatarMarkup(avatars[seat]) + '</span>';
       const label = document.createElement('span');
       label.textContent = name;
       player.append(label);
       if (seat === winningPlayer) {
         player.classList.add('is-winner');
+        player.querySelector('.result-portrait')!.insertAdjacentHTML('afterbegin',
+          '<span class="result-crown"><svg viewBox="0 0 48 32" aria-hidden="true"><path d="M5 28 2 8l12 9L24 2l10 15 12-9-3 20Z"/><circle cx="2" cy="8" r="2"/><circle cx="24" cy="2" r="2"/><circle cx="46" cy="8" r="2"/></svg></span>');
         const badge = document.createElement('span');
         badge.className = 'result-winner';
         badge.textContent = t('Winner');
         player.append(badge);
-      }
+      } else if (winningPlayer !== undefined) player.classList.add('is-runner-up');
       return player;
     }));
   }
@@ -2607,8 +2673,7 @@ function updateGameNotice() {
     celebrateWin();
   } else if (kind !== 'win') {
     celebratedWin = false;
-    window.clearTimeout(confettiCleanup);
-    confetti.replaceChildren();
+    stopCelebration(confetti);
   }
   const rematch = document.querySelector<HTMLButtonElement>('#noticeRematch')!;
   const circuitButton = document.querySelector<HTMLButtonElement>('#noticeCircuit')!;
@@ -2677,7 +2742,7 @@ engine.runRenderLoop(() => {
     clock.textContent = finished ? t('Finished') : Math.ceil(left) + 's';
     clock.classList.toggle('urgent', !finished && left <= 10);
   }
-  const callEligible = !snooker && !finished && !rolling && !strike && !shotReplay && legalTargets().includes(8);
+  const callEligible = !finished && !rolling && !strike && !shotReplay && needsCalledPocket();
   const showPocketPicker = callEligible && canControl() && !tvEnabled && calledPocket === undefined;
   if (showPocketPicker && callPocket.hidden) setPocketPickerOpen(true);
   callPocket.hidden = !showPocketPicker;
@@ -2707,9 +2772,9 @@ engine.runRenderLoop(() => {
   if (versusComputer && !onlineMode && turn === 1 && !finished && !rolling && !strike && !shotReplay && !settings.open && !endGameDialog.open && !snookerConcessionDialog.open) {
     cpuWait -= dt;
     if (cpuWait <= 0) {
-      const shot = chooseShot(balls, legalTargets(), difficulty);
+      const shot = chooseShot(balls, legalTargets(), difficulty, Math.random, nineBall);
       if (shot) {
-        if (!snooker && legalTargets().includes(8)) {
+        if (needsCalledPocket()) {
           calledPocket = shot.pocket ?? pockets.reduce((best, p, index) => Math.hypot(p.x - balls[8].x, p.z - balls[8].z) < Math.hypot(pockets[best].x - balls[8].x, pockets[best].z - balls[8].z) ? index : best, 0);
         }
         aim.set(Math.sin(shot.angle), 0, Math.cos(shot.angle));
