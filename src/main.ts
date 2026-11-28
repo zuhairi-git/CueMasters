@@ -49,12 +49,8 @@ let svgRenderer: SvgTable | undefined;
 let canvasRenderer: TvTable | undefined;
 const statusText = document.querySelector<HTMLElement>('#statusText')!;
 const tableHelp = document.querySelector<HTMLDetailsElement>('#tableHelp')!;
-const mobileHelpContainer = tableHelp.parentElement!;
-const tableHelpSummary = tableHelp.querySelector('summary')!;
-const expandTableHelp = document.querySelector<HTMLButtonElement>('#expandTableHelp')!;
 function setStatus(message = '') {
-  statusText.hidden = !message;
-  statusText.textContent = message;
+  if (statusText.textContent !== message) statusText.textContent = message;
 }
 const shotHighlightBanner = document.querySelector<HTMLElement>('#shotHighlight')!;
 const shotHighlightTitle = document.querySelector<HTMLElement>('#shotHighlightTitle')!;
@@ -67,18 +63,6 @@ const hudHeader = document.querySelector<HTMLElement>('header')!;
 const menuDialog = document.querySelector<HTMLDialogElement>('#mobileGameMenu')!;
 const menuActions = document.querySelector<HTMLElement>('#gameMenuActions')!;
 const mobileLayout = window.matchMedia('(max-width: 600px)');
-function openTableHelp() {
-  const restoreFocus = document.activeElement === expandTableHelp;
-  tableHelp.open = true;
-  if (restoreFocus) tableHelpSummary.focus();
-}
-expandTableHelp.onclick = openTableHelp;
-tableHelpSummary.addEventListener('click', event => {
-  if (!tableHelp.open || !mobileLayout.matches || !document.body.classList.contains('compact-hud')) return;
-  event.preventDefault();
-  tableHelp.open = false;
-  expandTableHelp.focus();
-});
 const tvEnabled = tvPreference() === 'on';
 const remote = new RemoteShot();
 let tvContext = '';
@@ -1000,16 +984,12 @@ function showScore() {
     return item;
   });
   if (mobileLayout.matches) {
-    if (tableHelp.parentElement !== mobileHelpContainer) mobileHelpContainer.append(tableHelp);
     score.replaceChildren(...seats);
   } else {
     score.replaceChildren(seats[0], tableHelp, seats[1]);
   }
 }
-mobileLayout.addEventListener('change', event => {
-  if (!event.matches) openTableHelp();
-  showScore();
-});
+mobileLayout.addEventListener('change', showScore);
 offlinePlayerTwoNameInput.onchange = () => {
   offlinePlayerTwoName = offlinePlayerTwoNameInput.value.trim().slice(0, 24) || 'Player 2';
   offlinePlayerTwoNameInput.value = offlinePlayerTwoName;
@@ -1573,7 +1553,7 @@ function showReadyStatus() {
   }
   if (tvEnabled) { updateTvControls(); return; }
   if (shotReplay) {
-    setStatus(t('Replay'));
+    setStatus();
     return;
   }
   if (online.departureDeadline !== undefined) {
@@ -1588,9 +1568,8 @@ function showReadyStatus() {
     return;
   }
   if (awaitingOnline) { setStatus(t('Waiting for an opponent. Open Players to see matchmaking.')); return; }
-  if (!canControl()) {
-    setStatus(onlineMode ? online.active ? t('{player} is lining up a shot.', { player: playerName(turn) })
-      : t('Online game paused. Reconnect through Players or choose End game.') : t('Computer is lining up a shot.'));
+  if (!canControl() && onlineMode && !online.active) {
+    setStatus(t('Online game paused. Reconnect through Players or choose End game.'));
     return;
   }
   setStatus();
@@ -1887,7 +1866,6 @@ document.querySelector<HTMLButtonElement>('#camera')!.onclick = event => {
   button.setAttribute('aria-label', t(overhead ? 'Switch to perspective view' : 'Switch to top-down view'));
 };
 function resetMatch(continueCareer = false) {
-  openTableHelp();
   if (!continueCareer) clearShotHighlight();
   shotHighlights = shotRecording = onlineHighlight = undefined;
   pocketDrops.clear();
@@ -2247,7 +2225,6 @@ function gameState(): SavedGame {
       : mode.kind === 'challenge' ? { careerAttempts, careerBanked, challengeTime } : {}) };
 }
 function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = false) {
-  if (!animatePockets || (!s.finished && (finished || (s.breaking && !breaking)))) openTableHelp();
   if (!animatePockets) {
     clearShotHighlight();
     shotHighlights = shotRecording = onlineHighlight = undefined;
@@ -2567,7 +2544,6 @@ function updateTvControls() {
   const presentation = [stepText, helpText, powerText].join('|');
   if (tvPresentation === presentation) return;
   tvPresentation = presentation;
-  setStatus(stepText);
   document.querySelector<HTMLElement>('#tvStep')!.textContent = stepText;
   document.querySelector<HTMLElement>('#tvHelp')!.textContent = helpText;
   document.querySelector<HTMLOutputElement>('#tvPower')!.value = powerText;

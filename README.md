@@ -30,7 +30,7 @@ A static file host alone does not support online games.
   pockets are tighter (about 1.8 balls). Geometry lives in `tableSpecs` in `src/physics.ts`.
 - In snooker and nine-ball the **Ball on** chip shows the next ball (red, any colour, or the
   specific colour in the closing sequence) and what follows it. The chip appears between the player
-  cards on desktop. On phones, expand or collapse **Ball on** to show or hide the chip.
+  cards on desktop.
   Spend coins on cue upgrades in
   the **Equipment shop** on the career screen. Career progress and equipment
   live in your browser, and cities unlocked before the update remain accessible.

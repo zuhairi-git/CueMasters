@@ -182,19 +182,16 @@
     <div class="game-heading">
       <strong class="game-brand"><button class="brand-home" type="button" data-game-home aria-label="Cue Master home" title="Return to game modes"><img class="brand-logo" src="/billiard-logo.svg" width="300" height="72" alt=""></button><span id="gameCity" class="game-city"></span></strong>
       <span id="shotClock" role="timer" aria-label="Online time remaining" hidden>30s</span>
-      <div id="status">
-        <span id="statusText" role="status" hidden></span>
-        <details id="tableHelp" open hidden>
-          <summary>Ball on</summary>
-          <div class="table-help-content">
-            <span id="ballOn" class="ball-on" role="status"></span>
-          </div>
-        </details>
-      </div>
       <small id="careerObjective" hidden></small>
     </div>
-    <div id="score" aria-label="Players and pocketed balls"></div>
-    <button id="expandTableHelp" type="button" aria-label="Ball on" aria-controls="tableHelp" aria-expanded="false"></button>
+    <div id="score" aria-label="Players and pocketed balls">
+      <details id="tableHelp" open hidden>
+        <summary>Ball on</summary>
+        <div class="table-help-content">
+          <span id="ballOn" class="ball-on" role="status"></span>
+        </div>
+      </details>
+    </div>
     <button class="ui-button hud-action" id="mobileMenu" type="button" aria-label="Open game menu" aria-expanded="false" aria-haspopup="dialog" aria-controls="mobileGameMenu"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="menu-open-icon" d="M4 6h16M4 12h16M4 18h16"/><path class="menu-close-icon" d="m6 6 12 12M6 18 18 6"/></svg></button>
     <nav id="tableActions" aria-label="Table controls">
       <button class="ui-button hud-action" id="fullscreen" type="button" aria-pressed="false" title="Enter full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><span class="hud-label">Full screen</span></button>
@@ -207,6 +204,7 @@
     </nav>
   </header>
   <p id="fullscreenNotice" class="fullscreen-notice" role="status" hidden></p>
+  <div id="statusText" class="game-status-toast" role="status"></div>
   <aside id="shotHighlight" class="shot-highlight" hidden>
     <div class="shot-highlight-copy" role="status" aria-atomic="true">
       <strong id="shotHighlightTitle"></strong>

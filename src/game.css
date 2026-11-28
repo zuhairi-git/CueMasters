@@ -138,13 +138,11 @@ header > .game-heading { display: grid; grid-template-columns: auto minmax(0, 1f
 .game-heading > strong { font: 500 1.05rem Georgia, serif; }
 header nav { justify-self: end; }
 #score { color: var(--accent); font-size: .75rem; }
-#status { grid-column: 1 / -1; font-size: .7rem; line-height: 1.2; }
 nav { display: flex; flex-shrink: 0; gap: 2px; }
 nav .ui-button { min-height: 36px; padding-inline: 10px; font-size: .75rem; border-color: transparent; background: transparent; }
 #openSettings { border-color: var(--border); background: var(--control); }
 footer { bottom: max(6px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(540px, calc(100% - 12px - env(safe-area-inset-left) - env(safe-area-inset-right))); flex-wrap: wrap; }
 #shotClock:not([hidden]) { grid-column: 1; grid-row: 2; font-size: .7rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
-header:has(#shotClock:not([hidden])) #status { grid-column: 2; }
 #shotClock.urgent { color: #ff9e80; }
 .call-pocket {
   position: fixed; z-index: 2; top: var(--notice-top, 90px); left: 50%; transform: translateX(-50%);
@@ -250,7 +248,6 @@ header:has(#shotClock:not([hidden])) #status { grid-column: 2; }
   header > .game-heading { grid-template-columns: auto minmax(0, 1fr); gap: 2px 8px; }
   .game-heading > strong { font-size: .9rem; }
   #score { text-align: right; }
-  #status { font-size: .65rem; }
   nav { width: 100%; }
   nav .ui-button { flex: 1; min-height: 36px; padding-inline: 4px; font-size: .7rem; }
   footer { gap: 8px; padding-inline: 8px; }
@@ -266,7 +263,6 @@ header:has(#shotClock:not([hidden])) #status { grid-column: 2; }
 }
 @media (max-height: 500px) and (min-width: 601px) {
   header > .game-heading { grid-template-columns: auto auto minmax(0, 1fr); gap: 8px; }
-  #status { grid-column: auto; }
 }
 @media (pointer: coarse) { nav .ui-button { min-height: 44px; } }
 #score { display: flex; justify-content: center; gap: 8px; min-width: 0; }
@@ -405,6 +401,26 @@ header:has(#shotClock:not([hidden])) #status { grid-column: 2; }
 
 #stroke .cue-stick { top: 3px; height: 16px; background: none; clip-path: none; }
 #stroke .cue-stick svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.game-status-toast {
+  position: fixed;
+  z-index: 4;
+  top: var(--notice-top, 90px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 24px);
+  pointer-events: none;
+}
+.game-status-toast:not(:empty) {
+  padding: 6px 10px;
+  border: 1px solid var(--edge-soft);
+  border-radius: 12px;
+  background: var(--pane-strong);
+  color: var(--ink);
+  font-size: .8rem;
+  text-align: center;
+}
 
 .shot-highlight:not([hidden]) {
   position: fixed; z-index: 5; top: var(--notice-top, 76px); left: 50%;

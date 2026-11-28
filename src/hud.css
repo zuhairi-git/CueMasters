@@ -93,7 +93,6 @@ header.game-hud > .game-heading {
   letter-spacing: 0;
   box-shadow: 0 1px 3px #0008, inset 0 -1px 2px #0002;
 }
-.game-hud #status { font-size: .65rem; line-height: 1.35; color: var(--muted); }
 .game-hud #shotClock:not([hidden]) {
   padding: 3px 5px;
   border: 1px solid var(--border);
@@ -101,7 +100,6 @@ header.game-hud > .game-heading {
   background: #0a1528;
   font: 700 .7rem ui-monospace, monospace;
 }
-#expandTableHelp { display: none; }
 header.game-hud #score {
   position: relative;
   display: grid;
@@ -218,7 +216,6 @@ footer.game-hud #powerValue { padding: 7px 0; border-block: 1px solid #c5a76c38;
   header.game-hud > .game-heading { padding: 5px 9px; }
   .game-hud .game-heading > strong { font-size: .85rem; gap: 6px; }
   .brand-ball { width: 20px; height: 20px; border-width: 4px; font-size: 8px; }
-  .game-hud #status { font-size: .6rem; }
   header.game-hud > #score { grid-column: 1 / -1; width: 100%; gap: 12px; padding: 3px; }
   .game-hud .player-score { grid-template-columns: 28px minmax(0, 1fr); grid-template-rows: auto auto 20px; min-height: 64px; padding: 6px 8px 5px; gap: 2px 7px; }
   .game-hud .group-marker { width: 27px; height: 27px; }
@@ -353,7 +350,6 @@ body.tv-mode .ui-dialog :is(small, .settings-note) { font-size: .95rem; }
 body.tv-mode :is(button, input, select, a):focus { outline: 4px solid #ffe3a1; outline-offset: 4px; box-shadow: 0 0 0 7px #121d17; }
 body.tv-mode header.game-hud { grid-template-columns: minmax(0, 1fr) auto 64px; }
 body.tv-mode header.game-hud #mobileMenu { display: flex; grid-column: 3; grid-row: 1; width: 56px; min-height: 48px; }
-body.tv-mode .game-hud #status { font-size: .9rem; }
 @media (max-width: 600px) {
   body.tv-mode #tvControls { gap: 12px; padding: 4px; flex-wrap: wrap; }
   body.tv-mode #tvControls > div { flex-basis: 70%; }
@@ -405,12 +401,6 @@ body.tv-mode .game-hud #status { font-size: .9rem; }
     border: 0;
     box-shadow: none;
     min-height: 16px;
-  }
-  .compact-hud header.game-hud #status {
-    font-size: .62rem;
-    color: #a4c1e4;
-    text-align: center;
-    line-height: 1.2;
   }
   .compact-hud header.game-hud > .game-heading:has(#careerObjective:not([hidden])) {
     flex-direction: column;
