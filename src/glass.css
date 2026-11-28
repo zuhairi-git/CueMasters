@@ -406,8 +406,8 @@ button.mode-card { width: 100%; min-height: 0; margin: 0; font: inherit; text-al
     color: var(--ink);
   }
   .compact-hud header.game-hud #status { width: min(100%, 20rem); }
-  .compact-hud header.game-hud:has(#tableHelp[open]) > .game-heading { grid-column: 1 / -1; }
-  .compact-hud header.game-hud #status:has(#tableHelp[open]) { width: 100%; }
+  .compact-hud header.game-hud:has(#tableHelp[open]:not([hidden])) > .game-heading { grid-column: 1 / -1; }
+  .compact-hud header.game-hud #status:has(#tableHelp[open]:not([hidden])) { width: 100%; }
   #tableHelp, #statusText:not([hidden]) {
     border: 1px solid var(--edge-soft);
     border-radius: 12px;
@@ -430,8 +430,8 @@ button.mode-card { width: 100%; min-height: 0; margin: 0; font: inherit; text-al
     background: transparent;
   }
   .compact-hud #tableHelp:not([open]) summary { display: none; }
-  .compact-hud header.game-hud:has(#tableHelp:not([open])) > .game-heading { min-height: 0; }
-  .compact-hud header.game-hud:has(#tableHelp:not([open])) #score::after { font-size: 0; }
+  .compact-hud header.game-hud:has(#tableHelp:is([hidden], :not([open]))) > .game-heading { min-height: 0; }
+  .compact-hud header.game-hud:has(#tableHelp:not([open], [hidden])) #score::after { font-size: 0; }
   .compact-hud #expandTableHelp {
     grid-column: 1;
     grid-row: 1;
@@ -450,7 +450,7 @@ button.mode-card { width: 100%; min-height: 0; margin: 0; font: inherit; text-al
     visibility: hidden;
     pointer-events: none;
   }
-  .compact-hud header.game-hud:has(#tableHelp:not([open])) #expandTableHelp {
+  .compact-hud header.game-hud:has(#tableHelp:not([open], [hidden])) #expandTableHelp {
     visibility: visible;
     pointer-events: auto;
   }
@@ -463,7 +463,7 @@ button.mode-card { width: 100%; min-height: 0; margin: 0; font: inherit; text-al
     opacity: 0;
     transform: translateY(-5px) rotate(45deg);
   }
-  .compact-hud header.game-hud:has(#tableHelp:not([open])) #expandTableHelp::after {
+  .compact-hud header.game-hud:has(#tableHelp:not([open], [hidden])) #expandTableHelp::after {
     opacity: 1;
     transform: translateY(-2px) rotate(45deg);
   }
@@ -505,7 +505,7 @@ header.game-hud #score .player-turn::before { background: var(--ink-gold); }
 @media (max-width: 600px) and (prefers-reduced-motion: no-preference) {
   .compact-hud header.game-hud #score::after { transition: font-size 180ms ease; }
   .compact-hud #expandTableHelp { transition: visibility 0s linear 180ms; }
-  .compact-hud header.game-hud:has(#tableHelp:not([open])) #expandTableHelp { transition-delay: 0s; }
+  .compact-hud header.game-hud:has(#tableHelp:not([open], [hidden])) #expandTableHelp { transition-delay: 0s; }
   #expandTableHelp::after { transition: opacity 180ms ease, transform 180ms ease; }
 }
 .ball-on:not([hidden]) { border-color: color-mix(in srgb, var(--ink-gold) 55%, transparent); border-radius: 12px; background: linear-gradient(180deg, var(--pane-gold), transparent), var(--pane-strong); color: var(--ink); }

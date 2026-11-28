@@ -52,16 +52,9 @@ const tableHelp = document.querySelector<HTMLDetailsElement>('#tableHelp')!;
 const mobileHelpContainer = tableHelp.parentElement!;
 const tableHelpSummary = tableHelp.querySelector('summary')!;
 const expandTableHelp = document.querySelector<HTMLButtonElement>('#expandTableHelp')!;
-const helpText = document.querySelector<HTMLElement>('#helpText')!;
-const helpChip = document.querySelector<HTMLElement>('#helpChip')!;
-document.querySelector<HTMLButtonElement>('#dismissHelp')!.onclick = () => {
-  helpChip.dataset.dismissed = '';
-};
-function setStatus(message: string, isHelp = false) {
-  statusText.hidden = isHelp;
-  statusText.textContent = isHelp ? '' : message;
-  helpChip.hidden = !isHelp;
-  helpText.textContent = isHelp ? message : '';
+function setStatus(message = '') {
+  statusText.hidden = !message;
+  statusText.textContent = message;
 }
 const shotHighlightBanner = document.querySelector<HTMLElement>('#shotHighlight')!;
 const shotHighlightTitle = document.querySelector<HTMLElement>('#shotHighlightTitle')!;
@@ -78,10 +71,6 @@ function openTableHelp() {
   const restoreFocus = document.activeElement === expandTableHelp;
   tableHelp.open = true;
   if (restoreFocus) tableHelpSummary.focus();
-}
-function resetTableHelp() {
-  delete helpChip.dataset.dismissed;
-  openTableHelp();
 }
 expandTableHelp.onclick = openTableHelp;
 tableHelpSummary.addEventListener('click', event => {
@@ -886,8 +875,8 @@ function renderPlayerDetails() {
 // Snooker and nine-ball: always show which ball is on, so the next one is never a guess.
 const ballOn = document.querySelector<HTMLElement>('#ballOn')!;
 function showBallOn() {
-  ballOn.hidden = !(snooker || nineBall) || finished || !ballOnEnabled;
-  if (ballOn.hidden) return;
+  tableHelp.hidden = !(snooker || nineBall) || finished || !ballOnEnabled;
+  if (tableHelp.hidden) return;
   const targets = legalTargets();
   if (nineBall) {
     const title = document.createElement('span');
@@ -1604,18 +1593,7 @@ function showReadyStatus() {
       : t('Online game paused. Reconnect through Players or choose End game.') : t('Computer is lining up a shot.'));
     return;
   }
-  if (aimLocked && !viewMode) {
-    setStatus(t('Aim locked · Drag back on the table and release to shoot. Double-tap the cue ball to unlock.'), true);
-    return;
-  }
-  if (placement && !viewMode) {
-    setStatus(placement === 'break' ? t('Drag the cue ball behind the head string. Aim on the cloth.') : t('Ball in hand. Drag the cue ball or aim on the cloth.'), true);
-    return;
-  }
-  setStatus(viewMode ? t('Drag to orbit. Pinch or scroll to zoom.')
-    : t(window.matchMedia('(pointer: coarse)').matches
-      ? '{player} · Tap to aim, slide Fine aim, then pull the cue to shoot.'
-      : '{player} · ← → Aim · Shift + arrows for fine aim', { player: playerName(turn) }), true);
+  setStatus();
 }
 
 function canPanTable() {
@@ -1909,7 +1887,7 @@ document.querySelector<HTMLButtonElement>('#camera')!.onclick = event => {
   button.setAttribute('aria-label', t(overhead ? 'Switch to perspective view' : 'Switch to top-down view'));
 };
 function resetMatch(continueCareer = false) {
-  resetTableHelp();
+  openTableHelp();
   if (!continueCareer) clearShotHighlight();
   shotHighlights = shotRecording = onlineHighlight = undefined;
   pocketDrops.clear();
@@ -2269,7 +2247,7 @@ function gameState(): SavedGame {
       : mode.kind === 'challenge' ? { careerAttempts, careerBanked, challengeTime } : {}) };
 }
 function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = false) {
-  if (!animatePockets || (!s.finished && (finished || (s.breaking && !breaking)))) resetTableHelp();
+  if (!animatePockets || (!s.finished && (finished || (s.breaking && !breaking)))) openTableHelp();
   if (!animatePockets) {
     clearShotHighlight();
     shotHighlights = shotRecording = onlineHighlight = undefined;
@@ -2328,7 +2306,7 @@ function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = fals
   });
   showScore();
   if (!rolling && !strike) showReadyStatus();
-  else setStatus(t('Balls in motion'));
+  else setStatus();
 }
 function saveGame() {
   if (returningHome) return;
@@ -2824,7 +2802,7 @@ engine.runRenderLoop(() => {
       shotRecording?.capture(0, balls, new Map());
       if (resetSpinAfterShot) setTip(0, 0);
       rolling = true;
-      setStatus(t('Balls in motion'));
+      setStatus();
     }
   }
   updatePocketDrops(dt);
