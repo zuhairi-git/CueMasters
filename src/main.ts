@@ -176,6 +176,22 @@ guidesToggle.onclick = () => {
   updateGuides();
 };
 updateGuides();
+// The ball-on chip can be dismissed with its × button; this switch brings it back.
+const ballOnToggle = document.querySelector<HTMLButtonElement>('#ballOnToggle')!;
+let ballOnEnabled = true;
+try { ballOnEnabled = localStorage.getItem('billiard-ball-on') !== 'off'; } catch {}
+function updateBallOnSetting() {
+  ballOnToggle.textContent = t(ballOnEnabled ? 'Chip on' : 'Chip off');
+  ballOnToggle.setAttribute('aria-pressed', String(ballOnEnabled));
+}
+function setBallOnEnabled(enabled: boolean) {
+  ballOnEnabled = enabled;
+  try { localStorage.setItem('billiard-ball-on', enabled ? 'on' : 'off'); } catch {}
+  updateBallOnSetting();
+  showScore();
+}
+ballOnToggle.onclick = () => setBallOnEnabled(!ballOnEnabled);
+updateBallOnSetting();
 const shotReplayToggle = document.querySelector<HTMLButtonElement>('#shotReplayToggle')!;
 let shotReplaysEnabled = true;
 try { shotReplaysEnabled = localStorage.getItem('billiard-shot-replay') !== 'off'; } catch {}
@@ -837,8 +853,18 @@ function renderPlayerDetails() {
 }
 // Snooker and nine-ball: always show which ball is on, so the next one is never a guess.
 const ballOn = document.querySelector<HTMLElement>('#ballOn')!;
+function ballOnDismiss() {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ball-on-close';
+  button.textContent = '×';
+  button.title = t('Hide ball on');
+  button.setAttribute('aria-label', button.title);
+  button.onclick = () => setBallOnEnabled(false);
+  return button;
+}
 function showBallOn() {
-  ballOn.hidden = !(snooker || nineBall) || finished;
+  ballOn.hidden = !(snooker || nineBall) || finished || !ballOnEnabled;
   if (ballOn.hidden) return;
   const targets = legalTargets();
   if (nineBall) {
@@ -861,6 +887,7 @@ function showBallOn() {
       next.append(t('then') + ' ', ballBadge(following));
       ballOn.append(next);
     }
+    ballOn.append(ballOnDismiss());
     ballOn.setAttribute('aria-label', t('Ball on') + ': ' + label);
     return;
   }
@@ -901,6 +928,7 @@ function showBallOn() {
     next.textContent = t(balls.some((ball, index) => index >= 1 && index <= 15 && !ball.pocketed) ? 'then a red' : 'then yellow');
     ballOn.append(next);
   }
+  ballOn.append(ballOnDismiss());
   ballOn.setAttribute('aria-label', t('Ball on') + ': ' + label);
 }
 function showScore() {
@@ -962,9 +990,13 @@ function showScore() {
     }
     return item;
   });
-  // In snooker the ball on sits between the two players.
-  score.replaceChildren(seats[0], ...(snooker || nineBall ? [ballOn] : []), seats[1]);
+  // On wide screens the ball on sits between the two players. On phones it is a small
+  // chip beside the hint line, so the players keep the whole width of the scoreboard.
+  const chipBesideHint = mobileLayout.matches;
+  score.replaceChildren(seats[0], ...(!chipBesideHint && (snooker || nineBall) ? [ballOn] : []), seats[1]);
+  if (chipBesideHint) document.querySelector('.game-heading')!.append(ballOn);
 }
+mobileLayout.addEventListener('change', showScore);
 offlinePlayerTwoNameInput.onchange = () => {
   offlinePlayerTwoName = offlinePlayerTwoNameInput.value.trim().slice(0, 24) || 'Player 2';
   offlinePlayerTwoNameInput.value = offlinePlayerTwoName;

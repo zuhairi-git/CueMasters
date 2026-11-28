@@ -107,6 +107,7 @@ const pairs = [
     { where: 'player seats, hint chips, callouts, pocket picker and result card', themes: ['table'], ink, on: ['--pane-strong'], over: ['felt'] },
   ]),
   ...['--ink', '--ink-soft', '--ink-gold'].map(ink => ({ where: 'active seat, ball on and shot clock', themes: ['table'], ink, on: ['--pane-strong', '--pane-gold'], over: ['felt'] })),
+  ...['--ink', '--ink-soft'].map(ink => ({ where: 'ball on dismiss button, resting and hovered', themes: ['table'], ink, on: ['--pane-strong', '--pane-gold', '--pane-control'], over: ['felt'] })),
   { where: 'HUD buttons', themes: ['table'], ink: '--ink', on: ['--pane', '--pane-control'], over: ['felt'] },
   { where: 'hovered HUD buttons', themes: ['table'], ink: '--ink', on: ['--pane', 'rgba(255, 255, 255, .14)'], over: ['felt'] },
   ...['#ffe08a', '#d99a22'].map(fill => ({ where: 'streak callout (' + fill + ')', themes: ['table'], ink: '--ink-on-gold', on: [fill], over: ['none'], finish: 'flat' })),

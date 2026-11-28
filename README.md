@@ -28,8 +28,10 @@ A static file host alone does not support online games.
   cost time and a scratch costs five seconds. Stars unlock the next tier and each new star pays coins.
 - Pockets are sized against the balls: a pool corner pocket is about two balls wide and snooker
   pockets are tighter (about 1.8 balls). Geometry lives in `tableSpecs` in `src/physics.ts`.
-- In snooker the **Ball on** pill under the title shows the next ball (red, any colour, or the
-  specific colour in the closing sequence), its value, and what follows it.
+- In snooker and nine-ball the **Ball on** chip shows the next ball (red, any colour, or the
+  specific colour in the closing sequence) and what follows it. On phones it sits beside the
+  hint line instead of in the scoreboard; tap its × to dismiss it, and bring it back with
+  **Ball on chip** in game settings.
   Spend coins on cue upgrades in
   the **Equipment shop** on the career screen. Career progress and equipment
   live in your browser, and cities unlocked before the update remain accessible.

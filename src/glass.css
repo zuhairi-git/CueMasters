@@ -439,6 +439,9 @@ header.game-hud #score .player-turn::before { background: var(--ink-gold); }
 .ball-on:not([hidden]) { border-color: color-mix(in srgb, var(--ink-gold) 55%, transparent); border-radius: 12px; background: linear-gradient(180deg, var(--pane-gold), transparent), var(--pane-strong); color: var(--ink); }
 .ball-on-title { color: var(--ink-gold); }
 .ball-on-next { color: var(--ink-soft); border-left-color: var(--edge-soft); }
+.ball-on-close { color: var(--ink-soft); }
+.ball-on-close:hover, .ball-on-close:focus-visible { background: var(--pane-control); color: var(--ink); }
+.ball-on-close:focus-visible { outline: 2px solid var(--ink-gold); outline-offset: 1px; }
 header.game-hud #shotClock:not([hidden]), #shotClock:not([hidden]) { border: 1px solid color-mix(in srgb, var(--ink-gold) 55%, transparent); background: linear-gradient(180deg, var(--pane-gold), transparent), var(--pane-strong); color: var(--ink-gold); }
 header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: var(--ink-danger); background: var(--pane-strong); color: var(--ink-danger); }
 .game-hud .hud-action, header.game-hud #openSettings {

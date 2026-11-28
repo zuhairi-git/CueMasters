@@ -516,6 +516,23 @@ button.selection-card:active { transform: scale(.985); }
 .ball-on small { display: none; }
 .ball-on-next { display: inline-flex; align-items: center; gap: 4px; padding-left: 7px; border-left: 1px solid #ffffff26; color: #a9bbd6; font-size: .64rem; }
 .ball-on-next .score-ball { display: inline-block; width: 12px; height: 12px; }
+.ball-on-close {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font: 700 1rem/1 var(--display);
+  cursor: pointer;
+}
+/* A bigger invisible target than the 20px button, so a thumb can dismiss the chip. */
+.ball-on-close::before { content: ''; position: absolute; inset: -8px; }
 header.game-hud #score:has(> .ball-on:not([hidden]))::after { display: none; }
 
 @media (min-width: 601px) {
@@ -624,10 +641,10 @@ header.game-hud #score:has(> .ball-on:not([hidden]))::after { display: none; }
   header.game-hud > nav .hud-action { min-width: 44px; min-height: 44px; }
   header.game-hud > #score { height: 50px; }
 }
-/* Phones: ball on gets its own short row under the players. */
+/* Phones: the ball on is a small chip with a dismiss button, kept beside the hint
+   line (see showScore) instead of taking a seat or a row in the scoreboard. */
 @media (max-width: 600px) {
-  header.game-hud #score:has(> .ball-on:not([hidden])) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  header.game-hud #score > .ball-on:not([hidden]) { grid-column: 1 / -1; grid-row: 2; min-height: 26px; }
+  .game-heading > .ball-on:not([hidden]) { grid-column: 1 / -1; justify-self: center; }
 }
 
 /* ---------- Contrast ---------- */
@@ -700,8 +717,7 @@ header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: #ff8a75; ba
   .compact-hud .game-hud .player-score.active { box-shadow: inset 0 -2px #d6b779; }
   .compact-hud .game-hud .player-score.active .player-name { grid-column: 2; }
 
-  /* Snooker: name over score on each side, ball on between them. */
-  .snooker-game.compact-hud header.game-hud #score:has(> .ball-on:not([hidden])) { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 6px; }
+  /* Snooker: name over score on each side. */
   .snooker-game.compact-hud .game-hud .player-score,
   .snooker-game.compact-hud .game-hud .player-score.active { grid-template-columns: minmax(0, 1fr); }
   .snooker-game.compact-hud .game-hud .group-marker { display: none; }
@@ -721,19 +737,16 @@ header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: #ff8a75; ba
   .snooker-game.compact-hud .game-hud .player-score:last-child :is(.player-name, .player-group) { text-align: right; }
   .snooker-game.compact-hud .game-hud .player-score:last-child .player-name { flex-direction: row-reverse; }
 
-  .snooker-game.compact-hud header.game-hud #score > .ball-on:not([hidden]) {
-    position: relative;
-    grid-column: auto;
-    grid-row: auto;
-    gap: 3px;
-    min-width: 56px;
-    min-height: 0;
-    padding: 13px 6px 0;
-  }
-  .compact-hud .ball-on-title { position: absolute; inset: 5px 0 auto; font-size: .44rem; letter-spacing: .12em; text-align: center; }
-  .compact-hud .ball-on-next { display: none; }
-  .compact-hud .ball-on strong { font-size: .76rem; }
-  /* Any colour: the six balls say it without the label. */
-  .compact-hud .ball-on:has(.ball-on-icon ~ .ball-on-icon) strong { display: none; }
-  .compact-hud .ball-on:has(.ball-on-icon ~ .ball-on-icon) .ball-on-icon { width: 11px; height: 11px; }
+
+  /* Ball on chip: one short line sitting next to the hint, about as tall as the hint chip. */
+  .compact-hud header.game-hud > .game-heading:has(> .ball-on:not([hidden])) { flex-direction: row !important; flex-wrap: nowrap; gap: 6px; }
+  .game-heading > .ball-on:not([hidden]) { flex: none; gap: 5px; min-height: 22px; padding: 0 2px 0 9px; border-radius: 999px; }
+  .game-heading > .ball-on .ball-on-title { font-size: .46rem; letter-spacing: .12em; }
+  .game-heading > .ball-on .ball-on-icon { width: 14px; height: 14px; }
+  .game-heading > .ball-on .ball-on-next { display: none; }
+  .game-heading > .ball-on strong { font-size: .72rem; }
+  /* Any colour: the six balls say it without the name. */
+  .game-heading > .ball-on:has(.ball-on-icon ~ .ball-on-icon) strong { display: none; }
+  .game-heading > .ball-on:has(.ball-on-icon ~ .ball-on-icon) .ball-on-icon { width: 11px; height: 11px; }
+  .game-heading > .ball-on .ball-on-close { width: 18px; height: 18px; font-size: .9rem; }
 }
