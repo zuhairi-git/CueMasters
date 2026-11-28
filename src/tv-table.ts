@@ -1,5 +1,5 @@
 import { traceShot } from './aim-guide';
-import { championshipInlays, railSights, tableFinish, type CareerTable } from './table-finishes';
+import { championshipInlays, mix, railSights, shade, tableFinish, type CareerTable } from './table-finishes';
 import { ballMarkings } from './ball-markings';
 import { cushions, length, pocketMouthRadius, pockets, radius, width, type Ball } from './physics';
 
@@ -7,6 +7,11 @@ import type { PocketDropPose } from './pocket-drop';
 
 export const calledPocketColor = '#ffdc38';
 export const calledPocketBorderWidth = 0.018;
+
+const tint = (color: string, share: number) => mix(color, '#ffffff', share);
+// The frame matches the overhead SVG table: outer edge, corner radius and where wood meets cushion cloth.
+const frameX = width / 2 + 0.14, frameZ = length / 2 + 0.14, frameRadius = 0.105;
+const noseX = width / 2 - 0.005, noseZ = length / 2 - 0.005, cushionDepth = 0.065;
 
 export function tvViewport(screenWidth: number, screenHeight: number, top: number, bottom: number) {
   const landscape = screenWidth > screenHeight;
@@ -96,14 +101,58 @@ export class TvTable {
     ctx.fillStyle = '#080f20'; ctx.fillRect(0, 0, this.screenWidth, this.screenHeight);
     const { venue } = state;
     const [felt, cushion, wood] = tableFinish(state.tableStyle, state.snooker, venue);
-    rectangle(width + 0.30, length + 0.30, '#0a100d');
-    rectangle(width + 0.27, length + 0.27, venue?.accent ?? '#63ddf1');
-    rectangle(width + 0.25, length + 0.25, wood);
-    rectangle(width + 0.04, length + 0.04, cushion);
-    rectangle(width, length, felt);
-    for (const c of cushions) line(c.ax, c.az, c.bx, c.bz, cushion, 0.025);
+    const trim = venue?.trim ?? '#c5ab79';
+    const accent = venue?.accent ?? '#63ddf1';
+    const cloth = mix(felt, cushion, 0.45);
+    // Every material is a flat band stroked around the table: no gradients, and no
+    // full-table fills stacked on each other, so slow TV browsers repaint little.
+    const band = (inset: number, thickness: number, color: string, halfX = frameX, halfZ = frameZ, corner = frameRadius) => {
+      const middle = inset + thickness / 2;
+      const a = point(middle - halfX, middle - halfZ), b = point(halfX - middle, halfZ - middle);
+      const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y), w = Math.abs(b.x - a.x), h = Math.abs(b.y - a.y);
+      const r = Math.max(0, corner - middle) * scale;
+      ctx.beginPath();
+      if (r > 0) {
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+      } else ctx.rect(x, y, w, h);
+      if (thickness) { ctx.strokeStyle = color; ctx.lineWidth = thickness * scale; ctx.stroke(); }
+    };
+    // Rail from the outside in: floor shadow, wood, rolled edge, lacquer highlight, inlay, cloth groove.
+    band(-0.012, 0.012, '#04070c');
+    band(0, 0.081, wood);
+    band(0, 0.007, shade(wood, 0.5));
+    band(0.009, 0.01, tint(wood, 0.2));
+    band(0.022, venue?.championship ? 0.007 : 0.004, accent);
+    band(0.072, 0.009, shade(wood, 0.6));
+    // Metal plates carry the pockets, trimmed to the outline of the frame.
+    ctx.save();
+    band(0, 0, wood);
+    ctx.clip();
+    for (const p of pockets) {
+      const plate = p.z ? 0.152 : 0.128, mouth = pocketMouthRadius(p);
+      circle(p.x, p.z, plate, shade(trim, 0.42));
+      circle(p.x, p.z, plate - 0.008, shade(trim, 0.66));
+      circle(p.x, p.z, plate - 0.03, shade(trim, 0.86));
+      circle(p.x, p.z, mouth + 0.04, tint(trim, 0.12));
+    }
+    ctx.restore();
+    // Bed, with the shadow of the cushions lying along its edge.
+    rectangle(2 * noseX, 2 * noseZ, felt);
+    band(0, 0.016, shade(felt, 0.8), noseX, noseZ, 0);
+    // Cushion cloth climbs from the rail groove to a lit nose.
+    const cushionBand = (from: number, to: number, color: string) =>
+      band(cushionDepth * from, cushionDepth * (to - from), color, noseX + cushionDepth, noseZ + cushionDepth, 0);
+    cushionBand(0, 0.12, shade(cloth, 0.62));
+    cushionBand(0.12, 0.42, shade(cloth, 0.93));
+    cushionBand(0.42, 0.76, tint(cloth, 0.05));
+    cushionBand(0.76, 0.93, tint(cloth, 0.15));
+    cushionBand(0.93, 1, tint(cloth, 0.3));
+    for (const c of cushions) if (c.jaw) line(c.ax, c.az, c.bx, c.bz, tint(cloth, 0.05), 0.022);
     // The plain table keeps round sights; venues draw their own rail motif.
-    const sights = venue ? railSights(venue.motif, width / 2 + 0.078, length / 2 + 0.078) : railSights('diamond', width / 2 + 0.078, length / 2 + 0.078).map(piece => ({ ...piece, diamond: false, round: true }));
+    const sights = venue ? railSights(venue.motif, 0.731, 1.362) : railSights('diamond', 0.731, 1.362).map(piece => ({ ...piece, diamond: false, round: true }));
     const sight = venue?.accent ?? '#e8dfc9';
     for (const { x, z, width, depth, diamond, round } of [...(venue?.championship ? championshipInlays : []), ...sights]) {
       if (round) { circle(x, z, width / 2, sight); continue; }
@@ -129,10 +178,13 @@ export class TvTable {
       const p = pockets[i];
       const mouth = pocketMouthRadius(p);
       const called = state.callEligible && state.calledPocket === i;
-      circle(p.x, p.z, mouth + 0.012, venue?.trim ?? '#c5ab79');
-      circle(p.x, p.z, mouth + 0.009, '#21191c');
+      // Metal rim, leather liner, then a drop that darkens towards its middle.
+      circle(p.x, p.z, mouth + 0.012, trim);
+      circle(p.x, p.z, mouth + 0.009, '#1c1617');
       const outline = called ? calledPocketColor : state.callEligible ? '#63ddf1' : undefined;
-      circle(p.x, p.z, mouth, '#030305', outline, called ? calledPocketBorderWidth : undefined);
+      circle(p.x, p.z, mouth, '#2b2320', outline, called ? calledPocketBorderWidth : undefined);
+      circle(p.x, p.z, mouth * 0.93, '#100c0c');
+      circle(p.x, p.z, mouth * 0.8, '#030305');
       if (state.callEligible) {
         const label = point(p.x, p.z);
         ctx.fillStyle = called ? calledPocketColor : '#d6c49f';

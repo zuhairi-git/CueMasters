@@ -73,7 +73,7 @@ function distanceToEdge(hull: Point[], [dx, dz]: Point) {
   throw new Error('Pocket surround must enclose the pocket centre');
 }
 
-export function buildPocket(scene: Scene, pocket: Pocket, wood: StandardMaterial, leather: StandardMaterial, liner: StandardMaterial) {
+export function buildPocket(scene: Scene, pocket: Pocket, wood: StandardMaterial, plate: StandardMaterial, leather: StandardMaterial, liner: StandardMaterial) {
   const side = Math.sign(pocket.x);
   const end = Math.sign(pocket.z) || 1;
   const middle = pocket.z === 0;
@@ -121,6 +121,12 @@ export function buildPocket(scene: Scene, pocket: Pocket, wood: StandardMaterial
     }, scene), material);
   }
   const surround = wrap('solid pocket surround', outerPaths, wood).convertToFlatShadedMesh();
+  // A thin metal plate caps the surround, like the pocket plates on the overhead table.
+  const cap = [ring(railTop + 0.0008, 0, true), ring(railTop + 0.0008, railBevel)];
+  for (let i = 0; i < rays.length; i++) {
+    if (rays[i].distance < radius + 0.006) cap[1][i].copyFrom(cap[0][i]);
+  }
+  wrap('pocket plate', cap, plate);
   const lip = (r: number, offset: number) => rays.map(({ direction: [dx, dz], distance }) => {
     const support = Math.max(0, Math.min(1, (distance - radius + 0.004) / 0.016));
     return at(dx * r, 0.001 + (railTop - 0.001) * support + offset, dz * r);

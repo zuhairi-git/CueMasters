@@ -4,6 +4,7 @@ import { loadSource } from './load-source.mjs';
 const { isTvBrowser, shouldAskAboutTv } = await loadSource('tv-detection');
 const { TvTable, tvViewport } = await loadSource('tv-table');
 const { rack, width, length } = await loadSource('physics');
+const { careerTable, challengeTable } = await loadSource('table-finishes');
 
 test('TV detection recognizes TV platforms while leaving computers and phones alone', () => {
   for (const ua of [
@@ -55,6 +56,10 @@ test('TV renderer uses only Canvas 2D, caps its buffer, and preserves game state
     const before = structuredClone(balls);
     for (const rolling of [false, true]) for (const tableStyle of ['Club Green', 'Tournament Blue', 'Burgundy Lounge']) {
       renderer.draw({ balls, aim: { x: 0, z: 1 }, rolling, finished: false, placement: !rolling, guides: true, callEligible: true, calledPocket: 2, snooker, tableStyle, cueStyle: 'Classic Maple', pull: 0.5 });
+    }
+    // Venue tables draw the same banded rails, cushions and pocket plates in their own colours.
+    for (const venue of [careerTable('helsinki', 3, snooker), careerTable('london', 9, snooker), challengeTable('Master', true, snooker)]) {
+      renderer.draw({ balls, aim: { x: 0, z: 1 }, rolling: false, finished: false, placement: false, guides: true, callEligible: false, snooker, tableStyle: 'Club Green', venue, cueStyle: 'Classic Maple', pull: 0 });
     }
     assert.deepEqual(balls, before);
   }

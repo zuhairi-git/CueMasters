@@ -16,7 +16,7 @@ import { directionToBall, traceShot } from './aim-guide';
 import { OnlineGame } from './online';
 import { cities, onlineMedalName, resultMessage, type Game } from './circuit';
 import { awardCoins, careerCityStatus, careerCue, careerCues, careerDifficulty, careerGoal, careerOpening, careerProgress, careerRank, careerStage, careerStages, careerStageStatus, finishCareerStage } from './career';
-import { careerTable, challengeTable, championshipInlays, cityFinishes, railSights, tableFinish, type CareerTable, type Motif } from './table-finishes';
+import { careerTable, challengeTable, championshipInlays, cityFinishes, mix, railSights, tableFinish, type CareerTable, type Motif } from './table-finishes';
 import { challengeLayout, challengeStars, completeChallenge, getChallenge, ratingFor, starReward } from './challenges';
 import { clearSession, labelGame, launch, saveSession } from './home';
 import { savedPage, savePage, savePagePanel } from './page-state';
@@ -30,6 +30,7 @@ import {
 } from '@babylonjs/core';
 import { furnishRoom, tableReflections } from './room';
 import { buildPocket, buildStraightRail, railBase, railDepth, railGrain, railTop } from './table-trim';
+import { paintCloth } from './cloth-texture';
 import { pocketDropDuration, pocketDropImpact, pocketDropPose, startPocketDrop } from './pocket-drop';
 import { chooseShot } from './opponent';
 import { ShotHighlights, ShotRecording, type ShotHighlight } from './shot-highlights';
@@ -305,37 +306,7 @@ function box(name: string, x: number, y: number, z: number, w: number, h: number
 function weave() {
   const texWidth = 1024, texHeight = 2048;
   const texture = new DynamicTexture('cloth weave', { width: texWidth, height: texHeight }, scene, true);
-  const ctx = texture.getContext() as CanvasRenderingContext2D;
-  ctx.fillStyle = '#dde1dc';
-  ctx.fillRect(0, 0, texWidth, texHeight);
-  // Stagger the yarn highlights so the weave reads as fabric at close range.
-  ctx.fillStyle = '#4b574b14';
-  for (let y = 0; y < texHeight; y += 4) ctx.fillRect(0, y, texWidth, 1);
-  ctx.fillStyle = '#ffffff25';
-  for (let x = 0; x < texWidth; x += 4) {
-    for (let y = x % 8 / 2; y < texHeight; y += 4) ctx.fillRect(x, y, 1, 2);
-  }
-  let seed = 1427;
-  for (let i = 0; i < 48000; i++) {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    const x = (seed >>> 16) % texWidth;
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    const y = (seed >>> 16) % texHeight;
-    ctx.fillStyle = i % 2 ? '#ffffff30' : '#00000021';
-    ctx.fillRect(x, y, 1, 2);
-  }
-  ctx.globalCompositeOperation = 'destination-out';
-  ctx.fillStyle = '#000000';
-  for (const pocket of pockets) {
-    ctx.save();
-    ctx.translate((pocket.x / width + 0.5) * texWidth, (pocket.z / length + 0.5) * texHeight);
-    ctx.scale(texWidth / width, texHeight / length);
-    ctx.beginPath();
-    ctx.arc(0, 0, pocketMouthRadius(pocket), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-  ctx.globalCompositeOperation = 'source-over';
+  paintCloth(texture.getContext() as CanvasRenderingContext2D, texWidth, texHeight);
   texture.hasAlpha = true;
   texture.anisotropicFilteringLevel = 8;
   texture.update();
@@ -461,7 +432,7 @@ function buildTableGeometry() {
   const ringScale = (pocketMouthRadius(pocket) - 0.005) / 0.08;
   pocketCallRings[index].scaling.set(ringScale, 1, ringScale);
  });
- for (const pocket of pockets) buildPocket(scene, pocket, wood, leather, dark);
+ for (const pocket of pockets) buildPocket(scene, pocket, wood, brass, leather, dark);
  // One continuous beveled cushion per rail, with mitered pocket approaches.
  for (const c of cushions.filter(c => !c.jaw)) {
   const distance = Math.hypot(c.bx - c.ax, c.bz - c.az);
@@ -2210,7 +2181,7 @@ function applyTableFinish() {
   document.body.classList.toggle('final-match', Boolean(venue?.championship));
   snookerLines.setEnabled(snooker);
   cloth.diffuseColor = Color3.FromHexString(felt);
-  rubber.diffuseColor = Color3.FromHexString(cushion);
+  rubber.diffuseColor = Color3.FromHexString(mix(felt, cushion, 0.45));
   wood.diffuseColor = Color3.FromHexString(rail);
   requestAnimationFrame(fitOverheadCamera);
 }
