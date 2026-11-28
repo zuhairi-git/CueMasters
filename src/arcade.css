@@ -516,24 +516,52 @@ button.selection-card:active { transform: scale(.985); }
 .ball-on small { display: none; }
 .ball-on-next { display: inline-flex; align-items: center; gap: 4px; padding-left: 7px; border-left: 1px solid #ffffff26; color: #a9bbd6; font-size: .64rem; }
 .ball-on-next .score-ball { display: inline-block; width: 12px; height: 12px; }
-.ball-on-close {
-  position: relative;
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  margin-left: 2px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  font: 700 1rem/1 var(--display);
+#status { min-width: 0; }
+#tableHelp summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 24px;
+  padding: 3px 10px;
+  border: 1px solid var(--edge-soft);
+  border-radius: 999px;
+  background: var(--pane-control);
+  color: var(--ink);
+  font-weight: 700;
+  list-style: none;
   cursor: pointer;
 }
-/* A bigger invisible target than the 20px button, so a thumb can dismiss the chip. */
-.ball-on-close::before { content: ''; position: absolute; inset: -8px; }
-header.game-hud #score:has(> .ball-on:not([hidden]))::after { display: none; }
+#tableHelp summary::-webkit-details-marker { display: none; }
+#tableHelp summary::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
+}
+#tableHelp[open] summary::after { transform: translateY(1px) rotate(225deg); }
+#tableHelp summary:hover { border-color: var(--ink-gold); }
+#tableHelp summary:focus-visible { outline: 2px solid var(--ink-gold); outline-offset: 2px; }
+.table-help-content { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 4px; }
+.table-help-content:not(:has(> :not([hidden]))) { display: none; }
+#statusText, #helpText { white-space: normal; }
+#dismissHelp { display: none; }
+
+@media (max-width: 600px) and (prefers-reduced-motion: no-preference) {
+  #tableHelp summary::after { transition: transform 180ms ease; }
+  @supports selector(details::details-content) and (interpolate-size: allow-keywords) {
+    #tableHelp::details-content {
+      interpolate-size: allow-keywords;
+      block-size: 0;
+      opacity: 0;
+      overflow: clip;
+      transition: block-size 220ms ease, opacity 160ms ease, content-visibility 220ms allow-discrete;
+    }
+    #tableHelp[open]::details-content { block-size: auto; opacity: 1; }
+  }
+}
 
 @media (min-width: 601px) {
   header.game-hud { align-items: center; gap: 6px 10px; }
@@ -544,7 +572,7 @@ header.game-hud #score:has(> .ball-on:not([hidden]))::after { display: none; }
     grid-template-columns: auto auto minmax(0, 1fr) auto;
     align-items: center;
     align-content: center;
-    gap: 0 10px;
+    gap: 2px 10px;
     max-width: 100%;
     min-height: 44px;
     padding: 4px 12px 4px 4px;
@@ -575,6 +603,45 @@ header.game-hud #score:has(> .ball-on:not([hidden]))::after { display: none; }
   }
   header.game-hud .game-heading > #status { grid-row: 1; color: #dbe6f7; }
   header.game-hud .game-heading > #careerObjective { grid-row: 2; color: #8fa3c2; font-size: .62rem; }
+  #tableHelp summary { display: none; }
+  #score > #tableHelp {
+    align-self: center;
+    min-width: 0;
+    max-width: clamp(9rem, 14vw, 16rem);
+    padding: 2px 6px;
+    font-size: .68rem;
+    line-height: 1.25;
+    text-align: center;
+  }
+  #score > #tableHelp:not(:has(#helpChip:not([hidden], [data-dismissed]), .ball-on:not([hidden]))) { display: none; }
+  #score .table-help-content { flex-direction: column; gap: 4px; margin: 0; }
+  #score #helpChip:not([hidden], [data-dismissed]) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 4px 3px 9px;
+    border: 1px solid var(--edge-soft);
+    border-radius: 12px;
+    background: var(--pane-control);
+  }
+  #score #helpChip[data-dismissed] { display: none; }
+  #score #dismissHelp {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    font: 600 1rem/1 var(--display);
+    cursor: pointer;
+  }
+  #score #dismissHelp:hover { background: var(--pane-strong); }
+  #score #dismissHelp:focus-visible { outline: 2px solid var(--ink-gold); }
+  #score .ball-on:not([hidden]) { flex-wrap: wrap; min-height: 22px; }
   header.game-hud #shotClock:not([hidden]) {
     grid-column: 4;
     grid-row: 1 / span 2;
@@ -596,7 +663,7 @@ header.game-hud #score:has(> .ball-on:not([hidden]))::after { display: none; }
     gap: 4px;
     width: max-content;
     max-width: 100%;
-    height: 44px;
+    min-height: 44px;
     padding: 3px;
   }
   header.game-hud > #score::after { display: none; }
@@ -639,12 +706,7 @@ header.game-hud #score:has(> .ball-on:not([hidden]))::after { display: none; }
 }
 @media (min-width: 601px) and (pointer: coarse) {
   header.game-hud > nav .hud-action { min-width: 44px; min-height: 44px; }
-  header.game-hud > #score { height: 50px; }
-}
-/* Phones: the ball on is a small chip with a dismiss button, kept beside the hint
-   line (see showScore) instead of taking a seat or a row in the scoreboard. */
-@media (max-width: 600px) {
-  .game-heading > .ball-on:not([hidden]) { grid-column: 1 / -1; justify-self: center; }
+  header.game-hud > #score { min-height: 50px; }
 }
 
 /* ---------- Contrast ---------- */
@@ -681,11 +743,10 @@ header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: #ff8a75; ba
 /* The thin scoreboard is a flex row: clear the old grid alignment so name and
    score sit on one centred line, and keep every strip the same height. */
 @media (min-width: 601px) {
-  header.game-hud #score .player-score { height: 100%; min-height: 0; max-height: none; overflow: hidden; text-align: left; }
+  header.game-hud #score .player-score { min-height: 0; max-height: none; overflow: hidden; text-align: left; }
   header.game-hud #score .player-score > * { align-self: center; grid-column: auto; grid-row: auto; margin-top: 0; }
   header.game-hud #score .player-score .player-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   header.game-hud #score .player-score .player-group { overflow: visible; white-space: nowrap; }
-  header.game-hud #score > .ball-on:not([hidden]) { align-self: stretch; }
   header.game-hud > nav { height: 44px; align-items: center; }
   header.game-hud > nav .hud-action, header.game-hud > nav #openSettings {
     flex: none;
@@ -696,12 +757,12 @@ header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: #ff8a75; ba
     padding: 0;
     gap: 0;
   }
-  header.game-hud > .game-heading { height: 44px; min-height: 0; }
+  header.game-hud > .game-heading { min-height: 44px; }
 }
 @media (min-width: 601px) and (pointer: coarse) {
   header.game-hud > nav { height: 50px; }
   header.game-hud > nav .hud-action, header.game-hud > nav #openSettings { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
-  header.game-hud > .game-heading { height: 50px; }
+  header.game-hud > .game-heading { min-height: 50px; }
 }
 
 /* ---------- Phones: one scoreboard row and a one-line hint ---------- */
@@ -710,7 +771,8 @@ header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: #ff8a75; ba
 @media (max-width: 600px) {
   .compact-hud header.game-hud { gap: 4px 8px; }
   .compact-hud header.game-hud #careerObjective { display: none; }
-  .compact-hud header.game-hud #status { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .compact-hud #tableHelp summary { min-height: 32px; margin-inline: auto; }
+  .compact-hud .table-help-content { justify-content: center; }
   .compact-hud .game-hud .player-turn { display: none; }
   .compact-hud .game-hud .player-score,
   .compact-hud .game-hud .player-score.active { grid-template-columns: 14px minmax(0, 1fr); gap: 1px 7px; min-height: 42px; padding: 4px 8px; }
@@ -738,15 +800,8 @@ header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: #ff8a75; ba
   .snooker-game.compact-hud .game-hud .player-score:last-child .player-name { flex-direction: row-reverse; }
 
 
-  /* Ball on chip: one short line sitting next to the hint, about as tall as the hint chip. */
-  .compact-hud header.game-hud > .game-heading:has(> .ball-on:not([hidden])) { flex-direction: row !important; flex-wrap: nowrap; gap: 6px; }
-  .game-heading > .ball-on:not([hidden]) { flex: none; gap: 5px; min-height: 22px; padding: 0 2px 0 9px; border-radius: 999px; }
-  .game-heading > .ball-on .ball-on-title { font-size: .46rem; letter-spacing: .12em; }
-  .game-heading > .ball-on .ball-on-icon { width: 14px; height: 14px; }
-  .game-heading > .ball-on .ball-on-next { display: none; }
-  .game-heading > .ball-on strong { font-size: .72rem; }
-  /* Any colour: the six balls say it without the name. */
-  .game-heading > .ball-on:has(.ball-on-icon ~ .ball-on-icon) strong { display: none; }
-  .game-heading > .ball-on:has(.ball-on-icon ~ .ball-on-icon) .ball-on-icon { width: 11px; height: 11px; }
-  .game-heading > .ball-on .ball-on-close { width: 18px; height: 18px; font-size: .9rem; }
+  .table-help-content > .ball-on:not([hidden]) { gap: 5px; min-height: 22px; padding: 0 8px; border-radius: 999px; }
+  .table-help-content .ball-on-icon { width: 14px; height: 14px; }
+  .table-help-content .ball-on-next { display: none; }
+  .table-help-content .ball-on strong { font-size: .72rem; }
 }

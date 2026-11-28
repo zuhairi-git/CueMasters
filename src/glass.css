@@ -384,6 +384,7 @@ button.mode-card { width: 100%; min-height: 0; margin: 0; font: inherit; text-al
     transition: --glare .25s ease-out;
   }
   header.game-hud .game-heading > #status { color: var(--ink); }
+  header.game-hud #score > #tableHelp { color: var(--ink); }
   header.game-hud .game-heading > #careerObjective { color: var(--ink-soft); }
   header.game-hud .game-city, .final-match .game-city { color: var(--ink-gold); }
   header.game-hud #score .player-score .player-avatar { flex-basis: 26px; width: 26px; height: 26px; }
@@ -398,16 +399,81 @@ button.mode-card { width: 100%; min-height: 0; margin: 0; font: inherit; text-al
     backdrop-filter: var(--glass-blur);
   }
   .compact-hud header.game-hud > #score { border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-  /* The hint line floats over the cloth on phones, so it carries its own chip. */
-  .compact-hud header.game-hud #status, header.game-hud #status {
+  header.game-hud #status {
     width: fit-content;
     max-width: 100%;
     margin-inline: auto;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: var(--pane-strong);
     color: var(--ink);
   }
+  .compact-hud header.game-hud #status { width: min(100%, 20rem); }
+  .compact-hud header.game-hud:has(#tableHelp[open]) > .game-heading { grid-column: 1 / -1; }
+  .compact-hud header.game-hud #status:has(#tableHelp[open]) { width: 100%; }
+  #tableHelp, #statusText:not([hidden]) {
+    border: 1px solid var(--edge-soft);
+    border-radius: 12px;
+    background: var(--pane-strong);
+  }
+  #tableHelp summary {
+    position: relative;
+    width: 100%;
+    justify-content: center;
+    padding-inline: 28px;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+  }
+  #tableHelp summary::after { position: absolute; right: 13px; }
+  #tableHelp summary:hover { background: var(--pane-control); }
+  #tableHelp summary:focus-visible { outline-offset: -2px; }
+  .compact-hud #tableHelp:not([open]) {
+    border: 0;
+    background: transparent;
+  }
+  .compact-hud #tableHelp:not([open]) summary { display: none; }
+  .compact-hud header.game-hud:has(#tableHelp:not([open])) > .game-heading { min-height: 0; }
+  .compact-hud header.game-hud:has(#tableHelp:not([open])) #score::after { font-size: 0; }
+  .compact-hud #expandTableHelp {
+    grid-column: 1;
+    grid-row: 1;
+    place-self: center;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .compact-hud header.game-hud:has(#tableHelp:not([open])) #expandTableHelp {
+    visibility: visible;
+    pointer-events: auto;
+  }
+  #expandTableHelp::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    opacity: 0;
+    transform: translateY(-5px) rotate(45deg);
+  }
+  .compact-hud header.game-hud:has(#tableHelp:not([open])) #expandTableHelp::after {
+    opacity: 1;
+    transform: translateY(-2px) rotate(45deg);
+  }
+  #expandTableHelp:focus-visible { outline: 2px solid var(--ink-gold); outline-offset: -2px; }
+  #tableHelp .table-help-content {
+    margin: 0;
+    padding: 6px 10px 8px;
+    border-top: 1px solid var(--edge-soft);
+  }
+  #statusText:not([hidden]) { display: block; margin-bottom: 4px; padding: 6px 10px; }
   .compact-hud header.game-hud #careerObjective, header.game-hud #careerObjective { padding: 2px 10px; border-radius: 999px; background: var(--pane-strong); color: var(--ink-soft); }
   .camera-zoom.game-hud, .camera-zoom.game-hud #fineAim { background-color: var(--pane-inset); }
   .camera-zoom.game-hud { box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
@@ -436,12 +502,15 @@ header.game-hud #score .player-turn { color: var(--ink-gold); }
 header.game-hud #score .player-turn::before { background: var(--ink-gold); }
 .snooker-game header.game-hud #score .player-score .player-group::after, .snooker-game.compact-hud .game-hud .player-group::after { color: var(--ink); }
 .compact-hud header.game-hud #score::after, header.game-hud #score::after { color: var(--ink-soft); opacity: 1; }
+@media (max-width: 600px) and (prefers-reduced-motion: no-preference) {
+  .compact-hud header.game-hud #score::after { transition: font-size 180ms ease; }
+  .compact-hud #expandTableHelp { transition: visibility 0s linear 180ms; }
+  .compact-hud header.game-hud:has(#tableHelp:not([open])) #expandTableHelp { transition-delay: 0s; }
+  #expandTableHelp::after { transition: opacity 180ms ease, transform 180ms ease; }
+}
 .ball-on:not([hidden]) { border-color: color-mix(in srgb, var(--ink-gold) 55%, transparent); border-radius: 12px; background: linear-gradient(180deg, var(--pane-gold), transparent), var(--pane-strong); color: var(--ink); }
 .ball-on-title { color: var(--ink-gold); }
 .ball-on-next { color: var(--ink-soft); border-left-color: var(--edge-soft); }
-.ball-on-close { color: var(--ink-soft); }
-.ball-on-close:hover, .ball-on-close:focus-visible { background: var(--pane-control); color: var(--ink); }
-.ball-on-close:focus-visible { outline: 2px solid var(--ink-gold); outline-offset: 1px; }
 header.game-hud #shotClock:not([hidden]), #shotClock:not([hidden]) { border: 1px solid color-mix(in srgb, var(--ink-gold) 55%, transparent); background: linear-gradient(180deg, var(--pane-gold), transparent), var(--pane-strong); color: var(--ink-gold); }
 header.game-hud #shotClock.urgent, #shotClock.urgent { border-color: var(--ink-danger); background: var(--pane-strong); color: var(--ink-danger); }
 .game-hud .hud-action, header.game-hud #openSettings {

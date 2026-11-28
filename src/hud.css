@@ -101,6 +101,7 @@ header.game-hud > .game-heading {
   background: #0a1528;
   font: 700 .7rem ui-monospace, monospace;
 }
+#expandTableHelp { display: none; }
 header.game-hud #score {
   position: relative;
   display: grid;
@@ -394,8 +395,9 @@ body.tv-mode .game-hud #status { font-size: .9rem; }
   .compact-hud .game-brand { display: none; }
   .compact-hud header.game-hud > .game-heading {
     display: flex;
-    grid-column: 1 / -1;
+    grid-column: 1;
     grid-row: 2;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 0;
@@ -423,14 +425,24 @@ body.tv-mode .game-hud #status { font-size: .9rem; }
 }
 
 @media (max-width: 600px) {
-  .compact-hud header.game-hud:has(#shotClock:not([hidden])) > .game-heading { display: flex; }
-  .compact-hud #shotClock:not([hidden]) { width: max-content; margin-inline: auto; margin-right: 6px; }
+  .compact-hud #shotClock:not([hidden]) { order: 1; width: max-content; margin-inline: auto; }
 }
 
 @media (max-width: 600px) {
   .compact-hud header.game-hud { align-items: center; gap: 8px; }
-  .compact-hud header.game-hud > #score { gap: 14px; }
-  .compact-hud header.game-hud #score::after { content: 'VS'; font: 700 8px system-ui, sans-serif; color: var(--muted); opacity: .8; }
+  .compact-hud header.game-hud > #score { gap: 34px; }
+  .compact-hud header.game-hud #score::after {
+    content: 'VS';
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 22px;
+    border: 1px solid var(--edge-soft);
+    border-radius: 8px;
+    background: var(--pane-control);
+    font: 700 .6rem/1 var(--display);
+    letter-spacing: .03em;
+  }
   .compact-hud .game-hud .player-score { grid-template-columns: 16px minmax(0, 1fr); gap: 3px 8px; padding: 8px; min-height: 54px; text-align: left; border: 1px solid var(--border); background: var(--panel); }
   .compact-hud .game-hud .player-name, .compact-hud .game-hud .player-group { grid-column: 2; text-align: left; }
   .compact-hud .game-hud .player-name { font-size: .76rem; line-height: 1.2; color: var(--text); }

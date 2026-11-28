@@ -47,7 +47,22 @@ let overhead = true;
 let viewMode = false;
 let svgRenderer: SvgTable | undefined;
 let canvasRenderer: TvTable | undefined;
-const status = document.querySelector<HTMLElement>('#status')!;
+const statusText = document.querySelector<HTMLElement>('#statusText')!;
+const tableHelp = document.querySelector<HTMLDetailsElement>('#tableHelp')!;
+const mobileHelpContainer = tableHelp.parentElement!;
+const tableHelpSummary = tableHelp.querySelector('summary')!;
+const expandTableHelp = document.querySelector<HTMLButtonElement>('#expandTableHelp')!;
+const helpText = document.querySelector<HTMLElement>('#helpText')!;
+const helpChip = document.querySelector<HTMLElement>('#helpChip')!;
+document.querySelector<HTMLButtonElement>('#dismissHelp')!.onclick = () => {
+  helpChip.dataset.dismissed = '';
+};
+function setStatus(message: string, isHelp = false) {
+  statusText.hidden = isHelp;
+  statusText.textContent = isHelp ? '' : message;
+  helpChip.hidden = !isHelp;
+  helpText.textContent = isHelp ? message : '';
+}
 const shotHighlightBanner = document.querySelector<HTMLElement>('#shotHighlight')!;
 const shotHighlightTitle = document.querySelector<HTMLElement>('#shotHighlightTitle')!;
 const shotHighlightDetail = document.querySelector<HTMLElement>('#shotHighlightDetail')!;
@@ -59,6 +74,22 @@ const hudHeader = document.querySelector<HTMLElement>('header')!;
 const menuDialog = document.querySelector<HTMLDialogElement>('#mobileGameMenu')!;
 const menuActions = document.querySelector<HTMLElement>('#gameMenuActions')!;
 const mobileLayout = window.matchMedia('(max-width: 600px)');
+function openTableHelp() {
+  const restoreFocus = document.activeElement === expandTableHelp;
+  tableHelp.open = true;
+  if (restoreFocus) tableHelpSummary.focus();
+}
+function resetTableHelp() {
+  delete helpChip.dataset.dismissed;
+  openTableHelp();
+}
+expandTableHelp.onclick = openTableHelp;
+tableHelpSummary.addEventListener('click', event => {
+  if (!tableHelp.open || !mobileLayout.matches || !document.body.classList.contains('compact-hud')) return;
+  event.preventDefault();
+  tableHelp.open = false;
+  expandTableHelp.focus();
+});
 const tvEnabled = tvPreference() === 'on';
 const remote = new RemoteShot();
 let tvContext = '';
@@ -176,17 +207,18 @@ guidesToggle.onclick = () => {
   updateGuides();
 };
 updateGuides();
-// The ball-on chip can be dismissed with its × button; this switch brings it back.
 const ballOnToggle = document.querySelector<HTMLButtonElement>('#ballOnToggle')!;
 let ballOnEnabled = true;
-try { ballOnEnabled = localStorage.getItem('billiard-ball-on') !== 'off'; } catch {}
+// The old key stored both the Settings preference and in-game dismissals.
+const ballOnPreferenceKey = 'billiard-ball-on-preference';
+try { ballOnEnabled = localStorage.getItem(ballOnPreferenceKey) !== 'off'; } catch {}
 function updateBallOnSetting() {
   ballOnToggle.textContent = t(ballOnEnabled ? 'Chip on' : 'Chip off');
   ballOnToggle.setAttribute('aria-pressed', String(ballOnEnabled));
 }
 function setBallOnEnabled(enabled: boolean) {
   ballOnEnabled = enabled;
-  try { localStorage.setItem('billiard-ball-on', enabled ? 'on' : 'off'); } catch {}
+  try { localStorage.setItem(ballOnPreferenceKey, enabled ? 'on' : 'off'); } catch {}
   updateBallOnSetting();
   showScore();
 }
@@ -853,16 +885,6 @@ function renderPlayerDetails() {
 }
 // Snooker and nine-ball: always show which ball is on, so the next one is never a guess.
 const ballOn = document.querySelector<HTMLElement>('#ballOn')!;
-function ballOnDismiss() {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'ball-on-close';
-  button.textContent = '×';
-  button.title = t('Hide ball on');
-  button.setAttribute('aria-label', button.title);
-  button.onclick = () => setBallOnEnabled(false);
-  return button;
-}
 function showBallOn() {
   ballOn.hidden = !(snooker || nineBall) || finished || !ballOnEnabled;
   if (ballOn.hidden) return;
@@ -887,7 +909,6 @@ function showBallOn() {
       next.append(t('then') + ' ', ballBadge(following));
       ballOn.append(next);
     }
-    ballOn.append(ballOnDismiss());
     ballOn.setAttribute('aria-label', t('Ball on') + ': ' + label);
     return;
   }
@@ -928,7 +949,6 @@ function showBallOn() {
     next.textContent = t(balls.some((ball, index) => index >= 1 && index <= 15 && !ball.pocketed) ? 'then a red' : 'then yellow');
     ballOn.append(next);
   }
-  ballOn.append(ballOnDismiss());
   ballOn.setAttribute('aria-label', t('Ball on') + ': ' + label);
 }
 function showScore() {
@@ -990,13 +1010,17 @@ function showScore() {
     }
     return item;
   });
-  // On wide screens the ball on sits between the two players. On phones it is a small
-  // chip beside the hint line, so the players keep the whole width of the scoreboard.
-  const chipBesideHint = mobileLayout.matches;
-  score.replaceChildren(seats[0], ...(!chipBesideHint && (snooker || nineBall) ? [ballOn] : []), seats[1]);
-  if (chipBesideHint) document.querySelector('.game-heading')!.append(ballOn);
+  if (mobileLayout.matches) {
+    if (tableHelp.parentElement !== mobileHelpContainer) mobileHelpContainer.append(tableHelp);
+    score.replaceChildren(...seats);
+  } else {
+    score.replaceChildren(seats[0], tableHelp, seats[1]);
+  }
 }
-mobileLayout.addEventListener('change', showScore);
+mobileLayout.addEventListener('change', event => {
+  if (!event.matches) openTableHelp();
+  showScore();
+});
 offlinePlayerTwoNameInput.onchange = () => {
   offlinePlayerTwoName = offlinePlayerTwoNameInput.value.trim().slice(0, 24) || 'Player 2';
   offlinePlayerTwoNameInput.value = offlinePlayerTwoName;
@@ -1560,38 +1584,38 @@ function showReadyStatus() {
   }
   if (tvEnabled) { updateTvControls(); return; }
   if (shotReplay) {
-    status.textContent = t('Replay');
+    setStatus(t('Replay'));
     return;
   }
   if (online.departureDeadline !== undefined) {
-    status.textContent = t('Opponent left. Waiting for their timer to expire…');
+    setStatus(t('Opponent left. Waiting for their timer to expire…'));
     return;
   }
   if (finished) {
-    status.textContent = challenge ? t(winner === 0 ? 'Challenge completed' : 'Challenge failed')
+    setStatus(challenge ? t(winner === 0 ? 'Challenge completed' : 'Challenge failed')
       : winner !== undefined
       ? t(wonByForfeit ? '{player} wins by forfeit!' : '{player} wins!', { player: playerName(winner) })
-      : scores[0] === scores[1] ? t('Match drawn.') : t('{player} wins!', { player: playerName(scores[0] > scores[1] ? 0 : 1) });
+      : scores[0] === scores[1] ? t('Match drawn.') : t('{player} wins!', { player: playerName(scores[0] > scores[1] ? 0 : 1) }));
     return;
   }
-  if (awaitingOnline) { status.textContent = t('Waiting for an opponent. Open Players to see matchmaking.'); return; }
+  if (awaitingOnline) { setStatus(t('Waiting for an opponent. Open Players to see matchmaking.')); return; }
   if (!canControl()) {
-    status.textContent = onlineMode ? online.active ? t('{player} is lining up a shot.', { player: playerName(turn) })
-      : t('Online game paused. Reconnect through Players or choose End game.') : t('Computer is lining up a shot.');
+    setStatus(onlineMode ? online.active ? t('{player} is lining up a shot.', { player: playerName(turn) })
+      : t('Online game paused. Reconnect through Players or choose End game.') : t('Computer is lining up a shot.'));
     return;
   }
   if (aimLocked && !viewMode) {
-    status.textContent = t('Aim locked · Drag back on the table and release to shoot. Double-tap the cue ball to unlock.');
+    setStatus(t('Aim locked · Drag back on the table and release to shoot. Double-tap the cue ball to unlock.'), true);
     return;
   }
   if (placement && !viewMode) {
-    status.textContent = placement === 'break' ? t('Drag the cue ball behind the head string. Aim on the cloth.') : t('Ball in hand. Drag the cue ball or aim on the cloth.');
+    setStatus(placement === 'break' ? t('Drag the cue ball behind the head string. Aim on the cloth.') : t('Ball in hand. Drag the cue ball or aim on the cloth.'), true);
     return;
   }
-  status.textContent = viewMode ? t('Drag to orbit. Pinch or scroll to zoom.')
+  setStatus(viewMode ? t('Drag to orbit. Pinch or scroll to zoom.')
     : t(window.matchMedia('(pointer: coarse)').matches
       ? '{player} · Tap to aim, slide Fine aim, then pull the cue to shoot.'
-      : '{player} · ← → Aim · Shift + arrows for fine aim', { player: playerName(turn) });
+      : '{player} · ← → Aim · Shift + arrows for fine aim', { player: playerName(turn) }), true);
 }
 
 function canPanTable() {
@@ -1885,6 +1909,7 @@ document.querySelector<HTMLButtonElement>('#camera')!.onclick = event => {
   button.setAttribute('aria-label', t(overhead ? 'Switch to perspective view' : 'Switch to top-down view'));
 };
 function resetMatch(continueCareer = false) {
+  resetTableHelp();
   if (!continueCareer) clearShotHighlight();
   shotHighlights = shotRecording = onlineHighlight = undefined;
   pocketDrops.clear();
@@ -1992,7 +2017,7 @@ async function startSettingsMatch() {
     leavingMatch = true;
     showCueLoader('Preparing your match…');
     try { await online.leave(!wonByForfeit); }
-    catch { status.textContent = t('Could not end the online game. Try again.'); return; }
+    catch { setStatus(t('Could not end the online game. Try again.')); return; }
     finally { leavingMatch = false; hideCueLoader(); }
     onlineMode = false;
   }
@@ -2244,6 +2269,7 @@ function gameState(): SavedGame {
       : mode.kind === 'challenge' ? { careerAttempts, careerBanked, challengeTime } : {}) };
 }
 function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = false) {
+  if (!animatePockets || (!s.finished && (finished || (s.breaking && !breaking)))) resetTableHelp();
   if (!animatePockets) {
     clearShotHighlight();
     shotHighlights = shotRecording = onlineHighlight = undefined;
@@ -2302,7 +2328,7 @@ function applyGame(s: SavedGame, preserveLocalAim = false, animatePockets = fals
   });
   showScore();
   if (!rolling && !strike) showReadyStatus();
-  else status.textContent = t('Balls in motion');
+  else setStatus(t('Balls in motion'));
 }
 function saveGame() {
   if (returningHome) return;
@@ -2563,7 +2589,7 @@ function updateTvControls() {
   const presentation = [stepText, helpText, powerText].join('|');
   if (tvPresentation === presentation) return;
   tvPresentation = presentation;
-  status.textContent = stepText;
+  setStatus(stepText);
   document.querySelector<HTMLElement>('#tvStep')!.textContent = stepText;
   document.querySelector<HTMLElement>('#tvHelp')!.textContent = helpText;
   document.querySelector<HTMLOutputElement>('#tvPower')!.value = powerText;
@@ -2798,7 +2824,7 @@ engine.runRenderLoop(() => {
       shotRecording?.capture(0, balls, new Map());
       if (resetSpinAfterShot) setTip(0, 0);
       rolling = true;
-      status.textContent = t('Balls in motion');
+      setStatus(t('Balls in motion'));
     }
   }
   updatePocketDrops(dt);

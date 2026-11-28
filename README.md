@@ -29,9 +29,9 @@ A static file host alone does not support online games.
 - Pockets are sized against the balls: a pool corner pocket is about two balls wide and snooker
   pockets are tighter (about 1.8 balls). Geometry lives in `tableSpecs` in `src/physics.ts`.
 - In snooker and nine-ball the **Ball on** chip shows the next ball (red, any colour, or the
-  specific colour in the closing sequence) and what follows it. On phones it sits beside the
-  hint line instead of in the scoreboard; tap its × to dismiss it, and bring it back with
-  **Ball on chip** in game settings.
+  specific colour in the closing sequence) and what follows it. The chip and gameplay hints appear
+  between the player cards on desktop. Dismiss the hint with its × to hide it until the next game.
+  On phones, expand or collapse **Table help** to show or hide both. The panel opens at the start of each game.
   Spend coins on cue upgrades in
   the **Equipment shop** on the career screen. Career progress and equipment
   live in your browser, and cities unlocked before the update remain accessible.
